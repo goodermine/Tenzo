@@ -46,8 +46,10 @@ always-on" is the trap, and the ideabrowser scores are marketing, not gospel.**
 ### What to push back on
 1. **"Ambient / always-on background capture" is barely buildable on a phone.** iOS restricts
    background mic access hard; a genuinely always-listening recorder is a privacy, battery, and
-   App-Store-rejection minefield. The most-hyped differentiator is the least shippable part. **v1
-   should be one-tap / push-to-talk capture, not ambient.**
+   App-Store-rejection minefield. The most-hyped differentiator is the least shippable part.
+   **Replace it with the multi-segment session model (below): record → stop → think → record
+   again, then one "Done" press triggers assimilation.** Same "think out loud over time" benefit,
+   none of the always-on cost.
 2. **The scores are promotional.** ideabrowser rates almost everything 8–9. "+54900% growth" is a
    vanity metric. "Execution 3/10" is optimistic once real capture, storage, and integrations are
    in scope.
@@ -68,28 +70,63 @@ always-on" is the trap, and the ideabrowser scores are marketing, not gospel.**
 Zero-friction capture + structuring you trust + it shows up in Notion/Linear. Moat = trust +
 compounding memory + integrations, not "always-on."
 
+## 2a. Capture model — multi-segment session with deferred assimilation
+
+This is the core interaction, and it replaces "ambient" entirely.
+
+A **capture session** is made of **many segments**:
+
+1. Press **Record** → talk → press **Stop**. That segment is saved to the session buffer.
+2. Think. Walk around. Come back.
+3. Press **Record** again → another segment appended to the _same_ session. Repeat as many times
+   as you like.
+4. Nothing is analyzed yet — segments just accumulate, each transcribed quietly in the background
+   so the "Done" step is fast.
+5. When the whole train of thought is out, press **Done**. **That press is the trigger for the
+   single assimilation pass**: all segments are stitched in order and sent to the LLM as one body
+   of text, which produces the summary + decisions + action items + open questions across the
+   _entire_ session as one coherent note.
+
+**Why deferring assimilation to the Done press matters:** the model sees the full arc of the
+thinking — including where the founder contradicted themselves, refined an idea, or answered their
+own earlier question. Summarizing each fragment in isolation would lose exactly that. One pass over
+the whole session = a much better structured note, and it keeps cost to a single LLM call per
+session rather than per fragment.
+
+**UI implication:** the primary screen is a big Record/Stop toggle, a running list of captured
+segments (with durations, re-orderable/deletable before assimilation), and one prominent **Done**
+button. No timeline scrubbing, no ambient toggle, no background permissions.
+
 ## 3. MVP plan
 
 ### Guiding principles
-- **Prove the core loop before building an app.** The core loop is _ramble in → trustworthy
-  structured note out_. If that isn't magic, nothing downstream matters.
+- **Prove the core loop before building an app.** The core loop is _multi-segment ramble in →
+  trustworthy structured note out_. If that isn't magic, nothing downstream matters.
 - **Reuse VOX Deploy.** Same FastAPI + strict-JSON-schema + validation scaffolding.
-- **Cut ambient.** One-tap record / file upload only in v1.
+- **Multi-segment session, deferred assimilation.** Record/stop as many times as you want; the
+  **Done** press is the only thing that triggers transcription-stitch + structuring. No ambient,
+  no always-on.
 - **Web first, mobile later.** A mobile-web record button covers 90% of the value with 10% of the
   effort and zero App Store risk.
 
 ### Scope: v0 (internal proof, ~days) — reuse this repo
 Goal: prove structuring quality on real founder rambles.
 
-1. **Capture:** `.wav`/`.mp3` upload + browser `MediaRecorder` one-tap record. (Upload path already
-   exists.)
-2. **Transcribe:** add a `transcribe()` step (Whisper API or local `faster-whisper`) that returns
-   text. This slots in exactly where `extract_features()` sits today in `app/main.py`.
-3. **Structure:** LLM call with a new `ramble_note` schema (below), replacing the vocal-report
-   schema. Reuse `call_llm_json()` + `jsonschema` validation verbatim.
-4. **Display:** render the structured note; show validation/debug errors on failure (already built).
-5. **Store:** append each validated note as a JSON row to a local SQLite table (session, topic,
-   urgency, created_at). Enables the search demo.
+1. **Capture (multi-segment):** browser `MediaRecorder` Record/Stop toggle that appends each take
+   as a segment to an in-progress session; segments listed and deletable before Done. `.wav`/`.mp3`
+   upload also accepted as a segment (upload path already exists). Endpoint: `POST /session/{id}/
+   segment`.
+2. **Transcribe per segment (background):** add a `transcribe()` step (Whisper API or local
+   `faster-whisper`) that runs as each segment lands, so the Done step is fast. This slots in where
+   `extract_features()` sits today in `app/main.py`, but per-segment.
+3. **Assimilate on Done:** `POST /session/{id}/assimilate` stitches all segment transcripts in
+   order into one text body and makes a **single** LLM call with the new `ramble_note` schema
+   (below), replacing the vocal-report schema. Reuse `call_llm_json()` + `jsonschema` validation
+   verbatim.
+4. **Display:** render the structured session note; show validation/debug errors on failure
+   (already built).
+5. **Store:** persist the session (its segments + transcripts) and the validated note as rows in a
+   local SQLite table (session, topic, urgency, created_at). Enables the search demo.
 
 **`ramble_note` schema (first cut):**
 ```jsonc
