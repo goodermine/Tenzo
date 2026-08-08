@@ -32,7 +32,7 @@
 
   <div class="row">
     <button id="rec">● Record</button>
-    <button id="done">Done — Assimilate</button>
+    <button id="done">Done — send to agent</button>
     <button id="archive">Archive</button>
     <button id="new">＋ New session</button>
   </div>
@@ -127,13 +127,23 @@ $("rec").onclick = async () => {
   }
 };
 
+let pollTimer = null;
 $("done").onclick = async () => {
   if (!sessionId) return;
-  setStatus("Assimilating whole session…");
-  const r = await fetch(`/session/${sessionId}/assimilate`, { method: "POST" });
+  const r = await fetch(`/session/${sessionId}/done`, { method: "POST" });
   const data = await r.json();
-  if (!r.ok) { $("note").textContent = JSON.stringify(data, null, 2); }
-  refresh();
+  if (!r.ok) { $("note").textContent = JSON.stringify(data, null, 2); return; }
+  setStatus("Sent to agent — waiting for the note…");
+  await refresh();
+  // Poll until the agent writes a note (status leaves 'ready').
+  if (pollTimer) clearInterval(pollTimer);
+  let tries = 0;
+  pollTimer = setInterval(async () => {
+    tries++;
+    const s = await (await fetch(`/session/${sessionId}`)).json();
+    if (s.status !== "ready" || tries > 60) { clearInterval(pollTimer); pollTimer = null; }
+    refresh();
+  }, 5000);
 };
 
 $("archive").onclick = async () => {

@@ -4,27 +4,25 @@ This is the "just for me" setup: run it on your own Linux box (or WSL on the Win
 point it at your OpenAI/ChatGPT key, and reach it from your phone over your Tailscale HTTPS URL.
 No accounts, no deployment, nothing to sell.
 
-## 1. Configure the models (your ChatGPT/OpenAI key)
+## 1. Configure (no API key needed)
 
-Copy `.env.example` to `.env` and set:
+The app does **not** call an LLM — your agent does the summarizing (see
+[`agent-integration.md`](agent-integration.md)). So there's nothing to pay for and no key to set for
+notes. Copy `.env.example` to `.env` and you can leave the `LLM_*` values as-is.
+
+The only real choice is **transcription** (audio → text), which still happens in the app:
 
 ```env
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini          # cheap + reliable for structuring; pennies per session
-LLM_API_KEY=sk-...             # your OpenAI API key
-
-# Turn on real transcription (uses the same key via Whisper):
-TRANSCRIBE_STUB=false
-TRANSCRIBE_MODEL=whisper-1
+# Default: no real transcription, placeholder text (fine for wiring things up):
+TRANSCRIBE_STUB=true
 ```
 
-- **Structuring** (transcript → note) uses `LLM_MODEL` via `/chat/completions`.
-- **Transcription** (audio → text) uses `TRANSCRIBE_MODEL` via `/audio/transcriptions`.
-- Leave `TRANSCRIBE_STUB=true` if you just want to click through the flow without spending anything;
-  set it `false` for real speech-to-text.
+For real speech-to-text without paying per call, run a **local Whisper** and point transcription at
+it, or have your agent transcribe. (If you *do* have an OpenAI API key and don't mind the pennies,
+set `TRANSCRIBE_STUB=false` with `TRANSCRIBE_MODEL=whisper-1` and it'll use `{LLM_BASE_URL}/audio/transcriptions`.)
 
-> Note: this needs an OpenAI **API key**, which is separate from a ChatGPT Plus subscription. If your
-> agent already calls the OpenAI API, reuse that key here.
+> The summaries come from your agent regardless of this setting — this only controls how segments
+> get turned into text.
 
 ## 2. Run it (Linux / WSL)
 

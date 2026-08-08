@@ -100,31 +100,37 @@ Returns:
 - `422` for non-JSON output or schema mismatch (with raw output).
 - `502` when LLM HTTP call fails.
 
-## Ramblbox (v0 stub)
+## Ramblbox (v0)
 
-An experimental capture loop built on the same audio → LLM → strict-JSON pipeline. Instead of
-transcribing one meeting, it captures a **session** made of many short segments (record → stop →
-think → record again) and assimilates the whole thing into one structured note only when you press
-**Done**. You can add more segments and re-assimilate until you **archive** the session, which seals
+A capture loop for thinking out loud. It captures a **session** made of many short segments
+(record → stop → think → record again) and turns the whole thing into one structured note when you
+press **Done**. You can add more segments and re-run until you **archive** the session, which seals
 it. See `docs/ramblbox-mvp-plan.md` for the rationale.
 
+**Architecture: the app does not call an LLM.** It's capture + storage only. The summarizing is done
+by *your own agent*, which reads pending sessions and writes notes back — so there's no API key in
+this app and no per-call cost. See [`docs/agent-integration.md`](docs/agent-integration.md).
+
 - Web UI: `GET /ramblbox` (one-tap `MediaRecorder` record button; no always-on/background capture).
-- API:
+- Capture API:
   - `POST /session` — create a session (`201`, status `active`).
   - `POST /session/{id}/segment` — upload one audio segment; transcribed on arrival (`201`).
-  - `DELETE /session/{id}/segment/{segment_id}` — drop a segment before assimilation.
-  - `POST /session/{id}/assimilate` — stitch all segments and produce a `ramble_note`; re-runnable,
-    each run bumps `version`. `409` once archived.
-  - `POST /session/{id}/archive` — seal the session (no more segments or assimilation).
-  - `GET /session/{id}` — current segments, status, and latest note.
+  - `DELETE /session/{id}/segment/{segment_id}` — drop a segment.
+  - `POST /session/{id}/done` — queue the session for the agent (status `ready`). No LLM.
+  - `POST /session/{id}/archive` — seal the session (no more segments/notes).
+  - `GET /session/{id}` — segments, status, stitched transcript, latest note.
   - `GET /sessions` — recent sessions with note titles, for browsing history.
-- Transcription is stubbed by default (`TRANSCRIBE_STUB=true`) so the loop runs with no ASR key; set
-  it `false` to transcribe via `{LLM_BASE_URL}/audio/transcriptions`.
+- Agent API:
+  - `GET /agent/pending` — sessions awaiting a note, each with its stitched transcript + schema.
+  - `POST /session/{id}/note` — agent submits a schema-validated `ramble_note`; bumps `version`,
+    sets status `assimilated`. `409` once archived.
+- Optional fallback: `POST /session/{id}/assimilate` calls an LLM directly, but only if `LLM_API_KEY`
+  is set. Not needed for the agent flow.
+- Transcription is stubbed by default (`TRANSCRIBE_STUB=true`); set it `false` to transcribe via
+  `{LLM_BASE_URL}/audio/transcriptions`.
 - Sessions persist in SQLite at `RAMBLBOX_DB_PATH` (default `ramblbox.db`).
 
-**Using it yourself (phone access via Tailscale):** see [`docs/personal-setup.md`](docs/personal-setup.md)
-for the self-hosted setup — point it at your OpenAI key, run it on your machine, and reach it from
-your phone over an HTTPS `tailscale serve` URL (required for the microphone to work).
+**Using it yourself (phone access via Tailscale):** see [`docs/personal-setup.md`](docs/personal-setup.md).
 
 ## License
 

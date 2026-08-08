@@ -35,54 +35,74 @@ def _seg(client, sid):
     )
 
 
-def test_full_loop_capture_assimilate_reassimilate_archive(monkeypatch, tmp_path):
+def test_agent_loop_done_pending_note_reassimilate_archive(monkeypatch, tmp_path):
     client = _client(monkeypatch, tmp_path)
 
-    # Create session
-    r = client.post("/session")
-    assert r.status_code == 201
-    sid = r.json()["id"]
-    assert r.json()["status"] == "active"
-
-    # Add two segments (stub transcription)
+    # Create session + two segments
+    sid = client.post("/session").json()["id"]
     assert _seg(client, sid).status_code == 201
     assert _seg(client, sid).status_code == 201
 
-    session = client.get(f"/session/{sid}").json()
-    assert len(session["segments"]) == 2
-    assert session["segments"][0]["ord"] == 1
+    # Done queues it for the agent (no LLM involved)
+    r = client.post(f"/session/{sid}/done")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
 
-    # Assimilate (mock the LLM)
+    # Agent sees it in the pending queue with the stitched transcript + schema
+    pending = client.get("/agent/pending").json()
+    assert len(pending) == 1
+    assert pending[0]["session_id"] == sid
+    assert "Segment 1" in pending[0]["stitched_transcript"]
+    assert pending[0]["note_schema"]["title"] == "Ramblbox Session Note"
+
+    # Agent submits a structured note -> version 1, status assimilated, queue empties
+    r = client.post(f"/session/{sid}/note", json=_valid_note())
+    assert r.status_code == 200
+    assert r.json()["version"] == 1
+    assert r.json()["status"] == "assimilated"
+    assert client.get("/agent/pending").json() == []
+
+    # Add another segment -> back to active; Done -> ready again; new note -> version 2
+    assert _seg(client, sid).status_code == 201
+    assert client.get(f"/session/{sid}").json()["status"] == "active"
+    client.post(f"/session/{sid}/done")
+    r = client.post(f"/session/{sid}/note", json=_valid_note())
+    assert r.json()["version"] == 2
+
+    # Archive seals: no segments, no done, no note
+    assert client.post(f"/session/{sid}/archive").json()["status"] == "archived"
+    assert _seg(client, sid).status_code == 409
+    assert client.post(f"/session/{sid}/done").status_code == 409
+    assert client.post(f"/session/{sid}/note", json=_valid_note()).status_code == 409
+
+
+def test_submit_note_rejects_invalid_schema(monkeypatch, tmp_path):
+    client = _client(monkeypatch, tmp_path)
+    sid = client.post("/session").json()["id"]
+    _seg(client, sid)
+    r = client.post(f"/session/{sid}/note", json={"title": "x"})  # missing required fields
+    assert r.status_code == 422
+    assert "Schema validation failed" in r.json()["error"]
+
+
+def test_done_with_no_segments_is_400(monkeypatch, tmp_path):
+    client = _client(monkeypatch, tmp_path)
+    sid = client.post("/session").json()["id"]
+    assert client.post(f"/session/{sid}/done").status_code == 400
+
+
+def test_optional_direct_assimilate_still_works(monkeypatch, tmp_path):
+    client = _client(monkeypatch, tmp_path)
+    sid = client.post("/session").json()["id"]
+    _seg(client, sid)
+
     async def fake_valid(**kwargs):
         return json.dumps(_valid_note())
 
     monkeypatch.setattr("app.ramblbox.routes.call_llm_json", fake_valid)
-
     r = client.post(f"/session/{sid}/assimilate")
     assert r.status_code == 200
-    assert r.json()["version"] == 1
-    assert r.json()["note"]["category"] == "build_priority"
-
-    # Add another segment, re-assimilate -> version 2
-    assert _seg(client, sid).status_code == 201
-    r = client.post(f"/session/{sid}/assimilate")
-    assert r.status_code == 200
-    assert r.json()["version"] == 2
-
-    # Archive seals the session
-    r = client.post(f"/session/{sid}/archive")
-    assert r.status_code == 200
-    assert r.json()["status"] == "archived"
-
-    # Post-archive: no new segments, no re-assimilation
-    assert _seg(client, sid).status_code == 409
-    assert client.post(f"/session/{sid}/assimilate").status_code == 409
-
-
-def test_assimilate_with_no_segments_is_400(monkeypatch, tmp_path):
-    client = _client(monkeypatch, tmp_path)
-    sid = client.post("/session").json()["id"]
-    assert client.post(f"/session/{sid}/assimilate").status_code == 400
+    assert r.json()["status"] == "assimilated"
 
 
 def test_delete_segment_reorders_view(monkeypatch, tmp_path):

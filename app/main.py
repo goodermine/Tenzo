@@ -10,6 +10,7 @@ from jsonschema import ValidationError, validate
 from app.config import get_settings
 from app.engine.audio_features import AudioFeatureError, extract_features
 from app.llm.openai_compat import call_llm_json
+from app.ramblbox.routes import agent_router as ramblbox_agent_router
 from app.ramblbox.routes import list_router as ramblbox_list_router
 from app.ramblbox.routes import router as ramblbox_router
 from app.schemas import load_vox_schema
@@ -17,6 +18,7 @@ from app.schemas import load_vox_schema
 app = FastAPI(title="VOX Deploy v0.1")
 app.include_router(ramblbox_router)
 app.include_router(ramblbox_list_router)
+app.include_router(ramblbox_agent_router)
 
 SYSTEM_PROMPT = """You are a vocal coaching assistant.
 Return ONLY valid JSON matching the provided JSON Schema.

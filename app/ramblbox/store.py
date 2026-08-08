@@ -7,9 +7,14 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 # Session lifecycle:
-#   active   -> can append segments, can (re)assimilate
-#   archived -> sealed; no more segments, no more assimilation
+#   active      -> capturing; can append segments
+#   ready       -> "Done" pressed; queued for the agent to assimilate
+#   assimilated -> agent (or optional direct LLM) has written a note; can still add more
+#   archived    -> sealed; no more segments, no more notes
+# active/ready/assimilated all allow more segments (which reset status to active).
 STATUS_ACTIVE = "active"
+STATUS_READY = "ready"
+STATUS_ASSIMILATED = "assimilated"
 STATUS_ARCHIVED = "archived"
 
 
@@ -90,15 +95,22 @@ class SessionStore:
         session["note"] = self.get_latest_note(session_id)
         return session
 
-    def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
+    def list_sessions(
+        self, limit: int = 50, status: Optional[str] = None
+    ) -> list[dict[str, Any]]:
+        query = (
+            "SELECT s.id, s.status, s.created_at, s.updated_at, "
+            "COUNT(seg.id) AS segment_count "
+            "FROM sessions s LEFT JOIN segments seg ON seg.session_id = s.id "
+        )
+        params: list[Any] = []
+        if status is not None:
+            query += "WHERE s.status = ? "
+            params.append(status)
+        query += "GROUP BY s.id ORDER BY s.updated_at DESC LIMIT ?"
+        params.append(limit)
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT s.id, s.status, s.created_at, s.updated_at, "
-                "COUNT(seg.id) AS segment_count "
-                "FROM sessions s LEFT JOIN segments seg ON seg.session_id = s.id "
-                "GROUP BY s.id ORDER BY s.updated_at DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
+            rows = conn.execute(query, tuple(params)).fetchall()
         sessions = []
         for row in rows:
             item = dict(row)
