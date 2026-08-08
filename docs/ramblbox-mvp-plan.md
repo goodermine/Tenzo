@@ -112,6 +112,12 @@ button. No timeline scrubbing, no ambient toggle, no background permissions.
 ### Scope: v0 (internal proof, ~days) — reuse this repo
 Goal: prove structuring quality on real founder rambles.
 
+> **Status: v0 stub is now in this repo.** FastAPI routes under `/session` implement the
+> multi-segment capture → deferred-assimilation loop with **re-assimilate allowed until archive**
+> (`app/ramblbox/`), backed by SQLite (`app/ramblbox/store.py`), a stubbable transcription step
+> (`app/ramblbox/transcribe.py`), the `ramble_note` schema (`schemas/ramble_note.schema.json`), and
+> a minimal `MediaRecorder` UI at `/ramblbox`. Covered by `tests/test_ramblbox.py`.
+
 1. **Capture (multi-segment):** browser `MediaRecorder` Record/Stop toggle that appends each take
    as a segment to an in-progress session; segments listed and deletable before Done. `.wav`/`.mp3`
    upload also accepted as a segment (upload path already exists). Endpoint: `POST /session/{id}/

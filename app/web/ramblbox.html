@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ramblbox v0</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; line-height: 1.4; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .sub { color: #666; margin-top: 0; font-size: 0.9rem; }
+    button { font-size: 1rem; padding: 10px 16px; border-radius: 10px; border: 1px solid #8888; cursor: pointer; }
+    #rec { background: #e11; color: #fff; border: none; }
+    #rec.recording { background: #444; }
+    #done { background: #2563eb; color: #fff; border: none; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+    ul { padding-left: 18px; }
+    li { margin: 4px 0; }
+    pre { background: #8881; padding: 12px; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; }
+    .muted { color: #888; font-size: 0.85rem; }
+    .del { color: #e11; cursor: pointer; margin-left: 8px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>Ramblbox <span class="muted">v0</span></h1>
+  <p class="sub">Record &rarr; stop &rarr; think &rarr; record again. Press <b>Done</b> to assimilate the whole session. Re-run as many times as you want, then Archive to seal it.</p>
+
+  <div class="row">
+    <button id="rec">● Record</button>
+    <button id="done">Done — Assimilate</button>
+    <button id="archive">Archive</button>
+  </div>
+  <p class="muted" id="status">No session yet.</p>
+
+  <h3>Segments</h3>
+  <ul id="segments"><li class="muted">None captured.</li></ul>
+
+  <h3>Session note</h3>
+  <pre id="note">—</pre>
+
+<script>
+let sessionId = null, status = "none", mediaRecorder = null, chunks = [], recording = false;
+const $ = (id) => document.getElementById(id);
+
+async function ensureSession() {
+  if (sessionId) return sessionId;
+  const r = await fetch("/session", { method: "POST" });
+  const s = await r.json();
+  sessionId = s.id;
+  status = s.status;
+  return sessionId;
+}
+
+function setStatus(msg) { $("status").textContent = msg; }
+
+async function refresh() {
+  if (!sessionId) return;
+  const r = await fetch(`/session/${sessionId}`);
+  const s = await r.json();
+  status = s.status;
+  const segs = s.segments || [];
+  $("segments").innerHTML = segs.length
+    ? segs.map(seg => `<li>#${seg.ord} <span class="muted">${seg.filename}</span> — ${seg.transcript}
+        <span class="del" data-id="${seg.id}">delete</span></li>`).join("")
+    : '<li class="muted">None captured.</li>';
+  document.querySelectorAll(".del").forEach(el => el.onclick = () => deleteSegment(el.dataset.id));
+  if (s.note) { $("note").textContent = `v${s.note.version}\n` + s.note.note_json; }
+  setStatus(`Session ${sessionId.slice(0,8)} · ${status} · ${segs.length} segment(s)`);
+}
+
+async function deleteSegment(id) {
+  await fetch(`/session/${sessionId}/segment/${id}`, { method: "DELETE" });
+  refresh();
+}
+
+$("rec").onclick = async () => {
+  if (!recording) {
+    await ensureSession();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    chunks = [];
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const fd = new FormData();
+      fd.append("audio", blob, `segment-${Date.now()}.webm`);
+      setStatus("Uploading + transcribing segment…");
+      await fetch(`/session/${sessionId}/segment`, { method: "POST", body: fd });
+      stream.getTracks().forEach(t => t.stop());
+      refresh();
+    };
+    mediaRecorder.start();
+    recording = true;
+    $("rec").textContent = "■ Stop";
+    $("rec").classList.add("recording");
+  } else {
+    mediaRecorder.stop();
+    recording = false;
+    $("rec").textContent = "● Record";
+    $("rec").classList.remove("recording");
+  }
+};
+
+$("done").onclick = async () => {
+  if (!sessionId) return;
+  setStatus("Assimilating whole session…");
+  const r = await fetch(`/session/${sessionId}/assimilate`, { method: "POST" });
+  const data = await r.json();
+  if (!r.ok) { $("note").textContent = JSON.stringify(data, null, 2); }
+  refresh();
+};
+
+$("archive").onclick = async () => {
+  if (!sessionId) return;
+  await fetch(`/session/${sessionId}/archive`, { method: "POST" });
+  refresh();
+};
+</script>
+</body>
+</html>

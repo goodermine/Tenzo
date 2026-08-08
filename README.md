@@ -100,6 +100,27 @@ Returns:
 - `422` for non-JSON output or schema mismatch (with raw output).
 - `502` when LLM HTTP call fails.
 
+## Ramblbox (v0 stub)
+
+An experimental capture loop built on the same audio → LLM → strict-JSON pipeline. Instead of
+transcribing one meeting, it captures a **session** made of many short segments (record → stop →
+think → record again) and assimilates the whole thing into one structured note only when you press
+**Done**. You can add more segments and re-assimilate until you **archive** the session, which seals
+it. See `docs/ramblbox-mvp-plan.md` for the rationale.
+
+- Web UI: `GET /ramblbox` (one-tap `MediaRecorder` record button; no always-on/background capture).
+- API:
+  - `POST /session` — create a session (`201`, status `active`).
+  - `POST /session/{id}/segment` — upload one audio segment; transcribed on arrival (`201`).
+  - `DELETE /session/{id}/segment/{segment_id}` — drop a segment before assimilation.
+  - `POST /session/{id}/assimilate` — stitch all segments and produce a `ramble_note`; re-runnable,
+    each run bumps `version`. `409` once archived.
+  - `POST /session/{id}/archive` — seal the session (no more segments or assimilation).
+  - `GET /session/{id}` — current segments, status, and latest note.
+- Transcription is stubbed by default (`TRANSCRIBE_STUB=true`) so the loop runs with no ASR key; set
+  it `false` to transcribe via `{LLM_BASE_URL}/audio/transcriptions`.
+- Sessions persist in SQLite at `RAMBLBOX_DB_PATH` (default `ramblbox.db`).
+
 ## License
 
 MIT

@@ -10,9 +10,11 @@ from jsonschema import ValidationError, validate
 from app.config import get_settings
 from app.engine.audio_features import AudioFeatureError, extract_features
 from app.llm.openai_compat import call_llm_json
+from app.ramblbox.routes import router as ramblbox_router
 from app.schemas import load_vox_schema
 
 app = FastAPI(title="VOX Deploy v0.1")
+app.include_router(ramblbox_router)
 
 SYSTEM_PROMPT = """You are a vocal coaching assistant.
 Return ONLY valid JSON matching the provided JSON Schema.
@@ -24,6 +26,11 @@ Do not invent audio facts. If something is unknown, include it in warnings.
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
     return Path("app/web/index.html").read_text(encoding="utf-8")
+
+
+@app.get("/ramblbox", response_class=HTMLResponse)
+async def ramblbox_ui() -> str:
+    return Path("app/web/ramblbox.html").read_text(encoding="utf-8")
 
 
 @app.post("/analyse")
