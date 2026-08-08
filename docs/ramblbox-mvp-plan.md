@@ -3,6 +3,12 @@
 _Review of the ideabrowser.com "Ramblbox" idea (12 screenshots), written against the existing
 VOX Deploy codebase in this repo. This is an internal strategy note, not a spec._
 
+> **Scope decision (current):** this is being built as a **personal, self-hosted tool** — not a
+> product to sell. The commercial sections below (ICP, pricing, GTM, moat, retention metrics) are
+> kept for reference but are **not** the goal; they were the "if you sold it" analysis. What matters
+> now is the capture loop working for one user on their own machine. See
+> [`personal-setup.md`](personal-setup.md) for how it actually runs.
+
 ## 1. What the idea is
 
 **Ramblbox** (as pitched on ideabrowser): "ambient" always-on voice capture for solo founders.

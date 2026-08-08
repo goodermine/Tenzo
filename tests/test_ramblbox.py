@@ -101,6 +101,25 @@ def test_unknown_session_is_404(monkeypatch, tmp_path):
     assert client.get("/session/deadbeef").status_code == 404
 
 
+def test_list_sessions_shows_note_title(monkeypatch, tmp_path):
+    client = _client(monkeypatch, tmp_path)
+    sid = client.post("/session").json()["id"]
+    _seg(client, sid)
+
+    async def fake_valid(**kwargs):
+        return json.dumps(_valid_note())
+
+    monkeypatch.setattr("app.ramblbox.routes.call_llm_json", fake_valid)
+    client.post(f"/session/{sid}/assimilate")
+
+    listing = client.get("/sessions").json()
+    assert len(listing) == 1
+    assert listing[0]["id"] == sid
+    assert listing[0]["segment_count"] == 1
+    assert listing[0]["note_version"] == 1
+    assert listing[0]["note_title"] == "Pricing + onboarding"
+
+
 def test_assimilate_rejects_invalid_schema(monkeypatch, tmp_path):
     client = _client(monkeypatch, tmp_path)
     sid = client.post("/session").json()["id"]

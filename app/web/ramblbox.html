@@ -25,10 +25,16 @@
   <h1>Ramblbox <span class="muted">v0</span></h1>
   <p class="sub">Record &rarr; stop &rarr; think &rarr; record again. Press <b>Done</b> to assimilate the whole session. Re-run as many times as you want, then Archive to seal it.</p>
 
+  <p id="warn" class="muted" style="color:#e11; display:none">
+    ⚠ Microphone needs a secure context. Open this over <b>https</b> (e.g. your Tailscale
+    <code>ts.net</code> URL) or <code>localhost</code> — plain http on an IP will block recording.
+  </p>
+
   <div class="row">
     <button id="rec">● Record</button>
     <button id="done">Done — Assimilate</button>
     <button id="archive">Archive</button>
+    <button id="new">＋ New session</button>
   </div>
   <p class="muted" id="status">No session yet.</p>
 
@@ -37,6 +43,9 @@
 
   <h3>Session note</h3>
   <pre id="note">—</pre>
+
+  <h3>Recent sessions</h3>
+  <ul id="recent"><li class="muted">None yet.</li></ul>
 
 <script>
 let sessionId = null, status = "none", mediaRecorder = null, chunks = [], recording = false;
@@ -54,6 +63,7 @@ async function ensureSession() {
 function setStatus(msg) { $("status").textContent = msg; }
 
 async function refresh() {
+  await refreshRecent();
   if (!sessionId) return;
   const r = await fetch(`/session/${sessionId}`);
   const s = await r.json();
@@ -64,8 +74,20 @@ async function refresh() {
         <span class="del" data-id="${seg.id}">delete</span></li>`).join("")
     : '<li class="muted">None captured.</li>';
   document.querySelectorAll(".del").forEach(el => el.onclick = () => deleteSegment(el.dataset.id));
-  if (s.note) { $("note").textContent = `v${s.note.version}\n` + s.note.note_json; }
+  $("note").textContent = s.note ? `v${s.note.version}\n` + s.note.note_json : "—";
   setStatus(`Session ${sessionId.slice(0,8)} · ${status} · ${segs.length} segment(s)`);
+}
+
+async function refreshRecent() {
+  const r = await fetch("/sessions?limit=25");
+  const list = await r.json();
+  $("recent").innerHTML = list.length
+    ? list.map(s => `<li><a href="#" data-id="${s.id}">${s.note_title || "(no note yet)"}</a>
+        <span class="muted">· ${s.status} · ${s.segment_count} seg${s.note_version ? " · v"+s.note_version : ""}</span></li>`).join("")
+    : '<li class="muted">None yet.</li>';
+  document.querySelectorAll("#recent a").forEach(a => a.onclick = (e) => {
+    e.preventDefault(); sessionId = a.dataset.id; refresh();
+  });
 }
 
 async function deleteSegment(id) {
@@ -73,7 +95,11 @@ async function deleteSegment(id) {
   refresh();
 }
 
+const micAvailable = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+if (!micAvailable) { $("warn").style.display = "block"; $("rec").disabled = true; }
+
 $("rec").onclick = async () => {
+  if (!micAvailable) return;
   if (!recording) {
     await ensureSession();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -115,6 +141,17 @@ $("archive").onclick = async () => {
   await fetch(`/session/${sessionId}/archive`, { method: "POST" });
   refresh();
 };
+
+$("new").onclick = async () => {
+  sessionId = null;
+  $("segments").innerHTML = '<li class="muted">None captured.</li>';
+  $("note").textContent = "—";
+  await ensureSession();
+  refresh();
+};
+
+// Load any existing history on first open.
+refreshRecent();
 </script>
 </body>
 </html>

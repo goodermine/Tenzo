@@ -13,6 +13,8 @@ from app.ramblbox.transcribe import TranscriptionError, transcribe
 from app.schemas import load_ramble_note_schema
 
 router = APIRouter(prefix="/session", tags=["ramblbox"])
+# Separate router so the collection lives at /sessions (plural) alongside /session/{id}.
+list_router = APIRouter(tags=["ramblbox"])
 
 ASSIMILATE_SYSTEM_PROMPT = """You are Ramblbox, an assistant for a solo founder \
 thinking out loud across several recorded segments in one session.
@@ -35,6 +37,12 @@ def _require_session(store: SessionStore, session_id: str) -> dict:
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found.")
     return session
+
+
+@list_router.get("/sessions")
+async def list_sessions(limit: int = 50) -> JSONResponse:
+    store = get_store()
+    return JSONResponse(status_code=200, content=store.list_sessions(limit=limit))
 
 
 @router.post("")

@@ -117,9 +117,14 @@ it. See `docs/ramblbox-mvp-plan.md` for the rationale.
     each run bumps `version`. `409` once archived.
   - `POST /session/{id}/archive` — seal the session (no more segments or assimilation).
   - `GET /session/{id}` — current segments, status, and latest note.
+  - `GET /sessions` — recent sessions with note titles, for browsing history.
 - Transcription is stubbed by default (`TRANSCRIBE_STUB=true`) so the loop runs with no ASR key; set
   it `false` to transcribe via `{LLM_BASE_URL}/audio/transcriptions`.
 - Sessions persist in SQLite at `RAMBLBOX_DB_PATH` (default `ramblbox.db`).
+
+**Using it yourself (phone access via Tailscale):** see [`docs/personal-setup.md`](docs/personal-setup.md)
+for the self-hosted setup — point it at your OpenAI key, run it on your machine, and reach it from
+your phone over an HTTPS `tailscale serve` URL (required for the microphone to work).
 
 ## License
 

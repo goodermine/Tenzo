@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -88,6 +89,30 @@ class SessionStore:
         session["segments"] = self.list_segments(session_id)
         session["note"] = self.get_latest_note(session_id)
         return session
+
+    def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT s.id, s.status, s.created_at, s.updated_at, "
+                "COUNT(seg.id) AS segment_count "
+                "FROM sessions s LEFT JOIN segments seg ON seg.session_id = s.id "
+                "GROUP BY s.id ORDER BY s.updated_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        sessions = []
+        for row in rows:
+            item = dict(row)
+            note = self.get_latest_note(item["id"])
+            title = None
+            if note is not None:
+                try:
+                    title = json.loads(note["note_json"]).get("title")
+                except (json.JSONDecodeError, AttributeError):
+                    title = None
+            item["note_version"] = note["version"] if note else 0
+            item["note_title"] = title
+            sessions.append(item)
+        return sessions
 
     def set_status(self, session_id: str, status: str) -> None:
         with self._connect() as conn:
