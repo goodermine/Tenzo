@@ -7,22 +7,37 @@ and writes the note back. No key lives in this app; nothing is billed per call.
 ## The loop
 
 ```
-You (phone)                Ramblbox backend                 Your agent
------------                ----------------                 ----------
+You (phone)                Ramblbox backend                 Your agent (Hermes)
+-----------                ----------------                 -------------------
 record segments  ───────▶  audio stored on disk
 press "Done"     ───────▶  status = "ready"
-                           POST webhook  ───────────────────▶ (agent wakes)
-                           GET segment audio  ◀─────────────  download + transcribe
+                           GET /agent/pending  ◀────────────  cron poll (every few min)
+                           GET segment audio   ◀────────────  download + transcribe
                            (agent assimilates)
                            POST /session/{id}/note  ◀───────  write structured note
                            status = "assimilated"
 note appears on phone ◀──  (UI polls and shows it)
 ```
 
-The webhook is the trigger; `GET /agent/pending` is the same payload as a poll-based fallback if a
-notification is ever missed.
+For Hermes the trigger is a **cron poll of `/agent/pending`** (see below). An optional webhook can
+push on Done if your agent ever exposes an ingestion endpoint, but it's not required.
 
-## 1. Get notified (push)
+## How Hermes (OpenClaw) actually gets triggered
+
+Hermes has **no inbound HTTP endpoint and no watched folder**, so the app can't push to it directly.
+OpenClaw does support **scheduled cron tasks and heartbeats**, and both Hermes and this app run on
+the same machine — so the trigger is a **cron poll**:
+
+> Give Hermes a scheduled task (e.g. every 2–5 min, or on its 6-hour heartbeat) that calls
+> `GET http://127.0.0.1:8000/agent/pending`, processes each ready session (download audio →
+> transcribe → assimilate → `POST …/note`), and stops when the queue is empty.
+
+That's the whole integration — no push, no ports opened, no Tailscale needed on the agent side
+(Tailscale is only for reaching the phone UI). Latency is your cron interval; a 2-minute cron feels
+near-instant for this use. The optional webhook below is a bonus for *if* you ever add an ingestion
+endpoint — it is not required for Hermes.
+
+## Optional: get notified (push)
 
 Set `AGENT_WEBHOOK_URL` in `.env` to an endpoint your agent listens on. The instant Done is pressed,
 the app POSTs this JSON:

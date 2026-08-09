@@ -2,167 +2,373 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ramblbox v0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f12" />
+  <title>Ramblbox</title>
   <style>
-    :root { color-scheme: light dark; }
-    body { font-family: system-ui, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; line-height: 1.4; }
-    h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
-    .sub { color: #666; margin-top: 0; font-size: 0.9rem; }
-    button { font-size: 1rem; padding: 10px 16px; border-radius: 10px; border: 1px solid #8888; cursor: pointer; }
-    #rec { background: #e11; color: #fff; border: none; }
-    #rec.recording { background: #444; }
-    #done { background: #2563eb; color: #fff; border: none; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
-    ul { padding-left: 18px; }
-    li { margin: 4px 0; }
-    pre { background: #8881; padding: 12px; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; }
-    .muted { color: #888; font-size: 0.85rem; }
-    .del { color: #e11; cursor: pointer; margin-left: 8px; font-size: 0.85rem; }
+    :root {
+      --bg: #f7f6f3;
+      --surface: #ffffff;
+      --surface-2: #f0eee9;
+      --text: #1b1b1f;
+      --muted: #6b6a72;
+      --faint: #9c9aa4;
+      --border: #e6e3dd;
+      --accent: #5b53e0;
+      --accent-soft: #ece9ff;
+      --rec: #e5484d;
+      --rec-soft: #fdecec;
+      --green: #2a7e5e;
+      --amber: #b7791f;
+      --shadow: 0 1px 2px rgba(20,18,30,.04), 0 8px 24px rgba(20,18,30,.06);
+      --radius: 18px;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f0f12; --surface: #17171c; --surface-2: #1f1f26;
+        --text: #ecebf0; --muted: #a2a1ab; --faint: #6f6e79; --border: #2a2a32;
+        --accent: #9089f2; --accent-soft: #21203a;
+        --rec: #ff6369; --rec-soft: #2a1b1d; --green: #4cc38a; --amber: #e2a336;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+      }
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.45; letter-spacing: -0.01em;
+      padding-bottom: 148px;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+    header {
+      position: sticky; top: 0; z-index: 20;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      backdrop-filter: saturate(1.4) blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .bar { display: flex; align-items: center; justify-content: space-between;
+      max-width: 560px; margin: 0 auto; padding: 14px 16px calc(14px + env(safe-area-inset-top,0)); }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 1.12rem; }
+    .dot { width: 11px; height: 11px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, var(--accent), #3b32c0); }
+    .ghost { border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      font: inherit; font-weight: 550; font-size: .9rem; padding: 8px 13px; border-radius: 11px;
+      cursor: pointer; transition: .15s; }
+    .ghost:active { transform: scale(.96); background: var(--surface-2); }
+
+    h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--faint); font-weight: 650; margin: 26px 4px 10px; display:flex;
+      align-items:center; justify-content:space-between; }
+    .link { color: var(--accent); font-weight: 600; font-size: .82rem; cursor: pointer; text-transform: none; letter-spacing: 0; }
+
+    .card { background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    .warn { display: none; margin: 14px 4px 0; padding: 12px 14px; border-radius: 12px;
+      background: var(--rec-soft); color: var(--rec); font-size: .86rem; }
+
+    /* segments */
+    .seg { display: flex; align-items: center; gap: 12px; padding: 13px 15px; }
+    .seg + .seg { border-top: 1px solid var(--border); }
+    .seg .idx { width: 26px; height: 26px; flex: none; border-radius: 8px; background: var(--accent-soft);
+      color: var(--accent); font-weight: 650; font-size: .8rem; display: grid; place-items: center; }
+    .seg .meta { flex: 1; min-width: 0; }
+    .seg .meta a { color: var(--text); text-decoration: none; font-weight: 550; }
+    .seg .meta small { color: var(--faint); display: block; font-size: .78rem; }
+    .seg .rm { color: var(--faint); cursor: pointer; padding: 6px; font-size: 1rem; line-height: 1; }
+    .empty { padding: 20px 16px; color: var(--faint); text-align: center; font-size: .9rem; }
+
+    /* note card */
+    .note { padding: 18px 18px 20px; }
+    .note .pill { display: inline-block; font-size: .72rem; font-weight: 650; letter-spacing: .03em;
+      text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
+      padding: 4px 10px; border-radius: 999px; }
+    .note h3 { margin: 12px 0 6px; font-size: 1.32rem; font-weight: 680; letter-spacing: -.02em; }
+    .note .summary { color: var(--muted); margin: 0 0 4px; }
+    .note .ver { color: var(--faint); font-size: .76rem; margin-top: 2px; }
+    .sec { margin-top: 18px; }
+    .sec .lbl { font-size: .78rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--faint); margin-bottom: 8px; }
+    .item { display: flex; gap: 10px; padding: 7px 0; align-items: flex-start; }
+    .item + .item { border-top: 1px dashed var(--border); }
+    .item .ic { flex: none; margin-top: 1px; font-size: .95rem; width: 18px; text-align:center; }
+    .item .tx { flex: 1; }
+    .item .owner { color: var(--faint); font-size: .82rem; }
+    .chip { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      padding: 3px 8px; border-radius: 999px; flex: none; align-self: center; }
+    .u-high { background: var(--rec-soft); color: var(--rec); }
+    .u-med  { background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); }
+    .u-low  { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tag { font-size: .8rem; color: var(--muted); background: var(--surface-2);
+      border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px; }
+    .warns { background: var(--rec-soft); border-radius: 12px; padding: 10px 13px; color: var(--rec); font-size: .86rem; }
+
+    /* thinking shimmer */
+    .thinking { padding: 22px 18px; display: flex; align-items: center; gap: 14px; }
+    .spin { width: 22px; height: 22px; border-radius: 50%; flex: none;
+      border: 2.5px solid var(--accent-soft); border-top-color: var(--accent);
+      animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .thinking b { font-weight: 600; } .thinking small { color: var(--muted); display: block; font-size: .84rem; }
+
+    /* recent */
+    .rec-item { display: flex; align-items: center; gap: 12px; padding: 13px 15px; cursor: pointer; }
+    .rec-item + .rec-item { border-top: 1px solid var(--border); }
+    .rec-item:active { background: var(--surface-2); }
+    .rec-item .ti { flex: 1; min-width: 0; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rec-item .ti small { display: block; color: var(--faint); font-weight: 400; font-size: .78rem; }
+    .status { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      padding: 3px 8px; border-radius: 999px; flex: none; }
+    .s-active { background: var(--accent-soft); color: var(--accent); }
+    .s-ready { background: color-mix(in srgb, var(--amber) 16%, transparent); color: var(--amber); }
+    .s-assimilated { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+    .s-archived { background: var(--surface-2); color: var(--faint); }
+
+    /* bottom dock */
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      padding: 12px 16px calc(14px + env(safe-area-inset-bottom,0));
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--border); }
+    .dock-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+    .viz { flex: 1; height: 40px; display: flex; align-items: center; gap: 3px; overflow: hidden; }
+    .viz i { flex: 1; background: var(--accent); border-radius: 2px; height: 12%; opacity: .5;
+      transition: height .08s ease; }
+    .rec-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .recbtn { width: 68px; height: 68px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--rec); position: relative; display: grid; place-items: center;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--rec) 45%, transparent); transition: .15s; }
+    .recbtn:active { transform: scale(.94); }
+    .recbtn .core { width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: .2s; }
+    .recbtn.on { background: var(--surface); border: 2px solid var(--rec); }
+    .recbtn.on .core { width: 22px; height: 22px; border-radius: 6px; background: var(--rec); }
+    .recbtn.on::after { content:""; position:absolute; inset:-6px; border-radius:50%;
+      border: 2px solid var(--rec); animation: pulse 1.4s ease-out infinite; }
+    @keyframes pulse { 0%{opacity:.6; transform:scale(.9)} 100%{opacity:0; transform:scale(1.25)} }
+    .rec-lbl { font-size: .74rem; color: var(--muted); font-weight: 550; font-variant-numeric: tabular-nums; }
+    .done { flex: 1; border: none; background: var(--accent); color: #fff; font: inherit; font-weight: 650;
+      padding: 15px 16px; border-radius: 15px; cursor: pointer; box-shadow: var(--shadow); transition: .15s; }
+    .done:active { transform: scale(.97); } .done:disabled { opacity: .4; }
+    .toast { position: fixed; left: 50%; bottom: 160px; transform: translateX(-50%);
+      background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px;
+      font-size: .86rem; font-weight: 550; opacity: 0; transition: .25s; pointer-events: none; z-index: 40; }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
-  <h1>Ramblbox <span class="muted">v0</span></h1>
-  <p class="sub">Record &rarr; stop &rarr; think &rarr; record again. Press <b>Done</b> to assimilate the whole session. Re-run as many times as you want, then Archive to seal it.</p>
+  <header>
+    <div class="bar">
+      <div class="brand"><span class="dot"></span> Ramblbox</div>
+      <button class="ghost" id="new">＋ New</button>
+    </div>
+  </header>
 
-  <p id="warn" class="muted" style="color:#e11; display:none">
-    ⚠ Microphone needs a secure context. Open this over <b>https</b> (e.g. your Tailscale
-    <code>ts.net</code> URL) or <code>localhost</code> — plain http on an IP will block recording.
-  </p>
+  <div class="wrap">
+    <div class="warn card" id="warn">
+      🎙️ Microphone needs a secure page. Open this over <b>https</b> (your Tailscale
+      <code>ts.net</code> URL) or <code>localhost</code> — recording is blocked on a plain http IP.
+    </div>
 
-  <div class="row">
-    <button id="rec">● Record</button>
-    <button id="done">Done — send to agent</button>
-    <button id="archive">Archive</button>
-    <button id="new">＋ New session</button>
+    <h2>This session <span class="link" id="archive" style="display:none">Archive</span></h2>
+    <div class="card" id="segments"><div class="empty">Tap record to start a ramble.</div></div>
+
+    <div id="noteArea"></div>
+
+    <h2>Recent</h2>
+    <div class="card" id="recent"><div class="empty">Nothing yet.</div></div>
   </div>
-  <p class="muted" id="status">No session yet.</p>
 
-  <h3>Segments</h3>
-  <ul id="segments"><li class="muted">None captured.</li></ul>
+  <div class="dock">
+    <div class="dock-in">
+      <button class="done" id="done" disabled>Done — send to agent</button>
+      <div class="viz" id="viz" style="display:none"></div>
+      <div class="rec-wrap">
+        <button class="recbtn" id="rec" aria-label="Record"><span class="core"></span></button>
+        <span class="rec-lbl" id="reclbl">Record</span>
+      </div>
+    </div>
+  </div>
 
-  <h3>Session note</h3>
-  <pre id="note">—</pre>
-
-  <h3>Recent sessions</h3>
-  <ul id="recent"><li class="muted">None yet.</li></ul>
+  <div class="toast" id="toast"></div>
 
 <script>
-let sessionId = null, status = "none", mediaRecorder = null, chunks = [], recording = false;
 const $ = (id) => document.getElementById(id);
+let sessionId = null, recorder = null, chunks = [], recording = false;
+let audioCtx = null, analyser = null, vizRAF = null, timerInt = null, t0 = 0, pollTimer = null;
 
-async function ensureSession() {
+const CAT = { build_priority:"Build priority", customer_feedback:"Customer feedback",
+  fundraising:"Fundraising", personal:"Personal", other:"Note" };
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200); }
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function ensureSession(){
   if (sessionId) return sessionId;
-  const r = await fetch("/session", { method: "POST" });
-  const s = await r.json();
-  sessionId = s.id;
-  status = s.status;
-  return sessionId;
+  const s = await (await fetch("/session",{method:"POST"})).json();
+  sessionId = s.id; return sessionId;
 }
 
-function setStatus(msg) { $("status").textContent = msg; }
-
-async function refresh() {
+/* ---------- rendering ---------- */
+async function refresh(){
   await refreshRecent();
-  if (!sessionId) return;
-  const r = await fetch(`/session/${sessionId}`);
-  const s = await r.json();
-  status = s.status;
-  const segs = s.segments || [];
-  $("segments").innerHTML = segs.length
-    ? segs.map(seg => `<li>#${seg.ord}
-        <a href="${seg.audio_url}" target="_blank">${seg.filename}</a>
-        <span class="muted">· ${(seg.size_bytes/1024).toFixed(0)} KB</span>
-        <span class="del" data-id="${seg.id}">delete</span></li>`).join("")
-    : '<li class="muted">None captured.</li>';
-  document.querySelectorAll(".del").forEach(el => el.onclick = () => deleteSegment(el.dataset.id));
-  $("note").textContent = s.note ? `v${s.note.version}\n` + s.note.note_json : "—";
-  setStatus(`Session ${sessionId.slice(0,8)} · ${status} · ${segs.length} segment(s)`);
+  if (!sessionId){ $("done").disabled = true; $("archive").style.display="none"; $("noteArea").innerHTML=""; return; }
+  const s = await (await fetch(`/session/${sessionId}`)).json();
+  renderSegments(s.segments||[]);
+  $("done").disabled = !(s.segments && s.segments.length) || s.status==="archived";
+  $("archive").style.display = s.status==="archived" ? "none" : "inline";
+  renderNoteArea(s);
 }
 
-async function refreshRecent() {
-  const r = await fetch("/sessions?limit=25");
-  const list = await r.json();
-  $("recent").innerHTML = list.length
-    ? list.map(s => `<li><a href="#" data-id="${s.id}">${s.note_title || "(no note yet)"}</a>
-        <span class="muted">· ${s.status} · ${s.segment_count} seg${s.note_version ? " · v"+s.note_version : ""}</span></li>`).join("")
-    : '<li class="muted">None yet.</li>';
-  document.querySelectorAll("#recent a").forEach(a => a.onclick = (e) => {
-    e.preventDefault(); sessionId = a.dataset.id; refresh();
-  });
+function renderSegments(segs){
+  $("segments").innerHTML = segs.length ? segs.map(g=>`
+    <div class="seg">
+      <div class="idx">${g.ord}</div>
+      <div class="meta"><a href="${g.audio_url}" target="_blank">${esc(g.filename)}</a>
+        <small>${(g.size_bytes/1024).toFixed(0)} KB</small></div>
+      <div class="rm" data-id="${g.id}">✕</div>
+    </div>`).join("")
+    : '<div class="empty">Tap record to start a ramble.</div>';
+  document.querySelectorAll("#segments .rm").forEach(e=>e.onclick=()=>delSeg(e.dataset.id));
 }
 
-async function deleteSegment(id) {
-  await fetch(`/session/${sessionId}/segment/${id}`, { method: "DELETE" });
-  refresh();
+function renderNoteArea(s){
+  const area = $("noteArea");
+  if (s.status === "ready"){
+    area.innerHTML = `<h2>Note</h2><div class="card thinking">
+      <div class="spin"></div><div><b>Your agent is assimilating…</b>
+      <small>Transcribing ${s.segments.length} segment${s.segments.length>1?"s":""} and writing your note.</small></div></div>`;
+    return;
+  }
+  if (!s.note){ area.innerHTML=""; return; }
+  let n; try { n = JSON.parse(s.note.note_json); } catch { area.innerHTML=""; return; }
+  area.innerHTML = `<h2>Note</h2>` + noteCard(n, s.note.version);
 }
 
-const micAvailable = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-if (!micAvailable) { $("warn").style.display = "block"; $("rec").disabled = true; }
+function list(title, items, icon, render){
+  if (!items || !items.length) return "";
+  return `<div class="sec"><div class="lbl">${title}</div>${items.map(render).join("")}</div>`;
+}
+
+function noteCard(n, ver){
+  const decisions = list("Decisions", n.decisions, "", d=>
+    `<div class="item"><span class="ic">✓</span><span class="tx">${esc(d.text)}</span></div>`);
+  const actions = list("Action items", n.action_items, "", a=>
+    `<div class="item"><span class="ic">▢</span><span class="tx">${esc(a.text)}
+      ${a.owner?`<span class="owner"> · ${esc(a.owner)}</span>`:""}</span>
+      <span class="chip u-${a.urgency||'low'}">${a.urgency||'low'}</span></div>`);
+  const questions = list("Open questions", n.open_questions, "", q=>
+    `<div class="item"><span class="ic">?</span><span class="tx">${esc(q.text)}</span></div>`);
+  const tags = (n.tags&&n.tags.length)?`<div class="sec"><div class="tags">
+      ${n.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></div>`:"";
+  const warns = (n.warnings&&n.warnings.length)?`<div class="sec"><div class="warns">
+      ⚠ ${n.warnings.map(esc).join("<br>")}</div></div>`:"";
+  return `<div class="card note">
+    <span class="pill">${CAT[n.category]||"Note"}</span>
+    <h3>${esc(n.title)}</h3>
+    <p class="summary">${esc(n.summary)}</p>
+    <div class="ver">Version ${ver}</div>
+    ${decisions}${actions}${questions}${tags}${warns}
+  </div>`;
+}
+
+async function refreshRecent(){
+  const list = await (await fetch("/sessions?limit=25")).json();
+  $("recent").innerHTML = list.length ? list.map(s=>`
+    <div class="rec-item" data-id="${s.id}">
+      <div class="ti">${esc(s.note_title || "Untitled ramble")}
+        <small>${s.segment_count} segment${s.segment_count!==1?"s":""}${s.note_version?` · v${s.note_version}`:""}</small></div>
+      <span class="status s-${s.status}">${s.status}</span>
+    </div>`).join("")
+    : '<div class="empty">Nothing yet.</div>';
+  document.querySelectorAll(".rec-item").forEach(e=>e.onclick=()=>{ sessionId=e.dataset.id; stopPoll(); refresh();
+    window.scrollTo({top:0,behavior:"smooth"}); });
+}
+
+/* ---------- recording ---------- */
+const micOK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+if (!micOK){ $("warn").style.display="block"; $("rec").disabled=true; }
+
+function startViz(stream){
+  try{
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 64;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    const viz = $("viz"); viz.style.display="flex";
+    viz.innerHTML = Array.from({length:20}, ()=>"<i></i>").join("");
+    const bars = viz.querySelectorAll("i"); const data = new Uint8Array(analyser.frequencyBinCount);
+    const draw = ()=>{ analyser.getByteFrequencyData(data);
+      bars.forEach((b,i)=>{ const v=data[i*1]/255; b.style.height = Math.max(12, v*100)+"%";
+        b.style.opacity = .35 + v*.65; });
+      vizRAF = requestAnimationFrame(draw); };
+    draw();
+  }catch(e){}
+}
+function stopViz(){ if(vizRAF) cancelAnimationFrame(vizRAF); vizRAF=null;
+  $("viz").style.display="none"; $("viz").innerHTML=""; if(audioCtx){audioCtx.close();audioCtx=null;} }
+function tick(){ const s=Math.floor((Date.now()-t0)/1000);
+  $("reclbl").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
 
 $("rec").onclick = async () => {
-  if (!micAvailable) return;
-  if (!recording) {
+  if (!micOK) return;
+  if (!recording){
     await ensureSession();
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    chunks = [];
-    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: "audio/webm" });
-      const fd = new FormData();
-      fd.append("audio", blob, `segment-${Date.now()}.webm`);
-      setStatus("Uploading + transcribing segment…");
-      await fetch(`/session/${sessionId}/segment`, { method: "POST", body: fd });
-      stream.getTracks().forEach(t => t.stop());
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch { toast("Microphone permission denied"); return; }
+    recorder = new MediaRecorder(stream); chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = async () => {
+      stopViz(); clearInterval(timerInt); $("reclbl").textContent="Record";
+      stream.getTracks().forEach(t=>t.stop());
+      const blob = new Blob(chunks,{type:"audio/webm"});
+      const fd = new FormData(); fd.append("audio", blob, `segment-${Date.now()}.webm`);
+      toast("Saving segment…");
+      await fetch(`/session/${sessionId}/segment`,{method:"POST",body:fd});
       refresh();
     };
-    mediaRecorder.start();
-    recording = true;
-    $("rec").textContent = "■ Stop";
-    $("rec").classList.add("recording");
+    recorder.start(); recording = true;
+    $("rec").classList.add("on"); t0 = Date.now(); tick(); timerInt = setInterval(tick,1000);
+    startViz(stream);
   } else {
-    mediaRecorder.stop();
-    recording = false;
-    $("rec").textContent = "● Record";
-    $("rec").classList.remove("recording");
+    recording = false; $("rec").classList.remove("on"); recorder.stop();
   }
 };
 
-let pollTimer = null;
+/* ---------- actions ---------- */
+async function delSeg(id){ await fetch(`/session/${sessionId}/segment/${id}`,{method:"DELETE"}); refresh(); }
+
+function stopPoll(){ if(pollTimer){clearInterval(pollTimer); pollTimer=null;} }
+
 $("done").onclick = async () => {
   if (!sessionId) return;
-  const r = await fetch(`/session/${sessionId}/done`, { method: "POST" });
-  const data = await r.json();
-  if (!r.ok) { $("note").textContent = JSON.stringify(data, null, 2); return; }
-  setStatus("Sent to agent — waiting for the note…");
+  const r = await fetch(`/session/${sessionId}/done`,{method:"POST"});
+  if (!r.ok){ toast("Nothing to send yet"); return; }
+  const d = await r.json();
+  toast(d.notified ? "Sent to your agent" : "Queued for your agent");
   await refresh();
-  // Poll until the agent writes a note (status leaves 'ready').
-  if (pollTimer) clearInterval(pollTimer);
-  let tries = 0;
-  pollTimer = setInterval(async () => {
-    tries++;
+  stopPoll(); let tries=0;
+  pollTimer = setInterval(async ()=>{ tries++;
     const s = await (await fetch(`/session/${sessionId}`)).json();
-    if (s.status !== "ready" || tries > 60) { clearInterval(pollTimer); pollTimer = null; }
+    if (s.status!=="ready" || tries>120){ stopPoll(); }
     refresh();
-  }, 5000);
+  }, 4000);
 };
 
 $("archive").onclick = async () => {
   if (!sessionId) return;
-  await fetch(`/session/${sessionId}/archive`, { method: "POST" });
-  refresh();
+  await fetch(`/session/${sessionId}/archive`,{method:"POST"}); stopPoll();
+  toast("Session archived"); refresh();
 };
 
 $("new").onclick = async () => {
-  sessionId = null;
-  $("segments").innerHTML = '<li class="muted">None captured.</li>';
-  $("note").textContent = "—";
-  await ensureSession();
-  refresh();
+  sessionId=null; stopPoll(); $("noteArea").innerHTML="";
+  await ensureSession(); refresh(); window.scrollTo({top:0,behavior:"smooth"});
 };
 
-// Load any existing history on first open.
 refreshRecent();
 </script>
 </body>
