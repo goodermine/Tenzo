@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from jsonschema import ValidationError, validate
 
 from app.config import get_settings
@@ -27,14 +27,20 @@ Do not invent audio facts. If something is unknown, include it in warnings.
 """
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index() -> str:
-    return Path("app/web/index.html").read_text(encoding="utf-8")
+@app.get("/")
+async def index() -> RedirectResponse:
+    # Ramblbox is the primary app; the bare URL lands there.
+    return RedirectResponse(url="/ramblbox")
 
 
 @app.get("/ramblbox", response_class=HTMLResponse)
 async def ramblbox_ui() -> str:
     return Path("app/web/ramblbox.html").read_text(encoding="utf-8")
+
+
+@app.get("/vox", response_class=HTMLResponse)
+async def vox_ui() -> str:
+    return Path("app/web/index.html").read_text(encoding="utf-8")
 
 
 @app.post("/analyse")
