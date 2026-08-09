@@ -37,6 +37,44 @@ That's the whole integration — no push, no ports opened, no Tailscale needed o
 near-instant for this use. The optional webhook below is a bonus for *if* you ever add an ingestion
 endpoint — it is not required for Hermes.
 
+### Hermes cron task prompt (copy-paste)
+
+Set this as a scheduled OpenClaw task for Hermes (e.g. every 2 minutes). Each firing is a fresh
+session, so the prompt is fully standalone. Change the host/port if the app doesn't run on
+`127.0.0.1:8000`.
+
+```text
+You are processing the Ramblbox queue. The Ramblbox app runs locally and holds voice-note
+sessions that are waiting for a structured note. Do this now, then stop.
+
+1. GET http://127.0.0.1:8000/agent/pending
+2. If the response is an empty array [], there is nothing to do. Stop silently — do not message me.
+3. For EACH session object in the array:
+   a. It has: session_id, segments[] (each with ord, filename, mime_type, audio_url),
+      note_endpoint, and note_schema.
+   b. Download each segment's audio_url and transcribe it to text, in ascending "ord" order.
+   c. Treat the segments as ONE continuous train of thought from me thinking out loud — I may
+      refine, contradict, or answer my own earlier points across segments. Assimilate the whole
+      session into a SINGLE note.
+   d. Build a JSON object that strictly matches note_schema:
+        - title:   a short, specific title for the session
+        - summary: 1-3 sentences capturing the through-line
+        - category: exactly one of build_priority | customer_feedback | fundraising | personal | other
+        - decisions:      [{ "text": ... }]           (things I decided; [] if none)
+        - action_items:   [{ "text": ..., "urgency": "low"|"med"|"high", "owner": ... }]  (owner optional)
+        - open_questions: [{ "text": ... }]           (things left unresolved)
+        - tags:           ["..."]                      (a few short topic tags)
+        - warnings:       ["..."]                      (e.g. where I contradicted myself, or audio was unclear)
+      Do not invent facts. If something is ambiguous or unresolved, put it in open_questions or
+      warnings rather than guessing. Only use categories/urgencies from the lists above.
+   e. POST the JSON to that session's note_endpoint with header Content-Type: application/json.
+   f. If the response status is 422, read the "error" field, fix the JSON to satisfy note_schema,
+      and POST again.
+4. After processing everything, if you wrote at least one note, send me a one-line Telegram summary
+   like: "Ramblbox: assimilated 2 sessions — 'Cold outreach angles', 'Feature cut list'." If you
+   wrote none, stay silent.
+```
+
 ## Optional: get notified (push)
 
 Set `AGENT_WEBHOOK_URL` in `.env` to an endpoint your agent listens on. The instant Done is pressed,
