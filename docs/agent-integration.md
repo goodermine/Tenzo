@@ -24,24 +24,34 @@ push on Done if your agent ever exposes an ingestion endpoint, but it's not requ
 
 ## How Hermes (OpenClaw) actually gets triggered
 
-Hermes has **no inbound HTTP endpoint and no watched folder**, so the app can't push to it directly.
-OpenClaw does support **scheduled cron tasks and heartbeats**, and both Hermes and this app run on
-the same machine — so the trigger is a **cron poll**:
+Hermes has no inbound HTTP endpoint and no watched folder — but it **does wake from Telegram**. So
+the efficient trigger is **on demand, not a timer**: the app sends a Telegram message the instant you
+press Done, Hermes wakes once, processes the queue, and goes back to sleep. No idle polling, so no
+credits are spent on empty checks.
 
-> Give Hermes a scheduled task (e.g. every 2–5 min, or on its 6-hour heartbeat) that calls
-> `GET http://127.0.0.1:8000/agent/pending`, processes each ready session (download audio →
-> transcribe → assimilate → `POST …/note`), and stops when the queue is empty.
+**Primary trigger — Telegram push on Done.** Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in
+`.env` (a chat that routes to Hermes). On Done the app posts a message like:
 
-That's the whole integration — no push, no ports opened, no Tailscale needed on the agent side
-(Tailscale is only for reaching the phone UI). Latency is your cron interval; a 2-minute cron feels
-near-instant for this use. The optional webhook below is a bonus for *if* you ever add an ingestion
-endpoint — it is not required for Hermes.
+> 🎙️ Ramblbox: a session is ready to assimilate (2 segment(s)). Run the Ramblbox queue.
 
-### Hermes cron task prompt (copy-paste)
+Give Hermes a standing instruction: *when you see a "Run the Ramblbox queue" message, do the
+Ramblbox queue task below.* That's one model wake-up per ramble you actually finish — nothing when
+you're idle.
 
-Set this as a scheduled OpenClaw task for Hermes (e.g. every 2 minutes). Each firing is a fresh
-session, so the prompt is fully standalone. Change the host/port if the app doesn't run on
-`127.0.0.1:8000`.
+**Safety net — a long heartbeat, not a fast poll.** So nothing is ever stranded if a message is
+missed, also run the same queue task on a **slow** schedule — ride Hermes's existing 6-hour
+heartbeat, or a cron no tighter than hourly. This is a backstop, not the main path, so keep the
+interval long to avoid burning credits on empty checks.
+
+No ports opened, no Tailscale on the agent side (Tailscale is only for the phone UI). The HTTP
+webhook below is an alternative to the Telegram push *if* you ever give Hermes an ingestion endpoint.
+
+### Hermes "Ramblbox queue" task prompt (copy-paste)
+
+Use this same prompt for **both** triggers: as the action Hermes runs when it sees a
+"Run the Ramblbox queue" Telegram message, **and** as the slow safety-net heartbeat task. It's
+fully standalone and stops silently when the queue is empty, so running it on the 6-hour heartbeat
+costs almost nothing. Change the host/port if the app doesn't run on `127.0.0.1:8000`.
 
 ```text
 You are processing the Ramblbox queue. The Ramblbox app runs locally and holds voice-note

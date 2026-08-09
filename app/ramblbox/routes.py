@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from jsonschema import ValidationError, validate
 
 from app.config import get_settings
-from app.ramblbox.notify import notify_agent
+from app.ramblbox.notify import notify_agent, notify_telegram
 from app.ramblbox.store import (
     STATUS_ACTIVE,
     STATUS_ARCHIVED,
@@ -197,12 +197,25 @@ async def mark_done(session_id: str, request: Request) -> JSONResponse:
 
     store.set_status(session_id, STATUS_READY)
     session = store.get_session(session_id)
+    settings = get_settings()
     payload = _ready_payload(request, session)
-    notified = await notify_agent(get_settings().agent_webhook_url, payload)
+
+    webhook_ok = await notify_agent(settings.agent_webhook_url, payload)
+    tg_text = (
+        f"🎙️ Ramblbox: a session is ready to assimilate "
+        f"({len(session['segments'])} segment(s)). Run the Ramblbox queue."
+    )
+    telegram_ok = await notify_telegram(
+        settings.telegram_bot_token, settings.telegram_chat_id, tg_text
+    )
 
     return JSONResponse(
         status_code=200,
-        content={"session": _serialize_session(session), "notified": notified},
+        content={
+            "session": _serialize_session(session),
+            "notified": webhook_ok or telegram_ok,
+            "channels": {"webhook": webhook_ok, "telegram": telegram_ok},
+        },
     )
 
 

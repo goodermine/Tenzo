@@ -128,6 +128,31 @@ def test_done_fires_webhook_when_configured(monkeypatch, tmp_path):
     assert captured["payload"]["segments"][0]["audio_url"].startswith("http")
 
 
+def test_done_fires_telegram_when_configured(monkeypatch, tmp_path):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    client = _client(monkeypatch, tmp_path)
+    sid = client.post("/session").json()["id"]
+    _seg(client, sid)
+
+    sent = {}
+
+    async def fake_tg(token, chat_id, text):
+        sent["token"] = token
+        sent["chat_id"] = chat_id
+        sent["text"] = text
+        return True
+
+    monkeypatch.setattr("app.ramblbox.routes.notify_telegram", fake_tg)
+
+    r = client.post(f"/session/{sid}/done")
+    assert r.status_code == 200
+    assert r.json()["notified"] is True
+    assert r.json()["channels"]["telegram"] is True
+    assert sent["token"] == "tok" and sent["chat_id"] == "123"
+    assert "Ramblbox" in sent["text"]
+
+
 def test_done_with_no_segments_is_400(monkeypatch, tmp_path):
     client = _client(monkeypatch, tmp_path)
     sid = client.post("/session").json()["id"]
