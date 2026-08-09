@@ -70,7 +70,9 @@ async function refresh() {
   status = s.status;
   const segs = s.segments || [];
   $("segments").innerHTML = segs.length
-    ? segs.map(seg => `<li>#${seg.ord} <span class="muted">${seg.filename}</span> — ${seg.transcript}
+    ? segs.map(seg => `<li>#${seg.ord}
+        <a href="${seg.audio_url}" target="_blank">${seg.filename}</a>
+        <span class="muted">· ${(seg.size_bytes/1024).toFixed(0)} KB</span>
         <span class="del" data-id="${seg.id}">delete</span></li>`).join("")
     : '<li class="muted">None captured.</li>';
   document.querySelectorAll(".del").forEach(el => el.onclick = () => deleteSegment(el.dataset.id));

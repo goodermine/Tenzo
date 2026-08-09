@@ -6,23 +6,20 @@ No accounts, no deployment, nothing to sell.
 
 ## 1. Configure (no API key needed)
 
-The app does **not** call an LLM — your agent does the summarizing (see
-[`agent-integration.md`](agent-integration.md)). So there's nothing to pay for and no key to set for
-notes. Copy `.env.example` to `.env` and you can leave the `LLM_*` values as-is.
-
-The only real choice is **transcription** (audio → text), which still happens in the app:
+The app does **not** call an LLM and does **not** transcribe — your agent transcribes the audio and
+writes the notes (see [`agent-integration.md`](agent-integration.md)). So there's nothing to pay for
+and no key to set. Copy `.env.example` to `.env` and set your agent's notify endpoint:
 
 ```env
-# Default: no real transcription, placeholder text (fine for wiring things up):
-TRANSCRIBE_STUB=true
+RAMBLBOX_DB_PATH=ramblbox.db
+RAMBLBOX_AUDIO_DIR=ramblbox_audio
+# The app POSTs here the instant you press "Done" so your agent starts immediately.
+# Leave empty and your agent can poll GET /agent/pending instead.
+AGENT_WEBHOOK_URL=http://localhost:PORT/your-agent-hook
 ```
 
-For real speech-to-text without paying per call, run a **local Whisper** and point transcription at
-it, or have your agent transcribe. (If you *do* have an OpenAI API key and don't mind the pennies,
-set `TRANSCRIBE_STUB=false` with `TRANSCRIBE_MODEL=whisper-1` and it'll use `{LLM_BASE_URL}/audio/transcriptions`.)
-
-> The summaries come from your agent regardless of this setting — this only controls how segments
-> get turned into text.
+Segment audio is stored under `RAMBLBOX_AUDIO_DIR`; your agent downloads each segment's `audio_url`
+to transcribe it.
 
 ## 2. Run it (Linux / WSL)
 

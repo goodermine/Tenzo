@@ -107,28 +107,26 @@ A capture loop for thinking out loud. It captures a **session** made of many sho
 press **Done**. You can add more segments and re-run until you **archive** the session, which seals
 it. See `docs/ramblbox-mvp-plan.md` for the rationale.
 
-**Architecture: the app does not call an LLM.** It's capture + storage only. The summarizing is done
-by *your own agent*, which reads pending sessions and writes notes back — so there's no API key in
-this app and no per-call cost. See [`docs/agent-integration.md`](docs/agent-integration.md).
+**Architecture: the app calls no LLM and does no transcription.** It captures + stores audio and
+notifies your agent. *Your own agent* downloads the audio, transcribes it, and writes the note back —
+so there's no API key in this app and no per-call cost. See
+[`docs/agent-integration.md`](docs/agent-integration.md).
 
 - Web UI: `GET /ramblbox` (one-tap `MediaRecorder` record button; no always-on/background capture).
 - Capture API:
   - `POST /session` — create a session (`201`, status `active`).
-  - `POST /session/{id}/segment` — upload one audio segment; transcribed on arrival (`201`).
-  - `DELETE /session/{id}/segment/{segment_id}` — drop a segment.
-  - `POST /session/{id}/done` — queue the session for the agent (status `ready`). No LLM.
+  - `POST /session/{id}/segment` — upload one audio segment (`201`).
+  - `DELETE /session/{id}/segment/{segment_id}` — drop a segment (also deletes its audio file).
+  - `POST /session/{id}/done` — queue the session and **POST a webhook** to `AGENT_WEBHOOK_URL`.
   - `POST /session/{id}/archive` — seal the session (no more segments/notes).
-  - `GET /session/{id}` — segments, status, stitched transcript, latest note.
+  - `GET /session/{id}` — segments (with `audio_url`), status, latest note.
   - `GET /sessions` — recent sessions with note titles, for browsing history.
 - Agent API:
-  - `GET /agent/pending` — sessions awaiting a note, each with its stitched transcript + schema.
+  - `GET /session/{id}/segment/{seg}/audio` — download raw segment audio to transcribe.
+  - `GET /agent/pending` — sessions awaiting a note, each with audio URLs + schema (poll fallback).
   - `POST /session/{id}/note` — agent submits a schema-validated `ramble_note`; bumps `version`,
     sets status `assimilated`. `409` once archived.
-- Optional fallback: `POST /session/{id}/assimilate` calls an LLM directly, but only if `LLM_API_KEY`
-  is set. Not needed for the agent flow.
-- Transcription is stubbed by default (`TRANSCRIBE_STUB=true`); set it `false` to transcribe via
-  `{LLM_BASE_URL}/audio/transcriptions`.
-- Sessions persist in SQLite at `RAMBLBOX_DB_PATH` (default `ramblbox.db`).
+- Segment audio is stored under `RAMBLBOX_AUDIO_DIR`; sessions/notes in SQLite at `RAMBLBOX_DB_PATH`.
 
 **Using it yourself (phone access via Tailscale):** see [`docs/personal-setup.md`](docs/personal-setup.md).
 

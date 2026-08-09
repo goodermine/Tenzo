@@ -59,7 +59,9 @@ class SessionStore:
                     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
                     ord        INTEGER NOT NULL,
                     filename   TEXT NOT NULL,
-                    transcript TEXT NOT NULL,
+                    audio_path TEXT NOT NULL,
+                    mime_type  TEXT NOT NULL,
+                    size_bytes INTEGER NOT NULL,
                     created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS notes (
@@ -139,8 +141,15 @@ class SessionStore:
         )
 
     # --- segments ---------------------------------------------------------
-    def add_segment(self, session_id: str, filename: str, transcript: str) -> dict[str, Any]:
-        seg_id = _new_id()
+    def add_segment(
+        self,
+        session_id: str,
+        segment_id: str,
+        filename: str,
+        audio_path: str,
+        mime_type: str,
+        size_bytes: int,
+    ) -> dict[str, Any]:
         ts = _now()
         with self._connect() as conn:
             row = conn.execute(
@@ -149,17 +158,20 @@ class SessionStore:
             ).fetchone()
             ord_ = int(row["max_ord"]) + 1
             conn.execute(
-                "INSERT INTO segments (id, session_id, ord, filename, transcript, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (seg_id, session_id, ord_, filename, transcript, ts),
+                "INSERT INTO segments "
+                "(id, session_id, ord, filename, audio_path, mime_type, size_bytes, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (segment_id, session_id, ord_, filename, audio_path, mime_type, size_bytes, ts),
             )
             self._touch(conn, session_id)
         return {
-            "id": seg_id,
+            "id": segment_id,
             "session_id": session_id,
             "ord": ord_,
             "filename": filename,
-            "transcript": transcript,
+            "audio_path": audio_path,
+            "mime_type": mime_type,
+            "size_bytes": size_bytes,
             "created_at": ts,
         }
 
@@ -171,14 +183,25 @@ class SessionStore:
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def delete_segment(self, session_id: str, segment_id: str) -> bool:
+    def get_segment(self, session_id: str, segment_id: str) -> Optional[dict[str, Any]]:
         with self._connect() as conn:
-            cur = conn.execute(
+            row = conn.execute(
+                "SELECT * FROM segments WHERE session_id = ? AND id = ?",
+                (session_id, segment_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def delete_segment(self, session_id: str, segment_id: str) -> Optional[dict[str, Any]]:
+        seg = self.get_segment(session_id, segment_id)
+        if seg is None:
+            return None
+        with self._connect() as conn:
+            conn.execute(
                 "DELETE FROM segments WHERE session_id = ? AND id = ?",
                 (session_id, segment_id),
             )
             self._touch(conn, session_id)
-            return cur.rowcount > 0
+        return seg
 
     # --- notes ------------------------------------------------------------
     def save_note(self, session_id: str, note_json: str) -> int:

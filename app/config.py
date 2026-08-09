@@ -10,11 +10,11 @@ class Settings(BaseSettings):
 
     # Ramblbox v0
     ramblbox_db_path: str = "ramblbox.db"
-    transcribe_model: str = "whisper-1"
-    # When true, segment audio is not sent anywhere and a placeholder transcript
-    # is used. Lets the whole capture -> assimilate loop run without an ASR key.
-    # Set false to transcribe via the OpenAI-compatible /audio/transcriptions endpoint.
-    transcribe_stub: bool = True
+    # Raw segment audio is stored here on disk; the agent downloads and transcribes it.
+    ramblbox_audio_dir: str = "ramblbox_audio"
+    # Optional: URL to POST to the instant "Done" is pressed, so the agent starts
+    # immediately instead of polling /agent/pending. Empty = notify disabled (poll only).
+    agent_webhook_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
