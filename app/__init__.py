@@ -1,1 +1,1 @@
-"""VOX Deploy application package."""
+"""Ramblbox application package."""
