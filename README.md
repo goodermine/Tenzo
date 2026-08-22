@@ -100,6 +100,12 @@ Returns:
 - `422` for non-JSON output or schema mismatch (with raw output).
 - `502` when LLM HTTP call fails.
 
+## Extras
+
+- [`games/relic-raider`](games/relic-raider/) — Relic Raider, a self-contained
+  browser platformer (no build step, no dependencies). Unrelated to the
+  analysis pipeline; open its `index.html` to play.
+
 ## License
 
 MIT

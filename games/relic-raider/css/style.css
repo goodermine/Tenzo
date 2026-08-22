@@ -1,0 +1,42 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0b07;
+  color: #e8d9b5;
+  font-family: Georgia, "Times New Roman", serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #0d0b07;
+  touch-action: none;
+}
+
+#game:focus {
+  outline: none;
+}
+
+noscript {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 2rem;
+}
