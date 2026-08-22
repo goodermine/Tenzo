@@ -169,13 +169,32 @@ window.RR = window.RR || {};
 
   /* --------------------------------------------------------- title screen */
 
+  /* One layout for the whole title screen, so the logo, the idol, the facade
+     and the menu are positioned relative to each other at any aspect ratio. */
+  function titleLayout(view) {
+    var portrait = view.h > view.w;
+    var lw = Math.min(view.w * (portrait ? 0.88 : 0.4), portrait ? 620 : 480);
+    var lh = lw * 0.46;
+    var logoCy = Math.max(view.h * 0.1, lh * 0.56) + view.h * 0.02;
+    var menuTop = view.h * (portrait ? 0.63 : 0.6);
+    /* The idol fills the room between the plaque and the menu, and is allowed
+       to sit a little behind the top button the way the steps run under it. */
+    var gapTop = logoCy + lh / 2;
+    var span = menuTop + 60 - gapTop;
+    var idolS = Math.max(0.3, Math.min(span / 300, view.w * 0.95 / 560));
+    return {
+      portrait: portrait, lw: lw, lh: lh, logoCy: logoCy, menuTop: menuTop,
+      idolS: idolS, idolCy: gapTop + span * 0.5 + 40 * idolS
+    };
+  }
+
   /* Stepped temple facade the great idol is carved into. */
-  function facade(ctx, view) {
+  function facade(ctx, view, L) {
     var cx = view.w / 2;
-    var top = view.h * 0.24;
-    var bot = view.h * 0.88;
+    var top = Math.max(view.h * 0.12, L.idolCy - 215 * L.idolS);
+    var bot = view.h * 0.9;
     var tiers = 6;
-    var maxW = Math.max(view.w * 1.05, view.h * 0.7);
+    var maxW = Math.max(view.w * 1.05, 620 * L.idolS * 1.6);
     var minW = maxW * 0.34;
     for (var i = 0; i < tiers; i++) {
       var t = i / (tiers - 1);
@@ -368,19 +387,21 @@ window.RR = window.RR || {};
   }
 
   function titleScene(ctx, view) {
-    if (!U.titleBackdrop) {
-      U.titleBackdrop = Art.backdropLayers(Levels.themes.jungle);
+    if (!U.titleBackdrop || U.titleDetail !== G.detail) {
+      U.titleBackdrop = Art.backdropLayers(Levels.themes.jungle, G.detail);
+      U.titleDetail = G.detail;
     }
     var theme = Levels.themes.jungle;
     Art.drawSky(ctx, view, theme);
     var drift = U.t * 6;
+    var L = titleLayout(view);
     var s = Math.max(view.w / 768, view.h / 700);
     Art.drawLayer(ctx, U.titleBackdrop.far, view, drift, 0.12, view.h * 0.96, 0.9, s);
-    facade(ctx, view);
-    idol(ctx, view.w / 2, view.h * 0.42, Math.min(view.w * 0.95, view.h * 0.72) / 560, U.t);
+    facade(ctx, view, L);
     Art.drawLayer(ctx, U.titleBackdrop.mid, view, drift, 0.3, view.h * 1.1, 0.92, s);
+    idol(ctx, view.w / 2, L.idolCy, L.idolS, U.t);
     /* temple steps in the foreground, with torches burning either side */
-    var stepTop = view.h * 0.8;
+    var stepTop = view.h * 0.82;
     var sh = view.h * 0.06;
     ctx.fillStyle = 'rgba(28,26,16,0.92)';
     for (var i = 0; i < 4; i++) {
@@ -398,7 +419,7 @@ window.RR = window.RR || {};
     });
     Art.drawLayer(ctx, U.titleBackdrop.near, view, drift, 0.55, view.h * 1.06, 0.95, s);
     Art.drawLayer(ctx, U.titleBackdrop.canopy, view, drift * 0.8, 0.4,
-      U.titleBackdrop.canopy.height * s * 0.92, 0.9, s);
+      U.titleBackdrop.canopy.worldH * s * 0.92, 0.9, s);
     var vg = ctx.createRadialGradient(view.w / 2, view.h * 0.45, Math.min(view.w, view.h) * 0.2,
       view.w / 2, view.h * 0.5, Math.max(view.w, view.h) * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -409,12 +430,12 @@ window.RR = window.RR || {};
 
   function drawTitle(ctx, view) {
     titleScene(ctx, view);
-    var lw = Math.min(view.w * 0.88, 640);
-    logo(ctx, view.w / 2, Math.max(view.h * 0.16, lw * 0.27) , lw, U.t);
+    var L = titleLayout(view);
+    logo(ctx, view.w / 2, L.logoCy, L.lw, U.t);
 
     var bw = Math.min(view.w * 0.6, 320);
-    var bh = Math.max(52, Math.min(74, view.h * 0.085));
-    var top = view.h * 0.63;
+    var bh = Math.max(42, Math.min(74, view.h * (L.portrait ? 0.085 : 0.078)));
+    var top = L.menuTop;
     menu(ctx, [
       { label: 'Play', run: function () { newGame(); } },
       { label: 'How to play', run: function () { G.state = 'howto'; } },

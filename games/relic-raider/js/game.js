@@ -28,6 +28,8 @@ window.RR = window.RR || {};
 
   var G = {
     state: 'title',
+    /* device pixels per world pixel that baked artwork is rendered at */
+    detail: 2,
     world: null,
     levelIndex: 0,
     score: 0,
@@ -78,8 +80,8 @@ window.RR = window.RR || {};
       w: def.w,
       h: def.h,
       theme: def.theme,
-      tiles: Art.buildTiles(def.theme),
-      backdrop: Art.backdropLayers(def.theme),
+      tiles: Art.buildTiles(def.theme, G.detail),
+      backdrop: Art.backdropLayers(def.theme, G.detail),
       entities: [],
       darts: [],
       rocks: [],
@@ -761,11 +763,11 @@ window.RR = window.RR || {};
         if (ch === ' ') continue;
         var px = tx * TS;
         var py = ty * TS;
-        var vi = (tx * 7 + ty * 13) & 3;
+        var vi = ((((tx * 73856093) ^ (ty * 19349663)) >>> 0) % tiles.stone.length);
         if (ch === '#' || ch === '<' || ch === '>') {
           var above = ty > 0 ? w.grid[ty - 1][tx] : ' ';
           var img = (above === ' ' || above === 'v' || above === '^') ? tiles.mossy[vi] : tiles.stone[vi];
-          ctx.drawImage(img, px, py);
+          ctx.drawImage(img, px, py, TS, TS);
           if (ch === '<' || ch === '>') {
             ctx.fillStyle = 'rgba(10,6,2,0.9)';
             ctx.fillRect(ch === '<' ? px + 1 : px + TS - 8, py + TS / 2 - 5, 7, 10);
@@ -777,12 +779,12 @@ window.RR = window.RR || {};
           if (c && c.state === 'gone') continue;
           var jitter = c && c.state === 'shaking' ? (Math.random() - 0.5) * 2.4 : 0;
           ctx.globalAlpha = c && c.state === 'falling' ? Math.max(0, 1 - c.oy / (TS * 6)) : 1;
-          ctx.drawImage(tiles.crumble[vi], px + jitter, py + (c ? c.oy : 0));
+          ctx.drawImage(tiles.crumble[vi], px + jitter, py + (c ? c.oy : 0), TS, TS);
           ctx.globalAlpha = 1;
         } else if (ch === '^') {
-          ctx.drawImage(tiles.spike, px, py);
+          ctx.drawImage(tiles.spike, px, py, TS, TS);
         } else if (ch === 'v') {
-          ctx.drawImage(tiles.vine, px, py);
+          ctx.drawImage(tiles.vine, px, py, TS, TS);
         }
       }
     }
@@ -791,7 +793,7 @@ window.RR = window.RR || {};
     if (w.door) {
       var dx = w.door.x;
       var dy = w.door.y - TS;
-      ctx.drawImage(tiles.door, dx, dy);
+      ctx.drawImage(tiles.door, dx, dy, TS, TS * 2);
       if (w.doorOpen) {
         var glow = ctx.createRadialGradient(dx + TS / 2, dy + TS, 0, dx + TS / 2, dy + TS, 90);
         var a = 0.35 + Math.sin(w.time * 4) * 0.12;
@@ -890,9 +892,9 @@ window.RR = window.RR || {};
     ctx.restore();
 
     Art.drawLayer(ctx, w.backdrop.canopy, view, camX, 0.6,
-      vp.y + w.backdrop.canopy.height * scale - (camY - maxCamY) * 0.18 * scale, 0.85, scale);
+      vp.y + w.backdrop.canopy.worldH * scale - (camY - maxCamY) * 0.18 * scale, 0.85, scale);
     Art.drawLayer(ctx, w.backdrop.near, view, camX, 0.7,
-      floorY + (w.backdrop.near.height - 72) * scale + (maxCamY - camY) * scale, 0.92, scale);
+      floorY + (w.backdrop.near.worldH - 72) * scale + (maxCamY - camY) * scale, 0.92, scale);
 
     /* vignette + warm tint */
     var vg = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.35,
@@ -904,6 +906,14 @@ window.RR = window.RR || {};
     ctx.fillStyle = w.theme.tint;
     ctx.fillRect(0, 0, view.w, view.h);
   }
+
+  /* Re-bake the artwork when the zoom or pixel ratio changes enough that the
+     current bitmaps would be visibly upscaled. */
+  G.rebuildArt = function () {
+    if (!G.world) return;
+    G.world.tiles = Art.buildTiles(G.world.theme, G.detail);
+    G.world.backdrop = Art.backdropLayers(G.world.theme, G.detail);
+  };
 
   G.renderWorld = worldRender;
   G.startLevel = startLevel;

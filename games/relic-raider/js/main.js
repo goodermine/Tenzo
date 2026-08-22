@@ -12,7 +12,7 @@
   var dpr = 1;
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
     var w = window.innerWidth || document.documentElement.clientWidth;
     var h = window.innerHeight || document.documentElement.clientHeight;
     view.w = w;
@@ -33,6 +33,15 @@
       ? w / (minTilesX * 32)
       : Math.min(w / (minTilesX * 32), h / (minTilesY * 32));
     view.scale = Math.max(1.05, Math.min(4, s));
+
+    /* Bake artwork at (at least) one bitmap pixel per device pixel. Quantised
+       to whole steps so dragging a window edge does not re-bake every frame. */
+    var detail = Math.max(1, Math.min(6, Math.ceil(view.scale * dpr)));
+    if (detail !== G.detail) {
+      G.detail = detail;
+      G.rebuildArt();
+      RR.UI.titleBackdrop = null;
+    }
 
     var worldPx = RR.Levels.WORLD_ROWS * 32 * view.scale;
     var bandH = Math.min(h, worldPx);
@@ -75,7 +84,8 @@
     G.update(dt);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#0d0b07';
     ctx.fillRect(0, 0, view.w, view.h);
     UI.render(ctx, view, dt);

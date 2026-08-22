@@ -11,7 +11,8 @@ temple comes down on top of you.
 
 Open `index.html` — that's it. No build step, no dependencies, no network
 access, and no asset files: every sprite, tile, backdrop and sound effect is
-generated procedurally at load time.
+generated procedurally at load time, at whatever resolution your screen needs
+(see [Resolution](#resolution) below).
 
 Some browsers restrict `file://` pages; if anything misbehaves, serve the
 folder instead:
@@ -84,6 +85,18 @@ Add a chunk to `CHUNKS`, keeping solid ground on the outer columns so it
 connects to its neighbours, then list it in a level's `chunks` array. The tile
 legend is at the top of that file. Every level needs a `start` chunk (it holds
 the spawn `P` and the door `D`) and a chunk containing the relic `R`.
+
+### Resolution
+
+Nothing is pre-rendered, so there is no fixed art resolution to outgrow.
+Characters, pickups and the UI are drawn as vector paths every frame, and the
+baked bitmaps — tiles and parallax backdrops — are re-rendered whenever the
+zoom or the device pixel ratio changes, at one bitmap pixel per device pixel
+(`Game.detail`, up to 6x, capped at 2.5x for the large backdrop layers).
+On a 3x phone panel that means 192px tiles rather than 32px ones, so cracks,
+moss blades and carved glyphs stay sharp instead of being upscaled. Re-baking
+a full set costs about 30ms, and only happens on level start or a resize that
+crosses a detail step.
 
 ### Layout on tall screens
 
