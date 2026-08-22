@@ -129,41 +129,63 @@ window.RR = window.RR || {};
     ctx.restore();
   }
 
+  /* iPhone Safari has no element fullscreen, and an embedded page may be
+     denied it by permissions policy — in both cases the button is hidden
+     rather than left there doing nothing. */
+  function fullscreenAvailable() {
+    var el = document.documentElement;
+    if (!(el.requestFullscreen || el.webkitRequestFullscreen)) return false;
+    var enabled = document.fullscreenEnabled;
+    if (enabled === undefined) enabled = document.webkitFullscreenEnabled;
+    return enabled !== false;
+  }
+
   function cornerIcons(ctx, view, withPause) {
     var s = Math.round(Math.max(36, U.scale * 36));
     var pad = Math.round(U.scale * 10);
-    var x = view.w - pad - s;
-    var y = pad;
-    var fsRect = rect(x, y, s, s);
-    x -= s + pad * 0.6;
-    var sndRect = rect(x, y, s, s);
-    iconButton(ctx, fsRect, 'fullscreen');
-    iconButton(ctx, sndRect, 'sound', !Audio.muted);
-    if (tapped(fsRect)) toggleFullscreen();
-    if (tapped(sndRect)) {
-      Audio.resume();
-      Audio.toggleMute();
-      Audio.play('ui');
+    var inset = view.inset || { top: 0, right: 0, bottom: 0, left: 0 };
+    var items = [];
+    if (fullscreenAvailable()) {
+      items.push({ kind: 'fullscreen', run: toggleFullscreen });
     }
-    if (withPause) {
-      x -= s + pad * 0.6;
-      var pRect = rect(x, y, s, s);
-      iconButton(ctx, pRect, 'pause');
-      if (tapped(pRect)) {
-        G.state = 'paused';
-        U.sel = 0;
+    items.push({
+      kind: 'sound',
+      active: !Audio.muted,
+      run: function () {
+        Audio.resume();
+        Audio.toggleMute();
+        Audio.play('ui');
       }
+    });
+    if (withPause) {
+      items.push({
+        kind: 'pause',
+        run: function () {
+          G.state = 'paused';
+          U.sel = 0;
+        }
+      });
+    }
+    var x = view.w - pad - s - inset.right;
+    var y = pad + inset.top;
+    for (var i = 0; i < items.length; i++) {
+      var r = rect(x, y, s, s);
+      iconButton(ctx, r, items[i].kind, items[i].active);
+      if (tapped(r)) items[i].run();
+      x -= s + pad * 0.6;
     }
   }
 
   function toggleFullscreen() {
     try {
-      if (!document.fullscreenElement) {
+      var p;
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         var el = document.documentElement;
-        (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
+        p = (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
       } else {
-        (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
+        p = (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
       }
+      if (p && typeof p.catch === 'function') p.catch(function () { /* denied */ });
     } catch (e) { /* not permitted */ }
   }
 
@@ -523,8 +545,11 @@ window.RR = window.RR || {};
 
   function drawHud(ctx, view, w) {
     var s = U.scale;
+    var inset = view.inset || { top: 0, right: 0, bottom: 0, left: 0 };
     var pad = Math.round(10 * s);
     var i;
+    ctx.save();
+    ctx.translate(inset.left, inset.top);
     for (i = 0; i < G.MAX_HEARTS; i++) {
       Art.heart(ctx, pad + 14 * s + i * 26 * s, pad + 14 * s, 22 * s, i < w.hearts);
     }
@@ -548,12 +573,13 @@ window.RR = window.RR || {};
       Art.drawRelic(ctx, { x: -14, y: -16, w: 28, h: 32, seed: 0 }, U.t);
       ctx.restore();
     }
+    ctx.restore();
 
     /* collapse warning */
     if (w.collapse.active) {
       var bw = Math.min(view.w * 0.72, 420);
       var bx = (view.w - bw) / 2;
-      var by = pad + 4 * s;
+      var by = pad + 4 * s + inset.top;
       var pulse = 0.55 + Math.sin(U.t * 8) * 0.2;
       ctx.fillStyle = 'rgba(120,20,10,' + pulse.toFixed(2) + ')';
       ctx.beginPath();
@@ -611,9 +637,10 @@ window.RR = window.RR || {};
 
   function layoutPad(view) {
     var s = U.scale;
+    var inset = view.inset || { top: 0, right: 0, bottom: 0, left: 0 };
     var r = Math.max(34, Math.min(52, view.w * 0.085)) * (s > 1.4 ? 1.1 : 1);
-    var cx = r * 2.1;
-    var cy = view.h - r * 2.1;
+    var cx = r * 2.1 + inset.left;
+    var cy = view.h - r * 2.1 - inset.bottom;
     var b = r * 0.92;
     U.pad = {
       r: r,
@@ -622,7 +649,7 @@ window.RR = window.RR || {};
       right: rect(cx + r - b / 2, cy - b / 2, b, b),
       up: rect(cx - b / 2, cy - r - b / 2, b, b),
       down: rect(cx - b / 2, cy + r - b / 2, b, b),
-      jump: rect(view.w - r * 2.6, view.h - r * 2.6, r * 1.9, r * 1.9)
+      jump: rect(view.w - r * 2.6 - inset.right, view.h - r * 2.6 - inset.bottom, r * 1.9, r * 1.9)
     };
     return U.pad;
   }

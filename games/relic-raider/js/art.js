@@ -24,6 +24,45 @@ window.RR = window.RR || {};
     return c;
   }
 
+  /* Bitmaps are baked once at a chosen density and then blitted every frame.
+     Caching a copy at the exact on-screen device size turns each of those
+     blits into a 1:1 copy instead of a filtered rescale, which is by far the
+     biggest per-frame cost in this renderer. */
+  var _dpr = 1;
+  var _sky = null;
+  var _vig = null;
+
+  function setPixelRatio(d) {
+    d = d || 1;
+    if (d === _dpr) return;
+    _dpr = d;
+    _sky = null;
+    _vig = null;
+  }
+
+  function prescale(img, wCss, hCss) {
+    var tw = Math.max(1, Math.round(wCss * _dpr));
+    var th = Math.max(1, Math.round(hCss * _dpr));
+    var ps = img._ps;
+    if (!ps || ps.width !== tw || ps.height !== th) {
+      ps = make(tw, th);
+      var g = ps.getContext('2d');
+      g.imageSmoothingEnabled = true;
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(img, 0, 0, tw, th);
+      img._ps = ps;
+    }
+    return ps;
+  }
+
+  function screenLayer(wCss, hCss, draw) {
+    var c = make(Math.round(wCss * _dpr), Math.round(hCss * _dpr));
+    var g = c.getContext('2d');
+    g.scale(_dpr, _dpr);
+    draw(g);
+    return c;
+  }
+
   function shade(hex, amt) {
     var n = parseInt(hex.slice(1), 16);
     var r = Math.min(255, Math.max(0, ((n >> 16) & 255) + amt));
@@ -551,20 +590,49 @@ window.RR = window.RR || {};
   }
 
   function drawSky(ctx, view, theme) {
-    var g = ctx.createLinearGradient(0, 0, 0, view.h);
-    g.addColorStop(0, theme.skyTop);
-    g.addColorStop(0.55, theme.skyMid);
-    g.addColorStop(1, theme.skyLow);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, view.w, view.h);
-    var sx = view.w * 0.62;
-    var sy = view.h * 0.22;
-    var rad = Math.max(view.w, view.h) * 0.45;
-    var sun = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad);
-    sun.addColorStop(0, theme.sun);
-    sun.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = sun;
-    ctx.fillRect(0, 0, view.w, view.h);
+    if (!_sky || _sky.w !== view.w || _sky.h !== view.h || _sky.theme !== theme) {
+      _sky = {
+        w: view.w, h: view.h, theme: theme,
+        canvas: screenLayer(view.w, view.h, function (g) {
+          var grad = g.createLinearGradient(0, 0, 0, view.h);
+          grad.addColorStop(0, theme.skyTop);
+          grad.addColorStop(0.55, theme.skyMid);
+          grad.addColorStop(1, theme.skyLow);
+          g.fillStyle = grad;
+          g.fillRect(0, 0, view.w, view.h);
+          var sx = view.w * 0.62;
+          var sy = view.h * 0.22;
+          var rad = Math.max(view.w, view.h) * 0.45;
+          var sun = g.createRadialGradient(sx, sy, 0, sx, sy, rad);
+          sun.addColorStop(0, theme.sun);
+          sun.addColorStop(1, 'rgba(0,0,0,0)');
+          g.fillStyle = sun;
+          g.fillRect(0, 0, view.w, view.h);
+        })
+      };
+    }
+    ctx.drawImage(_sky.canvas, 0, 0, view.w, view.h);
+  }
+
+  /* Vignette plus the level's colour wash, also cached per size/theme. */
+  function drawVignette(ctx, view, theme) {
+    if (!_vig || _vig.w !== view.w || _vig.h !== view.h || _vig.theme !== theme) {
+      _vig = {
+        w: view.w, h: view.h, theme: theme,
+        canvas: screenLayer(view.w, view.h, function (g) {
+          var vg = g.createRadialGradient(
+            view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.35,
+            view.w / 2, view.h / 2, Math.max(view.w, view.h) * 0.72);
+          vg.addColorStop(0, 'rgba(0,0,0,0)');
+          vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+          g.fillStyle = vg;
+          g.fillRect(0, 0, view.w, view.h);
+          g.fillStyle = theme.tint;
+          g.fillRect(0, 0, view.w, view.h);
+        })
+      };
+    }
+    ctx.drawImage(_vig.canvas, 0, 0, view.w, view.h);
   }
 
   /* Draw a parallax layer, repeated horizontally. camX is in world units and
@@ -576,9 +644,10 @@ window.RR = window.RR || {};
     var y = Math.round(baseY - h);
     var offset = -((camX * factor * scale) % w);
     if (offset > 0) offset -= w;
+    var img = prescale(layer, w, h);
     ctx.globalAlpha = alpha == null ? 1 : alpha;
     for (var x = offset; x < view.w; x += w) {
-      ctx.drawImage(layer, Math.round(x), y, w, h);
+      ctx.drawImage(img, Math.round(x), y, w, h);
     }
     ctx.globalAlpha = 1;
   }
@@ -1178,6 +1247,9 @@ window.RR = window.RR || {};
     buildTiles: buildTiles,
     backdropLayers: backdropLayers,
     drawSky: drawSky,
+    drawVignette: drawVignette,
+    prescale: prescale,
+    setPixelRatio: setPixelRatio,
     drawLayer: drawLayer,
     drawPlayer: drawPlayer,
     drawGuardian: drawGuardian,

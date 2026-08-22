@@ -36,7 +36,11 @@ window.RR = window.RR || {};
     totalScore: 0,
     best: 0,
     time: 0,
-    view: { w: 800, h: 600, scale: 2, vp: { x: 0, y: 0, w: 800, h: 600 } },
+    view: {
+      w: 800, h: 600, scale: 2,
+      vp: { x: 0, y: 0, w: 800, h: 600 },
+      inset: { top: 0, right: 0, bottom: 0, left: 0 }
+    },
     ui: {},
     banner: null,
     flash: 0,
@@ -767,7 +771,7 @@ window.RR = window.RR || {};
         if (ch === '#' || ch === '<' || ch === '>') {
           var above = ty > 0 ? w.grid[ty - 1][tx] : ' ';
           var img = (above === ' ' || above === 'v' || above === '^') ? tiles.mossy[vi] : tiles.stone[vi];
-          ctx.drawImage(img, px, py, TS, TS);
+          ctx.drawImage(Art.prescale(img, TS * scale, TS * scale), px, py, TS, TS);
           if (ch === '<' || ch === '>') {
             ctx.fillStyle = 'rgba(10,6,2,0.9)';
             ctx.fillRect(ch === '<' ? px + 1 : px + TS - 8, py + TS / 2 - 5, 7, 10);
@@ -779,12 +783,13 @@ window.RR = window.RR || {};
           if (c && c.state === 'gone') continue;
           var jitter = c && c.state === 'shaking' ? (Math.random() - 0.5) * 2.4 : 0;
           ctx.globalAlpha = c && c.state === 'falling' ? Math.max(0, 1 - c.oy / (TS * 6)) : 1;
-          ctx.drawImage(tiles.crumble[vi], px + jitter, py + (c ? c.oy : 0), TS, TS);
+          ctx.drawImage(Art.prescale(tiles.crumble[vi], TS * scale, TS * scale),
+            px + jitter, py + (c ? c.oy : 0), TS, TS);
           ctx.globalAlpha = 1;
         } else if (ch === '^') {
-          ctx.drawImage(tiles.spike, px, py, TS, TS);
+          ctx.drawImage(Art.prescale(tiles.spike, TS * scale, TS * scale), px, py, TS, TS);
         } else if (ch === 'v') {
-          ctx.drawImage(tiles.vine, px, py, TS, TS);
+          ctx.drawImage(Art.prescale(tiles.vine, TS * scale, TS * scale), px, py, TS, TS);
         }
       }
     }
@@ -793,7 +798,7 @@ window.RR = window.RR || {};
     if (w.door) {
       var dx = w.door.x;
       var dy = w.door.y - TS;
-      ctx.drawImage(tiles.door, dx, dy, TS, TS * 2);
+      ctx.drawImage(Art.prescale(tiles.door, TS * scale, TS * 2 * scale), dx, dy, TS, TS * 2);
       if (w.doorOpen) {
         var glow = ctx.createRadialGradient(dx + TS / 2, dy + TS, 0, dx + TS / 2, dy + TS, 90);
         var a = 0.35 + Math.sin(w.time * 4) * 0.12;
@@ -896,15 +901,7 @@ window.RR = window.RR || {};
     Art.drawLayer(ctx, w.backdrop.near, view, camX, 0.7,
       floorY + (w.backdrop.near.worldH - 72) * scale + (maxCamY - camY) * scale, 0.92, scale);
 
-    /* vignette + warm tint */
-    var vg = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.35,
-      view.w / 2, view.h / 2, Math.max(view.w, view.h) * 0.72);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, view.w, view.h);
-    ctx.fillStyle = w.theme.tint;
-    ctx.fillRect(0, 0, view.w, view.h);
+    Art.drawVignette(ctx, view, w.theme);
   }
 
   /* Re-bake the artwork when the zoom or pixel ratio changes enough that the

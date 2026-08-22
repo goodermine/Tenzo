@@ -98,6 +98,21 @@ moss blades and carved glyphs stay sharp instead of being upscaled. Re-baking
 a full set costs about 30ms, and only happens on level start or a resize that
 crosses a detail step.
 
+Every baked bitmap also keeps a copy at its exact on-screen device size, so
+the per-frame draw is a 1:1 blit rather than a filtered rescale — the single
+biggest win in the renderer. The sky and the vignette are cached the same way
+instead of being re-gradiented each frame. The device pixel ratio is kept a
+whole number for the same reason: at a fractional ratio, integer CSS
+coordinates land between device pixels and every blit falls back to filtering.
+
+If the frame rate still can't hold up, the game notices: it samples frame
+times and steps the render scale down (3x -> 2x -> 1x, never back up) so a
+weaker device stays smooth instead of crawling at full resolution.
+
+On iPhone, the HUD, the corner buttons and the thumb pad are kept inside the
+safe area, and the fullscreen button hides itself where the browser doesn't
+allow element fullscreen (iPhone Safari, or an embedded frame).
+
 ### Layout on tall screens
 
 The world is drawn into a horizontal band sized to the level's height. On a
