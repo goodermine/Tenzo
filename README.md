@@ -105,6 +105,8 @@ Returns:
 - [`games/relic-raider`](games/relic-raider/) — Relic Raider, a self-contained
   browser platformer (no build step, no dependencies). Unrelated to the
   analysis pipeline; open its `index.html` to play.
+- [`games/greyline`](games/greyline/) — Greyline, a browser first-person
+  shooter with a fully procedural 3D world, built on three.js.
 
 ## License
 

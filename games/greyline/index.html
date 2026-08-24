@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Greyline</title>
+    <meta name="description" content="A browser first-person shooter with a fully procedural 3D world." />
+    <meta name="theme-color" content="#0a0b0c" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="hud"></div>
+
+    <div class="touch">
+      <button class="tbtn fire" data-act="fire">FIRE</button>
+      <button class="tbtn ads" data-act="ads">AIM</button>
+      <button class="tbtn jump" data-act="jump">JUMP</button>
+      <button class="tbtn crouch" data-act="crouch">CROUCH</button>
+      <button class="tbtn reload" data-act="reload">RELOAD</button>
+    </div>
+
+    <div id="rotate">TURN YOUR DEVICE SIDEWAYS<span>this one wants a landscape screen</span></div>
+
+    <div id="loading">
+      <div class="lwrap">
+        <h1>GREYLINE</h1>
+        <div class="track"><div id="bar"></div></div>
+        <p id="loadmsg">generating surfaces</p>
+      </div>
+    </div>
+
+    <div id="overlay">
+      <div class="panel">
+        <h1 class="title">GREYLINE</h1>
+        <p class="sub">Sector 07 — hostiles active</p>
+        <button id="play" class="play">DEPLOY</button>
+        <div class="controls">
+          <div><b>WASD</b> move · <b>SHIFT</b> sprint · <b>CTRL</b> crouch · <b>SPACE</b> jump</div>
+          <div><b>MOUSE</b> look · <b>LMB</b> fire · <b>RMB</b> aim · <b>R</b> reload · <b>ESC</b> pause</div>
+          <div class="touchonly">Left half of the screen moves, right half looks. Buttons fire, aim and reload.</div>
+          <div class="lockhint">Embedded view: hold the left button and drag to look.</div>
+        </div>
+        <div class="quality">
+          <span>QUALITY</span>
+          <button data-quality="low">LOW</button>
+          <button data-quality="medium">MEDIUM</button>
+          <button data-quality="high" class="sel">HIGH</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="dist/greyline.js"></script>
+  </body>
+</html>
