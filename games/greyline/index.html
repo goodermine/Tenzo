@@ -18,6 +18,17 @@
       <button class="tbtn jump" data-act="jump">JUMP</button>
       <button class="tbtn crouch" data-act="crouch">CROUCH</button>
       <button class="tbtn reload" data-act="reload">RELOAD</button>
+      <button class="tbtn use" data-act="use">USE</button>
+      <button class="tbtn swap" data-act="swap">SWAP</button>
+      <button class="tbtn det" data-act="detonate">DET</button>
+    </div>
+
+    <div id="briefing">
+      <div class="bwrap">
+        <p class="beyebrow">MISSION BRIEFING · <span class="bdiff">AGENT</span></p>
+        <h2>SECTOR 07 RESEARCH COMPOUND</h2>
+        <ul></ul>
+      </div>
     </div>
 
     <div id="rotate">TURN YOUR DEVICE SIDEWAYS<span>this one wants a landscape screen</span></div>
@@ -35,9 +46,17 @@
         <h1 class="title">GREYLINE</h1>
         <p class="sub">Sector 07 — hostiles active</p>
         <button id="play" class="play">DEPLOY</button>
+        <div class="debrief"></div>
+        <div class="difficulty">
+          <span>DIFFICULTY</span>
+          <button data-diff="agent" class="sel">AGENT</button>
+          <button data-diff="secret">SECRET AGENT</button>
+          <button data-diff="00">00 AGENT</button>
+        </div>
         <div class="controls">
           <div><b>WASD</b> move · <b>SHIFT</b> sprint · <b>CTRL</b> crouch · <b>SPACE</b> jump</div>
           <div><b>MOUSE</b> look · <b>LMB</b> fire · <b>RMB</b> aim · <b>R</b> reload · <b>ESC</b> pause</div>
+          <div><b>F</b> use · <b>1-5</b> / <b>Q</b> weapon · <b>G</b> detonate</div>
           <div class="touchonly">Left half of the screen moves, right half looks. Buttons fire, aim and reload.</div>
           <div class="lockhint">Embedded view: hold the left button and drag to look.</div>
         </div>

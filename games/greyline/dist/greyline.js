@@ -4356,15 +4356,15 @@
      * @param {Object} values - A container with texture parameters.
      */
     setValues(values) {
-      for (const key in values) {
-        const newValue = values[key];
+      for (const key2 in values) {
+        const newValue = values[key2];
         if (newValue === void 0) {
-          warn(`Texture.setValues(): parameter '${key}' has value of undefined.`);
+          warn(`Texture.setValues(): parameter '${key2}' has value of undefined.`);
           continue;
         }
-        const currentValue = this[key];
+        const currentValue = this[key2];
         if (currentValue === void 0) {
-          warn(`Texture.setValues(): property '${key}' does not exist.`);
+          warn(`Texture.setValues(): property '${key2}' does not exist.`);
           continue;
         }
         if (currentValue && newValue && (currentValue.isVector2 && newValue.isVector2)) {
@@ -4374,7 +4374,7 @@
         } else if (currentValue && newValue && (currentValue.isMatrix3 && newValue.isMatrix3)) {
           currentValue.copy(newValue);
         } else {
-          this[key] = newValue;
+          this[key2] = newValue;
         }
       }
     }
@@ -7943,8 +7943,8 @@
       return output;
       function extractFromCache(cache) {
         const values = [];
-        for (const key in cache) {
-          const data = cache[key];
+        for (const key2 in cache) {
+          const data = cache[key2];
           delete data.metadata;
           values.push(data);
         }
@@ -11694,8 +11694,8 @@
       if (Object.keys(this.userData).length > 0) data.userData = this.userData;
       if (this.parameters !== void 0 && this._transformed !== true) {
         const parameters = this.parameters;
-        for (const key in parameters) {
-          if (parameters[key] !== void 0) data[key] = parameters[key];
+        for (const key2 in parameters) {
+          if (parameters[key2] !== void 0) data[key2] = parameters[key2];
         }
         return data;
       }
@@ -11708,21 +11708,21 @@
         };
       }
       const attributes = this.attributes;
-      for (const key in attributes) {
-        const attribute = attributes[key];
-        data.data.attributes[key] = attribute.toJSON(data.data);
+      for (const key2 in attributes) {
+        const attribute = attributes[key2];
+        data.data.attributes[key2] = attribute.toJSON(data.data);
       }
       const morphAttributes = {};
       let hasMorphAttributes = false;
-      for (const key in this.morphAttributes) {
-        const attributeArray = this.morphAttributes[key];
+      for (const key2 in this.morphAttributes) {
+        const attributeArray = this.morphAttributes[key2];
         const array = [];
         for (let i = 0, il = attributeArray.length; i < il; i++) {
           const attribute = attributeArray[i];
           array.push(attribute.toJSON(data.data));
         }
         if (array.length > 0) {
-          morphAttributes[key] = array;
+          morphAttributes[key2] = array;
           hasMorphAttributes = true;
         }
       }
@@ -12433,15 +12433,15 @@
      */
     setValues(values) {
       if (values === void 0) return;
-      for (const key in values) {
-        const newValue = values[key];
+      for (const key2 in values) {
+        const newValue = values[key2];
         if (newValue === void 0) {
-          warn(`Material: parameter '${key}' has value of undefined.`);
+          warn(`Material: parameter '${key2}' has value of undefined.`);
           continue;
         }
-        const currentValue = this[key];
+        const currentValue = this[key2];
         if (currentValue === void 0) {
-          warn(`Material: '${key}' is not a property of THREE.${this.type}.`);
+          warn(`Material: '${key2}' is not a property of THREE.${this.type}.`);
           continue;
         }
         if (currentValue && currentValue.isColor) {
@@ -12449,7 +12449,7 @@
         } else if (currentValue && currentValue.isVector2 && (newValue && newValue.isVector2) || currentValue && currentValue.isEuler && (newValue && newValue.isEuler) || currentValue && currentValue.isVector3 && (newValue && newValue.isVector3)) {
           currentValue.copy(newValue);
         } else {
-          this[key] = newValue;
+          this[key2] = newValue;
         }
       }
     }
@@ -12625,8 +12625,8 @@
       if (Object.keys(this.userData).length > 0) data.userData = this.userData;
       function extractFromCache(cache) {
         const values = [];
-        for (const key in cache) {
-          const data2 = cache[key];
+        for (const key2 in cache) {
+          const data2 = cache[key2];
           delete data2.metadata;
           values.push(data2);
         }
@@ -15605,8 +15605,8 @@
         if (geometryInfo.vertexStart !== nextVertexStart) {
           const { vertexStart, reservedVertexCount } = geometryInfo;
           const attributes = geometry.attributes;
-          for (const key in attributes) {
-            const attribute = attributes[key];
+          for (const key2 in attributes) {
+            const attribute = attributes[key2];
             const { array, itemSize } = attribute;
             array.copyWithin(nextVertexStart * itemSize, vertexStart * itemSize, (vertexStart + reservedVertexCount) * itemSize);
             attribute.addUpdateRange(nextVertexStart * itemSize, reservedVertexCount * itemSize);
@@ -15894,8 +15894,8 @@
       if (oldGeometry.index) {
         copyArrayContents(oldGeometry.index.array, geometry.index.array);
       }
-      for (const key in oldGeometry.attributes) {
-        copyArrayContents(oldGeometry.attributes[key].array, geometry.attributes[key].array);
+      for (const key2 in oldGeometry.attributes) {
+        copyArrayContents(oldGeometry.attributes[key2].array, geometry.attributes[key2].array);
       }
     }
     raycast(raycaster, intersects2) {
@@ -17744,9 +17744,9 @@
             }
           }
         }
-        for (const key in edgeData) {
-          if (edgeData[key]) {
-            const { index0, index1 } = edgeData[key];
+        for (const key2 in edgeData) {
+          if (edgeData[key2]) {
+            const { index0, index1 } = edgeData[key2];
             _v0.fromBufferAttribute(positionAttr, index0);
             _v1$1.fromBufferAttribute(positionAttr, index1);
             vertices.push(_v0.x, _v0.y, _v0.z);
@@ -21462,8 +21462,8 @@
       data.lights = this.lights;
       data.clipping = this.clipping;
       const extensions = {};
-      for (const key in this.extensions) {
-        if (this.extensions[key] === true) extensions[key] = true;
+      for (const key2 in this.extensions) {
+        if (this.extensions[key2] === true) extensions[key2] = true;
       }
       if (Object.keys(extensions).length > 0) data.extensions = extensions;
       return data;
@@ -21513,8 +21513,8 @@
       if (json.fragmentShader !== void 0) this.fragmentShader = json.fragmentShader;
       if (json.glslVersion !== void 0) this.glslVersion = json.glslVersion;
       if (json.extensions !== void 0) {
-        for (const key in json.extensions) {
-          this.extensions[key] = json.extensions[key];
+        for (const key2 in json.extensions) {
+          this.extensions[key2] = json.extensions[key2];
         }
       }
       if (json.lights !== void 0) this.lights = json.lights;
@@ -22285,40 +22285,40 @@
     return result;
   }
   function flattenJSON(jsonKeys, times, values, valuePropertyName) {
-    let i = 1, key = jsonKeys[0];
-    while (key !== void 0 && key[valuePropertyName] === void 0) {
-      key = jsonKeys[i++];
+    let i = 1, key2 = jsonKeys[0];
+    while (key2 !== void 0 && key2[valuePropertyName] === void 0) {
+      key2 = jsonKeys[i++];
     }
-    if (key === void 0) return;
-    let value = key[valuePropertyName];
+    if (key2 === void 0) return;
+    let value = key2[valuePropertyName];
     if (value === void 0) return;
     if (Array.isArray(value)) {
       do {
-        value = key[valuePropertyName];
+        value = key2[valuePropertyName];
         if (value !== void 0) {
-          times.push(key.time);
+          times.push(key2.time);
           values.push(...value);
         }
-        key = jsonKeys[i++];
-      } while (key !== void 0);
+        key2 = jsonKeys[i++];
+      } while (key2 !== void 0);
     } else if (value.toArray !== void 0) {
       do {
-        value = key[valuePropertyName];
+        value = key2[valuePropertyName];
         if (value !== void 0) {
-          times.push(key.time);
+          times.push(key2.time);
           value.toArray(values, values.length);
         }
-        key = jsonKeys[i++];
-      } while (key !== void 0);
+        key2 = jsonKeys[i++];
+      } while (key2 !== void 0);
     } else {
       do {
-        value = key[valuePropertyName];
+        value = key2[valuePropertyName];
         if (value !== void 0) {
-          times.push(key.time);
+          times.push(key2.time);
           values.push(value);
         }
-        key = jsonKeys[i++];
-      } while (key !== void 0);
+        key2 = jsonKeys[i++];
+      } while (key2 !== void 0);
     }
   }
   function subclip(sourceClip, name, startFrame, endFrame, fps = 30) {
@@ -23572,10 +23572,10 @@
      * @param {string} key - The key to reference the cached file.
      * @param {Object} file -  The file to be cached.
      */
-    add: function(key, file) {
+    add: function(key2, file) {
       if (this.enabled === false) return;
-      if (isBlobURL(key)) return;
-      this.files[key] = file;
+      if (isBlobURL(key2)) return;
+      this.files[key2] = file;
     },
     /**
      * Gets the cached value for the given key.
@@ -23584,10 +23584,10 @@
      * @param {string} key - The key to reference the cached file.
      * @return {Object|undefined} The cached file. If the key does not exist `undefined` is returned.
      */
-    get: function(key) {
+    get: function(key2) {
       if (this.enabled === false) return;
-      if (isBlobURL(key)) return;
-      return this.files[key];
+      if (isBlobURL(key2)) return;
+      return this.files[key2];
     },
     /**
      * Removes the cached file associated with the given key.
@@ -23595,8 +23595,8 @@
      * @static
      * @param {string} key - The key to reference the cached file.
      */
-    remove: function(key) {
-      delete this.files[key];
+    remove: function(key2) {
+      delete this.files[key2];
     },
     /**
      * Remove all values from the cache.
@@ -23607,9 +23607,9 @@
       this.files = {};
     }
   };
-  function isBlobURL(key) {
+  function isBlobURL(key2) {
     try {
-      const urlString = key.slice(key.indexOf(":") + 1);
+      const urlString = key2.slice(key2.indexOf(":") + 1);
       const url = new URL(urlString);
       return url.protocol === "blob:";
     } catch (e) {
@@ -25796,8 +25796,8 @@
         geometry.setIndex(new BufferAttribute(typedArray, 1));
       }
       const attributes = json.data.attributes;
-      for (const key in attributes) {
-        const attribute = attributes[key];
+      for (const key2 in attributes) {
+        const attribute = attributes[key2];
         let bufferAttribute;
         if (attribute.isInterleavedBufferAttribute) {
           const interleavedBuffer = getInterleavedBuffer(json.data, attribute.data);
@@ -25809,12 +25809,12 @@
         }
         if (attribute.name !== void 0) bufferAttribute.name = attribute.name;
         if (attribute.usage !== void 0) bufferAttribute.setUsage(attribute.usage);
-        geometry.setAttribute(key, bufferAttribute);
+        geometry.setAttribute(key2, bufferAttribute);
       }
       const morphAttributes = json.data.morphAttributes;
       if (morphAttributes) {
-        for (const key in morphAttributes) {
-          const attributeArray = morphAttributes[key];
+        for (const key2 in morphAttributes) {
+          const attributeArray = morphAttributes[key2];
           const array = [];
           for (let i = 0, il = attributeArray.length; i < il; i++) {
             const attribute = attributeArray[i];
@@ -25829,7 +25829,7 @@
             if (attribute.name !== void 0) bufferAttribute.name = attribute.name;
             array.push(bufferAttribute);
           }
-          geometry.morphAttributes[key] = array;
+          geometry.morphAttributes[key2] = array;
         }
       }
       const morphTargetsRelative = json.data.morphTargetsRelative;
@@ -36631,7 +36631,7 @@
       if (value === 0) return "uv";
       return `uv${value}`;
     }
-    function getParameters(material, lights, shadows, scene, object, lightProbeGrids) {
+    function getParameters(material, lights2, shadows, scene, object, lightProbeGrids) {
       const fog = scene.fog;
       const geometry = object.geometry;
       const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene.environment : null;
@@ -36815,17 +36815,17 @@
         morphColors: geometry.morphAttributes.color !== void 0,
         morphTargetsCount,
         morphTextureStride,
-        numDirLights: lights.directional.length,
-        numPointLights: lights.point.length,
-        numSpotLights: lights.spot.length,
-        numSpotLightMaps: lights.spotLightMap.length,
-        numRectAreaLights: lights.rectArea.length,
-        numHemiLights: lights.hemi.length,
-        numDirLightShadows: lights.directionalShadowMap.length,
-        numPointLightShadows: lights.pointShadowMap.length,
-        numSpotLightShadows: lights.spotShadowMap.length,
-        numSpotLightShadowsWithMaps: lights.numSpotLightShadowsWithMaps,
-        numLightProbes: lights.numLightProbes,
+        numDirLights: lights2.directional.length,
+        numPointLights: lights2.point.length,
+        numSpotLights: lights2.spot.length,
+        numSpotLightMaps: lights2.spotLightMap.length,
+        numRectAreaLights: lights2.rectArea.length,
+        numHemiLights: lights2.hemi.length,
+        numDirLightShadows: lights2.directionalShadowMap.length,
+        numPointLightShadows: lights2.pointShadowMap.length,
+        numSpotLightShadows: lights2.spotShadowMap.length,
+        numSpotLightShadowsWithMaps: lights2.numSpotLightShadowsWithMaps,
+        numLightProbes: lights2.numLightProbes,
         numLightProbeGrids: lightProbeGrids.length,
         numClippingPlanes: clipping.numPlanes,
         numClipIntersection: clipping.numIntersection,
@@ -37091,8 +37091,8 @@
     function remove(object) {
       properties.delete(object);
     }
-    function update(object, key, value) {
-      properties.get(object)[key] = value;
+    function update(object, key2, value) {
+      properties.get(object)[key2] = value;
     }
     function dispose() {
       properties = /* @__PURE__ */ new WeakMap();
@@ -37257,11 +37257,11 @@
     };
   }
   function UniformsCache() {
-    const lights = {};
+    const lights2 = {};
     return {
       get: function(light) {
-        if (lights[light.id] !== void 0) {
-          return lights[light.id];
+        if (lights2[light.id] !== void 0) {
+          return lights2[light.id];
         }
         let uniforms;
         switch (light.type) {
@@ -37306,17 +37306,17 @@
             };
             break;
         }
-        lights[light.id] = uniforms;
+        lights2[light.id] = uniforms;
         return uniforms;
       }
     };
   }
   function ShadowUniformsCache() {
-    const lights = {};
+    const lights2 = {};
     return {
       get: function(light) {
-        if (lights[light.id] !== void 0) {
-          return lights[light.id];
+        if (lights2[light.id] !== void 0) {
+          return lights2[light.id];
         }
         let uniforms;
         switch (light.type) {
@@ -37350,7 +37350,7 @@
             };
             break;
         }
-        lights[light.id] = uniforms;
+        lights2[light.id] = uniforms;
         return uniforms;
       }
     };
@@ -37402,7 +37402,7 @@
     const vector3 = new Vector3();
     const matrix4 = new Matrix4();
     const matrix42 = new Matrix4();
-    function setup(lights) {
+    function setup(lights2) {
       let r = 0, g = 0, b = 0;
       for (let i = 0; i < 9; i++) state.probe[i].set(0, 0, 0);
       let directionalLength = 0;
@@ -37416,9 +37416,9 @@
       let numSpotMaps = 0;
       let numSpotShadowsWithMaps = 0;
       let numLightProbes = 0;
-      lights.sort(shadowCastingAndTexturingLightsFirst);
-      for (let i = 0, l = lights.length; i < l; i++) {
-        const light = lights[i];
+      lights2.sort(shadowCastingAndTexturingLightsFirst);
+      for (let i = 0, l = lights2.length; i < l; i++) {
+        const light = lights2[i];
         const color = light.color;
         const intensity = light.intensity;
         const distance = light.distance;
@@ -37567,15 +37567,15 @@
         state.version = nextVersion++;
       }
     }
-    function setupView(lights, camera) {
+    function setupView(lights2, camera) {
       let directionalLength = 0;
       let pointLength = 0;
       let spotLength = 0;
       let rectAreaLength = 0;
       let hemiLength = 0;
       const viewMatrix = camera.matrixWorldInverse;
-      for (let i = 0, l = lights.length; i < l; i++) {
-        const light = lights[i];
+      for (let i = 0, l = lights2.length; i < l; i++) {
+        const light = lights2[i];
         if (light.isDirectionalLight) {
           const uniforms = state.directional[directionalLength];
           uniforms.direction.setFromMatrixPosition(light.matrixWorld);
@@ -37625,7 +37625,7 @@
     };
   }
   function WebGLRenderState(extensions) {
-    const lights = new WebGLLights(extensions);
+    const lights2 = new WebGLLights(extensions);
     const lightsArray = [];
     const shadowsArray = [];
     const lightProbeGridArray = [];
@@ -37645,17 +37645,17 @@
       lightProbeGridArray.push(volume);
     }
     function setupLights() {
-      lights.setup(lightsArray);
+      lights2.setup(lightsArray);
     }
     function setupLightsView(camera) {
-      lights.setupView(lightsArray, camera);
+      lights2.setupView(lightsArray, camera);
     }
     const state = {
       lightsArray,
       shadowsArray,
       lightProbeGridArray,
       camera: null,
-      lights,
+      lights: lights2,
       transmissionRenderTarget: {},
       textureUnits: 0
     };
@@ -37749,10 +37749,10 @@
     this.needsUpdate = false;
     this.type = PCFShadowMap;
     let _previousType = this.type;
-    this.render = function(lights, scene, camera) {
+    this.render = function(lights2, scene, camera) {
       if (scope.enabled === false) return;
       if (scope.autoUpdate === false && scope.needsUpdate === false) return;
-      if (lights.length === 0) return;
+      if (lights2.length === 0) return;
       if (this.type === PCFSoftShadowMap) {
         warn("WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead.");
         this.type = PCFShadowMap;
@@ -37781,8 +37781,8 @@
           }
         });
       }
-      for (let i = 0, il = lights.length; i < il; i++) {
-        const light = lights[i];
+      for (let i = 0, il = lights2.length; i < il; i++) {
+        const light = lights2[i];
         const shadow = light.shadow;
         if (shadow === void 0) {
           warn("WebGLShadowMap:", light, "has no shadow.");
@@ -40419,8 +40419,8 @@ void main() {
         _currentDepthNear = null;
         _currentDepthFar = null;
         depthSensing.reset();
-        for (const key in cameraAccessTextures) {
-          delete cameraAccessTextures[key];
+        for (const key2 in cameraAccessTextures) {
+          delete cameraAccessTextures[key2];
         }
         renderer.setRenderTarget(initialRenderTarget);
         glBaseLayer = null;
@@ -42781,10 +42781,10 @@ void main() {
       function getProgram(material, scene, object) {
         if (scene.isScene !== true) scene = _emptyScene;
         const materialProperties = properties.get(material);
-        const lights = currentRenderState.state.lights;
+        const lights2 = currentRenderState.state.lights;
         const shadowsArray = currentRenderState.state.shadowsArray;
-        const lightsStateVersion = lights.state.version;
-        const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene, object, currentRenderState.state.lightProbeGridArray);
+        const lightsStateVersion = lights2.state.version;
+        const parameters2 = programCache.getParameters(material, lights2.state, shadowsArray, scene, object, currentRenderState.state.lightProbeGridArray);
         const programCacheKey = programCache.getProgramCacheKey(parameters2);
         let programs = materialProperties.programs;
         materialProperties.environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene.environment : null;
@@ -42821,22 +42821,22 @@ void main() {
         materialProperties.needsLights = materialNeedsLights(material);
         materialProperties.lightsStateVersion = lightsStateVersion;
         if (materialProperties.needsLights) {
-          uniforms.ambientLightColor.value = lights.state.ambient;
-          uniforms.lightProbe.value = lights.state.probe;
-          uniforms.directionalLights.value = lights.state.directional;
-          uniforms.directionalLightShadows.value = lights.state.directionalShadow;
-          uniforms.spotLights.value = lights.state.spot;
-          uniforms.spotLightShadows.value = lights.state.spotShadow;
-          uniforms.rectAreaLights.value = lights.state.rectArea;
-          uniforms.ltc_1.value = lights.state.rectAreaLTC1;
-          uniforms.ltc_2.value = lights.state.rectAreaLTC2;
-          uniforms.pointLights.value = lights.state.point;
-          uniforms.pointLightShadows.value = lights.state.pointShadow;
-          uniforms.hemisphereLights.value = lights.state.hemi;
-          uniforms.directionalShadowMatrix.value = lights.state.directionalShadowMatrix;
-          uniforms.spotLightMatrix.value = lights.state.spotLightMatrix;
-          uniforms.spotLightMap.value = lights.state.spotLightMap;
-          uniforms.pointShadowMatrix.value = lights.state.pointShadowMatrix;
+          uniforms.ambientLightColor.value = lights2.state.ambient;
+          uniforms.lightProbe.value = lights2.state.probe;
+          uniforms.directionalLights.value = lights2.state.directional;
+          uniforms.directionalLightShadows.value = lights2.state.directionalShadow;
+          uniforms.spotLights.value = lights2.state.spot;
+          uniforms.spotLightShadows.value = lights2.state.spotShadow;
+          uniforms.rectAreaLights.value = lights2.state.rectArea;
+          uniforms.ltc_1.value = lights2.state.rectAreaLTC1;
+          uniforms.ltc_2.value = lights2.state.rectAreaLTC2;
+          uniforms.pointLights.value = lights2.state.point;
+          uniforms.pointLightShadows.value = lights2.state.pointShadow;
+          uniforms.hemisphereLights.value = lights2.state.hemi;
+          uniforms.directionalShadowMatrix.value = lights2.state.directionalShadowMatrix;
+          uniforms.spotLightMatrix.value = lights2.state.spotLightMatrix;
+          uniforms.spotLightMap.value = lights2.state.spotLightMap;
+          uniforms.pointShadowMatrix.value = lights2.state.pointShadowMatrix;
         }
         materialProperties.lightProbeGrid = currentRenderState.state.lightProbeGridArray.length > 0;
         materialProperties.currentProgram = program;
@@ -42903,7 +42903,7 @@ void main() {
         const morphAttribute = geometry.morphAttributes.position || geometry.morphAttributes.normal || geometry.morphAttributes.color;
         const morphTargetsCount = morphAttribute !== void 0 ? morphAttribute.length : 0;
         const materialProperties = properties.get(material);
-        const lights = currentRenderState.state.lights;
+        const lights2 = currentRenderState.state.lights;
         if (_clippingEnabled === true) {
           if (_localClippingEnabled === true || camera !== _currentCamera) {
             const useCache = camera === _currentCamera && material.id === _currentMaterialId;
@@ -42912,7 +42912,7 @@ void main() {
         }
         let needsProgramChange = false;
         if (material.version === materialProperties.__version) {
-          if (materialProperties.needsLights && materialProperties.lightsStateVersion !== lights.state.version) {
+          if (materialProperties.needsLights && materialProperties.lightsStateVersion !== lights2.state.version) {
             needsProgramChange = true;
           } else if (materialProperties.outputColorSpace !== colorSpace) {
             needsProgramChange = true;
@@ -43023,14 +43023,14 @@ void main() {
           }
         }
         if (materialProperties.needsLights) {
-          if (lights.state.directionalShadowMap.length > 0) {
-            p_uniforms.setValue(_gl, "directionalShadowMap", lights.state.directionalShadowMap, textures);
+          if (lights2.state.directionalShadowMap.length > 0) {
+            p_uniforms.setValue(_gl, "directionalShadowMap", lights2.state.directionalShadowMap, textures);
           }
-          if (lights.state.spotShadowMap.length > 0) {
-            p_uniforms.setValue(_gl, "spotShadowMap", lights.state.spotShadowMap, textures);
+          if (lights2.state.spotShadowMap.length > 0) {
+            p_uniforms.setValue(_gl, "spotShadowMap", lights2.state.spotShadowMap, textures);
           }
-          if (lights.state.pointShadowMap.length > 0) {
-            p_uniforms.setValue(_gl, "pointShadowMap", lights.state.pointShadowMap, textures);
+          if (lights2.state.pointShadowMap.length > 0) {
+            p_uniforms.setValue(_gl, "pointShadowMap", lights2.state.pointShadowMap, textures);
           }
         }
         if (object.isSkinnedMesh) {
@@ -46596,7 +46596,7 @@ void main() {
       vec2 centred = uv - 0.5;
 
       /* motion blur: smear along the view velocity, a few taps is enough */
-      vec2 vel = clamp(uVelocity, -0.03, 0.03);
+      vec2 vel = clamp(uVelocity, -0.012, 0.012);
       vec3 col = vec3(0.0);
       float total = 0.0;
       for (int i = 0; i < 5; i++) {
@@ -46796,7 +46796,7 @@ void main() {
       this.camera.getWorldDirection(dir);
       const turn = new Vector2(dir.x - this._prevDir.x, dir.y - this._prevDir.y);
       this._prevDir.copy(dir);
-      this._velocity.lerp(turn.multiplyScalar(0.45), 0.35);
+      this._velocity.lerp(turn.multiplyScalar(0.16), 0.3);
       this.grade.uniforms.uVelocity.value.copy(this._velocity);
       this.grade.uniforms.uTime.value = time;
       this.composer.render(dt);
@@ -47543,6 +47543,420 @@ void main() {
   }
   var SURFACE_KINDS = Object.keys(SURFACES);
 
+  // src/facility.js
+  var CELL = 2.6;
+  var WALL_H = 3.6;
+  var PLAN = [
+    "##############################",
+    "#....#.........#....#........#",
+    "#.W..#...T.....#.C..#...V....#",
+    "#..o.D....o....D.o..#..oV....#",
+    "#....#.........#....#...V....#",
+    "#....#....G....#....D........#",
+    "#######.########....#####D####",
+    "#..........o........D...o....#",
+    "#..T...G............#...T....#",
+    "#........#####D#####.........#",
+    "####D#####....o....#####.#####",
+    "#....#....#...T....#....#....#",
+    "#.A..D....#...G....D....D..K.#",
+    "#..o.#....#........#..o.#....#",
+    "#....#....#........#....#....#",
+    "#######.###...#..#.######D####",
+    "#.........o..#....#..........#",
+    "#...T..G.....#....#...T...G..#",
+    "#............#....#..........#",
+    "###L##########....########L###",
+    "#....#........E....#.........#",
+    "#.X..#...o.........#....o....#",
+    "#....#.............#.........#",
+    "##############P###############"
+  ];
+  function key(x, y) {
+    return y * 1e3 + x;
+  }
+  var Facility = class {
+    /** @param world the World instance whose buckets/boxes we append into */
+    constructor(world2, originZ) {
+      this.world = world2;
+      this.w = Math.max(...PLAN.map((r) => r.length));
+      this.h = PLAN.length;
+      this.rows = PLAN.map((r) => r.padEnd(this.w, " "));
+      this.originX = -(this.w * CELL) / 2;
+      this.originZ = originZ - (this.h - 1) * CELL;
+      this.doors = [];
+      this.consoles = [];
+      this.servers = [];
+      this.alarms = [];
+      this.keycards = [];
+      this.pickups = [];
+      this.guardPosts = [];
+      this.lightSpots = [];
+      this.extraction = null;
+      this.entry = null;
+    }
+    at(x, y) {
+      if (x < 0 || y < 0 || x >= this.w || y >= this.h) return "#";
+      return this.rows[y][x];
+    }
+    solidCell(x, y) {
+      return this.at(x, y) === "#";
+    }
+    worldPos(x, y, height = 0) {
+      return new Vector3(
+        this.originX + x * CELL + CELL / 2,
+        height,
+        this.originZ + y * CELL + CELL / 2
+      );
+    }
+    build() {
+      const w = this.world;
+      const halfW = this.w * CELL / 2;
+      const cz = this.originZ + (this.h - 1) * CELL / 2;
+      const depth = this.h * CELL;
+      w.box("concrete", 0, -0.15, cz, this.w * CELL, 0.3, depth, { uvScale: 0.32 });
+      w.box("concrete", 0, WALL_H + 0.25, cz, this.w * CELL, 0.5, depth, { uvScale: 0.28 });
+      for (let y = 0; y < this.h; y++) {
+        for (let x = 0; x < this.w; x++) {
+          const c = this.at(x, y);
+          const p = this.worldPos(x, y);
+          if (c === "#") {
+            this.wall(x, y, p);
+            continue;
+          }
+          if (c === " ") continue;
+          switch (c) {
+            case "D":
+              this.door(x, y, p, false);
+              break;
+            case "L":
+              this.door(x, y, p, true);
+              break;
+            case "E":
+              this.door(x, y, p, false, true);
+              break;
+            case "C":
+              this.console_(p);
+              break;
+            case "A":
+              this.alarmPanel(p);
+              break;
+            case "V":
+              this.serverRack(p);
+              break;
+            case "K":
+              this.keycard(p);
+              break;
+            case "W":
+              this.pickups.push({ pos: p.clone(), kind: "weapon" });
+              break;
+            case "M":
+              this.pickups.push({ pos: p.clone(), kind: "ammo" });
+              break;
+            case "T":
+              this.crate(p);
+              break;
+            case "G":
+              this.guardPosts.push(p.clone());
+              break;
+            case "o":
+              this.ceilingLight(p);
+              break;
+            case "X":
+              this.extraction = p.clone();
+              break;
+            case "P":
+              this.entry = p.clone();
+              break;
+            default:
+              break;
+          }
+        }
+      }
+      this.trim();
+      return this;
+    }
+    /* Interior walls are only built where they face a walkable cell, so the
+       solid blocks of the plan do not fill the level with hidden geometry. */
+    wall(x, y, p) {
+      const w = this.world;
+      const exposed = [".", "D", "L", "E", "C", "A", "V", "K", "W", "M", "T", "G", "o", "X", "P"];
+      const near = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => exposed.includes(this.at(x + dx, y + dy)));
+      if (!near) return;
+      w.box("concrete", p.x, WALL_H / 2, p.z, CELL, WALL_H, CELL, { uvScale: 0.52 });
+      if ((x + y) % 3 === 0) {
+        w.box(
+          "metal",
+          p.x,
+          WALL_H - 0.45,
+          p.z,
+          CELL * 1.01,
+          0.16,
+          CELL * 1.01,
+          { solid: false, uvScale: 0.9 }
+        );
+      }
+    }
+    door(x, y, p, locked, shutter = false) {
+      const horizontal = this.solidCell(x - 1, y) && this.solidCell(x + 1, y);
+      const width = CELL * 0.98;
+      const geo = new BoxGeometry(horizontal ? width : 0.16, WALL_H - 0.15, horizontal ? 0.16 : width);
+      const mat = new MeshStandardMaterial({
+        color: locked ? 7166522 : 5462108,
+        roughness: 0.55,
+        metalness: 0.65
+      });
+      const mesh = new Mesh(geo, mat);
+      mesh.position.set(p.x, (WALL_H - 0.15) / 2, p.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.world.group.add(mesh);
+      const w = this.world;
+      if (horizontal) {
+        w.box("metal", p.x - CELL / 2, WALL_H / 2, p.z, 0.18, WALL_H, 0.4, { solid: false, uvScale: 1.2 });
+        w.box("metal", p.x + CELL / 2, WALL_H / 2, p.z, 0.18, WALL_H, 0.4, { solid: false, uvScale: 1.2 });
+      } else {
+        w.box("metal", p.x, WALL_H / 2, p.z - CELL / 2, 0.4, WALL_H, 0.18, { solid: false, uvScale: 1.2 });
+        w.box("metal", p.x, WALL_H / 2, p.z + CELL / 2, 0.4, WALL_H, 0.18, { solid: false, uvScale: 1.2 });
+      }
+      const door = {
+        mesh,
+        pos: p.clone(),
+        horizontal,
+        locked,
+        shutter,
+        open: 0,
+        opening: false,
+        closedY: (WALL_H - 0.15) / 2,
+        box: new Box3()
+      };
+      this.updateDoorBox(door);
+      this.doors.push(door);
+      this.world.dynamicBoxes.push(door.box);
+    }
+    updateDoorBox(d) {
+      const half = CELL * 0.49;
+      const lift = d.open * (WALL_H - 0.1);
+      d.mesh.position.y = d.closedY + lift;
+      const y0 = Math.max(0, d.closedY - (WALL_H - 0.15) / 2 + lift);
+      const y1 = y0 + (WALL_H - 0.15);
+      if (d.open > 0.92) {
+        d.box.makeEmpty();
+        d.box.min.set(0, 1e6, 0);
+        d.box.max.set(0, 1e6, 0);
+        return;
+      }
+      if (d.horizontal) {
+        d.box.min.set(d.pos.x - half, y0, d.pos.z - 0.14);
+        d.box.max.set(d.pos.x + half, y1, d.pos.z + 0.14);
+      } else {
+        d.box.min.set(d.pos.x - 0.14, y0, d.pos.z - half);
+        d.box.max.set(d.pos.x + 0.14, y1, d.pos.z + half);
+      }
+    }
+    console_(p) {
+      const w = this.world;
+      w.box("metal", p.x, 0.5, p.z, 1.5, 1, 0.75, { uvScale: 0.9 });
+      w.box("metal", p.x, 1.15, p.z - 0.1, 1.35, 0.35, 0.5, { solid: false, uvScale: 0.9 });
+      const screen = new Mesh(
+        new PlaneGeometry(1.15, 0.6),
+        new MeshStandardMaterial({
+          color: 862762,
+          emissive: 3134660,
+          emissiveIntensity: 1.4,
+          roughness: 0.35
+        })
+      );
+      screen.position.set(p.x, 1.28, p.z + 0.28);
+      screen.rotation.x = -0.42;
+      this.world.group.add(screen);
+      this.consoles.push({ pos: p.clone(), screen, done: false });
+    }
+    alarmPanel(p) {
+      const w = this.world;
+      w.box("metal", p.x, 1.35, p.z, 1.1, 1.5, 0.4, { uvScale: 0.9 });
+      const light = new Mesh(
+        new SphereGeometry(0.11, 10, 8),
+        new MeshStandardMaterial({ color: 3148555, emissive: 16722462, emissiveIntensity: 2.2 })
+      );
+      light.position.set(p.x, 1.95, p.z + 0.22);
+      this.world.group.add(light);
+      this.alarms.push({ pos: p.clone(), light, done: false });
+    }
+    serverRack(p) {
+      const w = this.world;
+      w.box("metal", p.x, 1.05, p.z, 1, 2.1, 0.85, { uvScale: 0.8 });
+      const leds = new Mesh(
+        new PlaneGeometry(0.7, 1.5),
+        new MeshStandardMaterial({
+          color: 529935,
+          emissive: 3523683,
+          emissiveIntensity: 0.9,
+          roughness: 0.5
+        })
+      );
+      leds.position.set(p.x, 1.15, p.z + 0.44);
+      this.world.group.add(leds);
+      this.servers.push({ pos: p.clone(), leds, mined: false, destroyed: false });
+    }
+    keycard(p) {
+      this.keycards.push({ pos: p.clone().setY(1), taken: false });
+      this.world.box("metal", p.x, 0.45, p.z, 0.8, 0.9, 0.6, { uvScale: 1 });
+    }
+    crate(p) {
+      const w = this.world;
+      const h = 0.9 + (p.x * 7 + p.z * 13) % 5 * 0.12;
+      w.box("metal", p.x, h / 2, p.z, 1.25, h, 1.25, { uvScale: 0.9 });
+      if (h > 1.2) w.box("metal", p.x + 0.2, h + 0.3, p.z - 0.1, 0.9, 0.6, 0.9, { uvScale: 0.9 });
+    }
+    ceilingLight(p) {
+      const housing = new Mesh(
+        new BoxGeometry(1.5, 0.12, 0.42),
+        new MeshStandardMaterial({
+          color: 15921382,
+          emissive: 16773844,
+          emissiveIntensity: 2.6,
+          roughness: 0.4
+        })
+      );
+      housing.position.set(p.x, WALL_H - 0.18, p.z);
+      this.world.group.add(housing);
+      this.lightSpots.push({ pos: new Vector3(p.x, WALL_H - 0.5, p.z), housing });
+    }
+    /* The plan's outer ring is solid, so the compound needs a shell that reads
+       from the street: a facade with the entry shutter in it. */
+    trim() {
+      const w = this.world;
+      const halfW = this.w * CELL / 2;
+      const zFront = this.originZ + (this.h - 0.5) * CELL;
+      w.box(
+        "concrete",
+        0,
+        WALL_H + 1.6,
+        this.originZ + (this.h - 1) * CELL / 2,
+        this.w * CELL + 1.2,
+        2.4,
+        this.h * CELL + 1.2,
+        { uvScale: 0.2 }
+      );
+      for (const sx of [-1, 1]) {
+        w.box(
+          "concrete",
+          sx * (halfW + 1.2),
+          3.2,
+          this.originZ + (this.h - 1) * CELL / 2,
+          2.4,
+          7.4,
+          this.h * CELL,
+          { uvScale: 0.25 }
+        );
+      }
+      w.box("metal", 0, 4.6, zFront + 1, 9, 0.5, 1.6, { solid: false, uvScale: 0.6 });
+    }
+    /* --- navigation ------------------------------------------------------ */
+    walkable(x, y) {
+      const c = this.at(x, y);
+      return c !== "#" && c !== " ";
+    }
+    cellOf(pos) {
+      return {
+        x: Math.floor((pos.x - this.originX) / CELL),
+        y: Math.floor((pos.z - this.originZ) / CELL)
+      };
+    }
+    inside(pos) {
+      const c = this.cellOf(pos);
+      return c.x >= 0 && c.y >= 0 && c.x < this.w && c.y < this.h && this.walkable(c.x, c.y);
+    }
+    /* A* over the floorplan. Guards use it to come round corners instead of
+       grinding along the wall between them and you. */
+    path(from, to) {
+      const a = this.cellOf(from);
+      const b = this.cellOf(to);
+      if (!this.walkable(a.x, a.y) || !this.walkable(b.x, b.y)) return null;
+      if (a.x === b.x && a.y === b.y) return [];
+      const startKey = key(a.x, a.y);
+      const goalKey = key(b.x, b.y);
+      const open = [{ k: startKey, x: a.x, y: a.y, g: 0, f: 0 }];
+      const cameFrom = /* @__PURE__ */ new Map();
+      const gScore = /* @__PURE__ */ new Map([[startKey, 0]]);
+      const closed = /* @__PURE__ */ new Set();
+      const h = (x, y) => Math.abs(x - b.x) + Math.abs(y - b.y);
+      let guard = 0;
+      while (open.length && guard++ < 4e3) {
+        let bi = 0;
+        for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
+        const cur = open.splice(bi, 1)[0];
+        if (cur.k === goalKey) {
+          const out = [];
+          let k = cur.k;
+          while (cameFrom.has(k)) {
+            const [cx, cy] = [k % 1e3, Math.floor(k / 1e3)];
+            out.push(this.worldPos(cx, cy));
+            k = cameFrom.get(k);
+          }
+          return out.reverse();
+        }
+        closed.add(cur.k);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cur.x + dx;
+          const ny = cur.y + dy;
+          if (!this.walkable(nx, ny)) continue;
+          const nk = key(nx, ny);
+          if (closed.has(nk)) continue;
+          const g = cur.g + 1;
+          if (gScore.has(nk) && gScore.get(nk) <= g) continue;
+          gScore.set(nk, g);
+          cameFrom.set(nk, cur.k);
+          const existing = open.find((o) => o.k === nk);
+          const f = g + h(nx, ny);
+          if (existing) {
+            existing.g = g;
+            existing.f = f;
+          } else {
+            open.push({ k: nk, x: nx, y: ny, g, f });
+          }
+        }
+      }
+      return null;
+    }
+    /** Walkable cells at least `minDist` from `avoid`, for guard placement. */
+    spawnCells(avoid, minDist) {
+      const out = [];
+      for (let y = 1; y < this.h - 1; y++) {
+        for (let x = 1; x < this.w - 1; x++) {
+          const c = this.at(x, y);
+          if (c !== "." && c !== "G") continue;
+          const p = this.worldPos(x, y);
+          if (!avoid || p.distanceTo(avoid) > minDist) out.push(p);
+        }
+      }
+      return out;
+    }
+  };
+  var LightPool = class {
+    constructor(scene, count = 6) {
+      this.lights = [];
+      for (let i = 0; i < count; i++) {
+        const l = new PointLight(16772300, 0, 13, 2);
+        l.castShadow = false;
+        scene.add(l);
+        this.lights.push(l);
+      }
+    }
+    update(spots, target) {
+      const near = spots.map((s) => ({ s, d: s.pos.distanceToSquared(target) })).sort((a, b) => a.d - b.d).slice(0, this.lights.length);
+      this.lights.forEach((l, i) => {
+        if (i < near.length && near[i].d < 900) {
+          l.position.copy(near[i].s.pos);
+          l.intensity = 11;
+        } else {
+          l.intensity = 0;
+        }
+      });
+    }
+  };
+
   // src/world.js
   function mulberry32(a) {
     return function() {
@@ -47559,6 +47973,7 @@ void main() {
       this.rand = mulberry32(seed);
       this.group = new Group();
       this.boxes = [];
+      this.dynamicBoxes = [];
       this.buckets = /* @__PURE__ */ new Map();
       this.materials = {};
       this.lights = [];
@@ -47668,6 +48083,8 @@ void main() {
         z += depth + 0.35;
       }
       this.archway(-LEN / 2 + 4);
+      this.facility = new Facility(this, -LEN / 2 - 2).build();
+      this.playerStart = new Vector3(0, 1, -48);
       this.streetCover(LEN, HALF);
       this.wires(LEN, HALF);
       this.finish();
@@ -47949,6 +48366,30 @@ void main() {
       let hitSign = 1;
       const ox = origin.x, oy = origin.y, oz = origin.z;
       const ix = 1 / dir.x, iy = 1 / dir.y, iz = 1 / dir.z;
+      for (let k = 0; k < this.dynamicBoxes.length; k++) {
+        const b = this.dynamicBoxes[k];
+        if (b.min.y > 1e5) continue;
+        const hit = this._slab(
+          b.min.x,
+          b.min.y,
+          b.min.z,
+          b.max.x,
+          b.max.y,
+          b.max.z,
+          ox,
+          oy,
+          oz,
+          ix,
+          iy,
+          iz,
+          bestT
+        );
+        if (hit) {
+          bestT = hit.t;
+          hitAxis = hit.axis;
+          hitSign = hit.sign;
+        }
+      }
       for (let i = 0; i < d.length; i += 6) {
         let t1 = (d[i] - ox) * ix, t2 = (d[i + 3] - ox) * ix;
         let axis = 0, sign2 = t1 > t2 ? 1 : -1;
@@ -47980,15 +48421,54 @@ void main() {
       normal.setComponent(hitAxis, hitSign);
       return { t: bestT, normal, point: origin.clone().addScaledVector(dir, bestT) };
     }
+    _slab(x0, y0, z0, x1, y1, z1, ox, oy, oz, ix, iy, iz, limit) {
+      let t1 = (x0 - ox) * ix, t2 = (x1 - ox) * ix;
+      let axis = 0, sign2 = t1 > t2 ? 1 : -1;
+      let tmin = Math.min(t1, t2), tmax = Math.max(t1, t2);
+      t1 = (y0 - oy) * iy;
+      t2 = (y1 - oy) * iy;
+      if (Math.min(t1, t2) > tmin) {
+        tmin = Math.min(t1, t2);
+        axis = 1;
+        sign2 = t1 > t2 ? 1 : -1;
+      }
+      tmax = Math.min(tmax, Math.max(t1, t2));
+      t1 = (z0 - oz) * iz;
+      t2 = (z1 - oz) * iz;
+      if (Math.min(t1, t2) > tmin) {
+        tmin = Math.min(t1, t2);
+        axis = 2;
+        sign2 = t1 > t2 ? 1 : -1;
+      }
+      tmax = Math.min(tmax, Math.max(t1, t2));
+      if (tmax >= Math.max(tmin, 0) && tmin > 0 && tmin < limit) return { t: tmin, axis, sign: sign2 };
+      return null;
+    }
     /** Push an axis-aligned capsule out of the world. Mutates `pos`. */
     resolve(pos, radius, halfHeight) {
       const d = this._boxData;
+      const dyn = this.dynamicBoxes;
       let grounded = false;
       for (let pass = 0; pass < 2; pass++) {
-        for (let i = 0; i < d.length; i += 6) {
-          const minX = d[i] - radius, maxX = d[i + 3] + radius;
-          const minY = d[i + 1] - halfHeight, maxY = d[i + 4] + halfHeight;
-          const minZ = d[i + 2] - radius, maxZ = d[i + 5] + radius;
+        for (let i = -dyn.length; i < d.length; i += i < 0 ? 1 : 6) {
+          let minX, maxX, minY, maxY, minZ, maxZ;
+          if (i < 0) {
+            const b = dyn[i + dyn.length];
+            if (b.min.y > 1e5) continue;
+            minX = b.min.x - radius;
+            maxX = b.max.x + radius;
+            minY = b.min.y - halfHeight;
+            maxY = b.max.y + halfHeight;
+            minZ = b.min.z - radius;
+            maxZ = b.max.z + radius;
+          } else {
+            minX = d[i] - radius;
+            maxX = d[i + 3] + radius;
+            minY = d[i + 1] - halfHeight;
+            maxY = d[i + 4] + halfHeight;
+            minZ = d[i + 2] - radius;
+            maxZ = d[i + 5] + radius;
+          }
           if (pos.x <= minX || pos.x >= maxX || pos.y <= minY || pos.y >= maxY || pos.z <= minZ || pos.z >= maxZ) continue;
           const px2 = Math.min(pos.x - minX, maxX - pos.x);
           const py2 = Math.min(pos.y - minY, maxY - pos.y);
@@ -48133,27 +48613,144 @@ void main() {
     }
   };
 
+  // src/weapons.js
+  var WEAPONS = {
+    pistol_s: {
+      id: "pistol_s",
+      name: "PP-9 SILENCED",
+      short: "PP-9",
+      damage: 25,
+      rpm: 300,
+      mag: 12,
+      reserve: 60,
+      spread: 0.01,
+      noise: 7,
+      auto: false,
+      reload: 1.25,
+      recoil: 0.01,
+      zoom: 1.15,
+      silenced: true
+    },
+    smg: {
+      id: "smg",
+      name: "KL-7 SMG",
+      short: "KL-7",
+      damage: 17,
+      rpm: 900,
+      mag: 32,
+      reserve: 160,
+      spread: 0.032,
+      noise: 38,
+      auto: true,
+      reload: 1.5,
+      recoil: 9e-3,
+      zoom: 1.2
+    },
+    rifle: {
+      id: "rifle",
+      name: "MK-4 CARBINE",
+      short: "MK-4",
+      damage: 27,
+      rpm: 700,
+      mag: 30,
+      reserve: 180,
+      spread: 0.021,
+      noise: 45,
+      auto: true,
+      reload: 1.55,
+      recoil: 0.013,
+      zoom: 1.35
+    },
+    shotgun: {
+      id: "shotgun",
+      name: "M20 BREACHER",
+      short: "M20",
+      damage: 15,
+      pellets: 9,
+      rpm: 75,
+      mag: 6,
+      reserve: 30,
+      spread: 0.075,
+      noise: 52,
+      auto: false,
+      reload: 2.2,
+      recoil: 0.036,
+      zoom: 1.1
+    },
+    sniper: {
+      id: "sniper",
+      name: "DR-8 MARKSMAN",
+      short: "DR-8",
+      damage: 115,
+      rpm: 48,
+      mag: 5,
+      reserve: 20,
+      spread: 1e-3,
+      noise: 60,
+      auto: false,
+      reload: 2.4,
+      recoil: 0.05,
+      zoom: 3.2
+    }
+  };
+  var GUARD_WEAPONS = ["smg", "smg", "rifle", "shotgun"];
+  var Loadout = class {
+    constructor(startId = "pistol_s") {
+      this.slots = [];
+      this.index = 0;
+      this.add(startId);
+    }
+    add(id, reserveBonus = 0) {
+      const def = WEAPONS[id];
+      if (!def) return null;
+      const existing = this.slots.find((s) => s.id === id);
+      if (existing) {
+        existing.reserve = Math.min(def.reserve * 2, existing.reserve + (reserveBonus || def.mag * 2));
+        return existing;
+      }
+      const slot = { id, def, ammo: def.mag, reserve: def.reserve };
+      this.slots.push(slot);
+      return slot;
+    }
+    current() {
+      return this.slots[this.index];
+    }
+    select(i) {
+      if (i >= 0 && i < this.slots.length) {
+        this.index = i;
+        return true;
+      }
+      return false;
+    }
+    cycle(dir) {
+      if (!this.slots.length) return;
+      this.index = (this.index + dir + this.slots.length) % this.slots.length;
+    }
+    giveAmmo(amount) {
+      for (const s of this.slots) {
+        s.reserve = Math.min(s.def.reserve * 2, s.reserve + Math.round(s.def.mag * amount));
+      }
+    }
+  };
+
   // src/weapon.js
   var Weapon = class {
-    constructor(camera, scene, world2, sfx2) {
+    constructor(camera, scene, world2, sfx2, loadout2) {
       this.camera = camera;
       this.scene = scene;
       this.world = world2;
       this.sfx = sfx2;
-      this.magSize = 30;
-      this.ammo = this.magSize;
-      this.reserve = 210;
-      this.rpm = 720;
-      this.damage = 26;
+      this.loadout = loadout2;
       this.reloading = 0;
       this.cooldown = 0;
       this.ads = 0;
-      this.spread = 0.022;
       this.recoil = 0;
+      this.switching = 0;
       this.sway = new Vector2();
       this.swayTarget = new Vector2();
       this.kick = 0;
       this.kickVel = 0;
+      this.sprintMix = 0;
       this.group = new Group();
       this.group.renderOrder = 10;
       this.build();
@@ -48163,16 +48760,32 @@ void main() {
       this.shells = [];
       this.muzzleLight = new PointLight(16764810, 0, 14, 2);
       scene.add(this.muzzleLight);
-      const flashGeo = new PlaneGeometry(0.42, 0.42);
-      this.flash = new Mesh(flashGeo, new MeshBasicMaterial({
-        color: 16767392,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-        fog: false
-      }));
+      this.flash = new Mesh(
+        new PlaneGeometry(0.42, 0.42),
+        new MeshBasicMaterial({
+          color: 16767392,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          fog: false
+        })
+      );
       this.flash.position.set(0, 0, -0.94);
       this.group.add(this.flash);
+      this.configure();
+    }
+    get slot() {
+      return this.loadout.current();
+    }
+    get def() {
+      const s = this.slot;
+      return s ? s.def : WEAPONS.rifle;
+    }
+    get ammo() {
+      return this.slot ? this.slot.ammo : 0;
+    }
+    get reserve() {
+      return this.slot ? this.slot.reserve : 0;
     }
     build() {
       const dark = new MeshStandardMaterial({ color: 2369066, roughness: 0.55, metalness: 0.75 });
@@ -48191,99 +48804,188 @@ void main() {
         const m = new Mesh(geo, mat);
         m.position.set(x, y, z);
         m.rotation.set(rx, ry, rz);
-        m.castShadow = false;
-        m.receiveShadow = false;
         this.group.add(m);
         return m;
       };
       const box = (w, h, d) => new BoxGeometry(w, h, d);
       const cyl = (r, h, s2 = 12) => new CylinderGeometry(r, r, h, s2);
-      add(box(0.085, 0.11, 0.42), polymer, 0, 0, -0.18);
-      add(box(0.075, 0.085, 0.34), dark, 0, 5e-3, -0.5);
-      add(cyl(0.016, 0.46), dark, 0, 0.012, -0.72, Math.PI / 2);
-      add(cyl(0.026, 0.09), dark, 0, 0.012, -0.95, Math.PI / 2);
-      add(box(0.05, 0.2, 0.09), polymer, 0, -0.14, -0.12, 0.22);
-      add(box(0.05, 0.16, 0.075), grip, 0, -0.115, 0.02, -0.32);
-      add(box(0.065, 0.09, 0.26), polymer, 0, -0.01, 0.2);
-      add(box(0.05, 0.13, 0.05), polymer, 0, -0.03, 0.31);
-      add(box(0.05, 0.035, 0.16), dark, 0, 0.085, -0.24);
-      add(cyl(0.032, 0.13, 14), dark, 0, 0.115, -0.24, Math.PI / 2);
-      this.lens = add(new CircleGeometry(0.028, 16), glassM, 0, 0.115, -0.31);
-      add(box(6e-3, 0.03, 6e-3), dark, 0, 0.055, -0.86);
-      add(box(0.075, 0.075, 0.14), hands, 5e-3, -0.075, -0.46, 0.2);
-      add(box(0.07, 0.09, 0.1), hands, 5e-3, -0.085, 0, -0.3);
+      this.parts = {};
+      this.parts.receiver = add(box(0.085, 0.11, 0.42), polymer, 0, 0, -0.18);
+      this.parts.handguard = add(box(0.075, 0.085, 0.34), dark, 0, 5e-3, -0.5);
+      this.parts.barrel = add(cyl(0.016, 0.46), dark, 0, 0.012, -0.72, Math.PI / 2);
+      this.parts.muzzle = add(cyl(0.026, 0.09), dark, 0, 0.012, -0.95, Math.PI / 2);
+      this.parts.mag = add(box(0.05, 0.2, 0.09), polymer, 0, -0.14, -0.12, 0.22);
+      this.parts.grip = add(box(0.05, 0.16, 0.075), grip, 0, -0.115, 0.02, -0.32);
+      this.parts.stock = add(box(0.065, 0.09, 0.26), polymer, 0, -0.01, 0.2);
+      this.parts.butt = add(box(0.05, 0.13, 0.05), polymer, 0, -0.03, 0.31);
+      this.parts.opticBase = add(box(0.05, 0.035, 0.16), dark, 0, 0.085, -0.24);
+      this.parts.opticTube = add(cyl(0.032, 0.13, 14), dark, 0, 0.115, -0.24, Math.PI / 2);
+      this.parts.lens = add(new CircleGeometry(0.028, 16), glassM, 0, 0.115, -0.31);
+      this.parts.ironSight = add(box(6e-3, 0.03, 6e-3), dark, 0, 0.055, -0.86);
+      this.parts.handFront = add(box(0.075, 0.075, 0.14), hands, 5e-3, -0.075, -0.46, 0.2);
+      this.parts.handRear = add(box(0.07, 0.09, 0.1), hands, 5e-3, -0.085, 0, -0.3);
       const s = 0.4;
       this.group.scale.setScalar(s);
+      this.baseScale = s;
       this.hipPos = new Vector3(0.17, -0.15, -0.42);
       this.adsPos = new Vector3(0, -0.115 * s, -0.33);
       this.group.position.copy(this.hipPos);
+    }
+    /* Re-proportion the rig for whatever is in hand. */
+    configure() {
+      const id = this.def.id;
+      const p = this.parts;
+      const set = (part, visible, scale, pos) => {
+        part.visible = visible;
+        if (scale) part.scale.set(scale.x || 1, scale.y || 1, scale.z || 1);
+        if (pos) part.position.set(pos.x, pos.y, pos.z);
+      };
+      Object.values(p).forEach((m) => {
+        m.visible = true;
+        m.scale.set(1, 1, 1);
+      });
+      p.barrel.position.set(0, 0.012, -0.72);
+      p.muzzle.position.set(0, 0.012, -0.95);
+      p.stock.position.set(0, -0.01, 0.2);
+      p.butt.position.set(0, -0.03, 0.31);
+      if (id === "pistol_s") {
+        set(p.receiver, true, { z: 0.6 }, { x: 0, y: 0, z: -0.06 });
+        set(p.handguard, false);
+        set(p.barrel, true, { x: 1.3, y: 0.75, z: 1.3 }, { x: 0, y: 0.012, z: -0.34 });
+        set(p.muzzle, true, { x: 1.9, y: 2.6, z: 1.9 }, { x: 0, y: 0.012, z: -0.6 });
+        set(p.mag, true, { y: 0.8 }, { x: 0, y: -0.13, z: 0.02 });
+        set(p.grip, true, null, { x: 0, y: -0.115, z: 0.05 });
+        set(p.stock, false);
+        set(p.butt, false);
+        set(p.opticBase, false);
+        set(p.opticTube, false);
+        set(p.lens, false);
+        set(p.ironSight, true, null, { x: 0, y: 0.05, z: -0.5 });
+        set(p.handFront, false);
+        set(p.handRear, true, null, { x: 5e-3, y: -0.085, z: 0.06 });
+        this.adsHeight = 0.05;
+      } else if (id === "smg") {
+        set(p.barrel, true, { z: 0.6 }, { x: 0, y: 0.012, z: -0.6 });
+        set(p.muzzle, true, null, { x: 0, y: 0.012, z: -0.78 });
+        set(p.handguard, true, { z: 0.75 });
+        set(p.opticBase, false);
+        set(p.opticTube, false);
+        set(p.lens, false);
+        set(p.ironSight, true, null, { x: 0, y: 0.055, z: -0.72 });
+        this.adsHeight = 0.055;
+      } else if (id === "shotgun") {
+        set(p.barrel, true, { x: 1.7, y: 0.95, z: 1.7 }, { x: 0, y: 0.012, z: -0.7 });
+        set(p.muzzle, true, { x: 1.4, y: 0.6, z: 1.4 }, { x: 0, y: 0.012, z: -0.92 });
+        set(p.mag, false);
+        set(p.opticBase, false);
+        set(p.opticTube, false);
+        set(p.lens, false);
+        set(p.ironSight, true, null, { x: 0, y: 0.055, z: -0.86 });
+        this.adsHeight = 0.055;
+      } else if (id === "sniper") {
+        set(p.barrel, true, { z: 1.5 }, { x: 0, y: 0.012, z: -0.95 });
+        set(p.muzzle, true, null, { x: 0, y: 0.012, z: -1.32 });
+        set(p.opticTube, true, { x: 1.5, y: 1.35, z: 1.5 }, { x: 0, y: 0.135, z: -0.26 });
+        set(p.lens, true, { x: 1.5, y: 1.5 }, { x: 0, y: 0.135, z: -0.36 });
+        set(p.ironSight, false);
+        this.adsHeight = 0.135;
+      } else {
+        this.adsHeight = 0.115;
+      }
+      this.adsPos.set(0, -this.adsHeight * this.baseScale, -0.33);
+      this.flash.position.set(0, 0.012, id === "pistol_s" ? -0.66 : id === "sniper" ? -1.4 : -0.98);
+    }
+    switchTo(index) {
+      if (index === this.loadout.index || this.switching > 0) return false;
+      if (!this.loadout.select(index)) return false;
+      this.switching = 0.45;
+      this.reloading = 0;
+      this.configure();
+      this.sfx.reload();
+      return true;
+    }
+    cycle(dir) {
+      const next = (this.loadout.index + dir + this.loadout.slots.length) % this.loadout.slots.length;
+      return this.switchTo(next);
     }
     onLook(dx, dy) {
       this.swayTarget.x = MathUtils.clamp(this.swayTarget.x - dx * 3.2, -0.09, 0.09);
       this.swayTarget.y = MathUtils.clamp(this.swayTarget.y - dy * 3.2, -0.07, 0.07);
     }
     startReload() {
-      if (this.reloading > 0 || this.ammo === this.magSize || this.reserve <= 0) return;
-      this.reloading = 1.55;
+      const s = this.slot;
+      if (!s || this.reloading > 0 || this.switching > 0) return;
+      if (s.ammo >= s.def.mag || s.reserve <= 0) return;
+      this.reloading = s.def.reload;
       this.sfx.reload();
     }
-    canFire() {
-      return this.cooldown <= 0 && this.reloading <= 0 && this.ammo > 0;
-    }
-    fire(player2, enemies2, onHit) {
-      if (this.reloading > 0) return false;
-      if (this.ammo <= 0) {
+    fire(player2, enemies2, ctx) {
+      const s = this.slot;
+      if (!s || this.reloading > 0 || this.switching > 0) return false;
+      const def = s.def;
+      if (s.ammo <= 0) {
         if (this.cooldown <= 0) {
           this.sfx.dryFire();
-          this.cooldown = 0.25;
+          this.cooldown = 0.3;
         }
         return false;
       }
       if (this.cooldown > 0) return false;
-      this.cooldown = 60 / this.rpm;
-      this.ammo--;
-      this.sfx.shot();
+      this.cooldown = 60 / def.rpm;
+      s.ammo--;
+      if (def.silenced) this.sfx.impact();
+      else this.sfx.shot();
+      ctx.mission.noise(player2.pos, def.noise);
+      ctx.mission.stats.shots++;
       const adsFactor = 1 - this.ads * 0.55;
-      player2.recoilKick.x += (0.012 + Math.random() * 8e-3) * adsFactor;
-      player2.recoilKick.y += (Math.random() - 0.5) * 9e-3 * adsFactor;
-      this.kickVel += 9 * adsFactor;
-      this.recoil = Math.min(1, this.recoil + 0.16);
+      player2.recoilKick.x += (def.recoil + Math.random() * def.recoil * 0.6) * adsFactor;
+      player2.recoilKick.y += (Math.random() - 0.5) * def.recoil * 0.7 * adsFactor;
+      this.kickVel += (6 + def.recoil * 260) * adsFactor;
+      this.recoil = Math.min(1, this.recoil + 0.14 + def.recoil);
       const origin = new Vector3();
       this.camera.getWorldPosition(origin);
-      const dir = new Vector3();
-      this.camera.getWorldDirection(dir);
-      const spread = this.spread * adsFactor * (player2.sprinting ? 2.4 : 1) * (player2.onGround ? 1 : 1.9) * (0.35 + this.recoil);
-      dir.x += (Math.random() - 0.5) * spread;
-      dir.y += (Math.random() - 0.5) * spread;
-      dir.z += (Math.random() - 0.5) * spread;
-      dir.normalize();
-      const worldHit = this.world.raycast(origin, dir, 300);
-      let best = worldHit ? worldHit.t : 300;
-      let victim = null;
-      for (const e of enemies2) {
-        if (!e.alive) continue;
-        const t = e.rayHit(origin, dir, best);
-        if (t && t.t < best) {
-          best = t.t;
-          victim = { enemy: e, head: t.head, point: origin.clone().addScaledVector(dir, t.t) };
+      const aim = new Vector3();
+      this.camera.getWorldDirection(aim);
+      const pellets = def.pellets || 1;
+      let anyHit = false;
+      for (let i = 0; i < pellets; i++) {
+        const dir = aim.clone();
+        const spread = def.spread * adsFactor * (player2.sprinting ? 2.4 : 1) * (player2.onGround ? 1 : 1.8) * (0.4 + this.recoil * 0.8);
+        dir.x += (Math.random() - 0.5) * spread;
+        dir.y += (Math.random() - 0.5) * spread;
+        dir.z += (Math.random() - 0.5) * spread;
+        dir.normalize();
+        const worldHit = this.world.raycast(origin, dir, 320);
+        let best = worldHit ? worldHit.t : 320;
+        let victim = null;
+        for (const e of enemies2) {
+          if (!e.alive) continue;
+          const t = e.rayHit(origin, dir, best);
+          if (t && t.t < best) {
+            best = t.t;
+            victim = { enemy: e, zone: t.zone };
+          }
+        }
+        const end = origin.clone().addScaledVector(dir, best);
+        if (i === 0 || pellets <= 3) this.spawnTracer(origin, end);
+        if (victim) {
+          anyHit = true;
+          const wasAlive = victim.enemy.alive;
+          victim.enemy.hit(def.damage, victim.zone, dir, ctx);
+          this.sfx.flesh();
+          ctx.onHit(victim.zone, victim.enemy, end, wasAlive && !victim.enemy.alive);
+        } else if (worldHit) {
+          if (i === 0) this.sfx.impact();
+          this.spawnImpact(end, worldHit.normal);
         }
       }
-      const end = origin.clone().addScaledVector(dir, best);
-      this.spawnTracer(origin, end);
-      this.muzzleLight.position.copy(origin).addScaledVector(dir, 0.6);
-      this.muzzleLight.intensity = 26;
-      this.flash.material.opacity = 0.95;
+      if (anyHit) ctx.mission.stats.hits++;
+      this.muzzleLight.position.copy(origin).addScaledVector(aim, 0.6);
+      this.muzzleLight.intensity = def.silenced ? 6 : 26;
+      this.flash.material.opacity = def.silenced ? 0.35 : 0.95;
       this.flash.rotation.z = Math.random() * Math.PI;
-      this.flash.scale.setScalar(0.8 + Math.random() * 0.5);
-      this.ejectShell(origin, dir);
-      if (victim) {
-        victim.enemy.hit(victim.head ? this.damage * 2.6 : this.damage, dir);
-        this.sfx.flesh();
-        onHit(victim.head, victim.enemy, victim.point);
-      } else if (worldHit) {
-        this.sfx.impact();
-        this.spawnImpact(end, worldHit.normal);
-      }
+      this.flash.scale.setScalar((def.silenced ? 0.5 : 0.8) + Math.random() * 0.5);
+      this.ejectShell(origin, aim);
       return true;
     }
     spawnTracer(from, to) {
@@ -48291,20 +48993,20 @@ void main() {
       const line = new Line(geo, new LineBasicMaterial({
         color: 16767394,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.8,
         fog: false
       }));
       this.scene.add(line);
-      this.tracers.push({ line, life: 0.06 });
+      this.tracers.push({ line, life: 0.05 });
     }
     spawnImpact(point, normal) {
       const puff = new Mesh(
-        new SphereGeometry(0.09, 6, 5),
-        new MeshBasicMaterial({ color: 12169892, transparent: true, opacity: 0.55, fog: false })
+        new SphereGeometry(0.08, 6, 5),
+        new MeshBasicMaterial({ color: 12169892, transparent: true, opacity: 0.5, fog: false })
       );
       puff.position.copy(point).addScaledVector(normal, 0.04);
       this.scene.add(puff);
-      this.decals.push({ mesh: puff, life: 0.4, normal });
+      this.decals.push({ mesh: puff, life: 0.35 });
     }
     ejectShell(origin, dir) {
       const shell = new Mesh(
@@ -48317,24 +49019,26 @@ void main() {
       this.scene.add(shell);
       this.shells.push({
         mesh: shell,
-        vel: right.multiplyScalar(2.2 + Math.random()).add(new Vector3(0, 2.4, 0)),
+        vel: right.multiplyScalar(2 + Math.random()).add(new Vector3(0, 2.3, 0)),
         spin: new Vector3(Math.random() * 14, Math.random() * 9, Math.random() * 12),
-        life: 2.2
+        life: 2
       });
     }
     update(dt, player2, input2) {
       if (this.cooldown > 0) this.cooldown -= dt;
-      this.recoil = Math.max(0, this.recoil - dt * 1.4);
-      if (this.reloading > 0) {
+      if (this.switching > 0) this.switching -= dt;
+      this.recoil = Math.max(0, this.recoil - dt * 1.5);
+      const s = this.slot;
+      if (this.reloading > 0 && s) {
         this.reloading -= dt;
         if (this.reloading <= 0) {
-          const need = this.magSize - this.ammo;
-          const take = Math.min(need, this.reserve);
-          this.ammo += take;
-          this.reserve -= take;
+          const need = s.def.mag - s.ammo;
+          const take = Math.min(need, s.reserve);
+          s.ammo += take;
+          s.reserve -= take;
         }
       }
-      const wantAds = input2.ads && this.reloading <= 0 && !player2.sprinting;
+      const wantAds = input2.ads && this.reloading <= 0 && this.switching <= 0 && !player2.sprinting;
       this.ads += ((wantAds ? 1 : 0) - this.ads) * Math.min(1, 14 * dt);
       this.sway.lerp(this.swayTarget, Math.min(1, 10 * dt));
       this.swayTarget.multiplyScalar(Math.max(0, 1 - 6 * dt));
@@ -48344,25 +49048,27 @@ void main() {
       const base = new Vector3().lerpVectors(this.hipPos, this.adsPos, this.ads);
       const bobX = Math.sin(player2.bob) * 0.016 * player2.bobAmount * (1 - this.ads * 0.85);
       const bobY = Math.abs(Math.cos(player2.bob)) * 0.012 * player2.bobAmount * (1 - this.ads * 0.85);
-      const sprintTilt = player2.sprinting ? 1 : 0;
-      this.sprintMix = (this.sprintMix || 0) + (sprintTilt - (this.sprintMix || 0)) * Math.min(1, 8 * dt);
+      this.sprintMix += ((player2.sprinting ? 1 : 0) - this.sprintMix) * Math.min(1, 8 * dt);
+      const swap = this.switching > 0 ? Math.sin((0.45 - this.switching) / 0.45 * Math.PI) : 0;
       this.group.position.set(
         base.x + this.sway.x + bobX + this.sprintMix * 0.07,
-        base.y + this.sway.y + bobY - player2.landDip * 0.05 - this.sprintMix * 0.05,
+        base.y + this.sway.y + bobY - player2.landDip * 0.05 - this.sprintMix * 0.05 - swap * 0.22,
         base.z + this.kick * 0.05
       );
       this.group.rotation.set(
-        -this.sway.y * 2.2 + this.kick * 0.09 + this.sprintMix * 0.22,
+        -this.sway.y * 2.2 + this.kick * 0.09 + this.sprintMix * 0.22 + swap * 0.5,
         this.sway.x * 2 + this.sprintMix * 0.5,
         this.sway.x * 1.1 + this.sprintMix * 0.18 + (this.reloading > 0 ? Math.sin(this.reloading * 6) * 0.25 : 0)
       );
-      if (this.reloading > 0) this.group.position.y -= 0.12 * Math.sin((1.55 - this.reloading) * 2);
+      if (this.reloading > 0 && s) {
+        this.group.position.y -= 0.12 * Math.sin((s.def.reload - this.reloading) / s.def.reload * Math.PI);
+      }
       this.muzzleLight.intensity *= Math.max(0, 1 - 22 * dt);
       this.flash.material.opacity *= Math.max(0, 1 - 26 * dt);
       for (let i = this.tracers.length - 1; i >= 0; i--) {
         const t = this.tracers[i];
         t.life -= dt;
-        t.line.material.opacity = Math.max(0, t.life / 0.06) * 0.85;
+        t.line.material.opacity = Math.max(0, t.life / 0.05) * 0.8;
         if (t.life <= 0) {
           this.scene.remove(t.line);
           t.line.geometry.dispose();
@@ -48373,8 +49079,8 @@ void main() {
       for (let i = this.decals.length - 1; i >= 0; i--) {
         const d = this.decals[i];
         d.life -= dt;
-        d.mesh.scale.setScalar(1 + (0.4 - d.life) * 3);
-        d.mesh.material.opacity = Math.max(0, d.life / 0.4) * 0.55;
+        d.mesh.scale.setScalar(1 + (0.35 - d.life) * 3);
+        d.mesh.material.opacity = Math.max(0, d.life / 0.35) * 0.5;
         if (d.life <= 0) {
           this.scene.remove(d.mesh);
           d.mesh.geometry.dispose();
@@ -48383,21 +49089,21 @@ void main() {
         }
       }
       for (let i = this.shells.length - 1; i >= 0; i--) {
-        const s = this.shells[i];
-        s.life -= dt;
-        s.vel.y -= 16 * dt;
-        s.mesh.position.addScaledVector(s.vel, dt);
-        s.mesh.rotation.x += s.spin.x * dt;
-        s.mesh.rotation.z += s.spin.z * dt;
-        if (s.mesh.position.y < 0.02) {
-          s.mesh.position.y = 0.02;
-          s.vel.set(0, 0, 0);
-          s.spin.set(0, 0, 0);
+        const sh = this.shells[i];
+        sh.life -= dt;
+        sh.vel.y -= 16 * dt;
+        sh.mesh.position.addScaledVector(sh.vel, dt);
+        sh.mesh.rotation.x += sh.spin.x * dt;
+        sh.mesh.rotation.z += sh.spin.z * dt;
+        if (sh.mesh.position.y < 0.02) {
+          sh.mesh.position.y = 0.02;
+          sh.vel.set(0, 0, 0);
+          sh.spin.set(0, 0, 0);
         }
-        if (s.life <= 0) {
-          this.scene.remove(s.mesh);
-          s.mesh.geometry.dispose();
-          s.mesh.material.dispose();
+        if (sh.life <= 0) {
+          this.scene.remove(sh.mesh);
+          sh.mesh.geometry.dispose();
+          sh.mesh.material.dispose();
           this.shells.splice(i, 1);
         }
       }
@@ -48406,49 +49112,76 @@ void main() {
 
   // src/enemies.js
   var HEAD_Y = 1.62;
-  var BODY_TOP = 1.5;
-  var BODY_BOTTOM = 0.35;
+  var HEAD_R = 0.18;
+  var TORSO_TOP = 1.5;
+  var TORSO_BOTTOM = 0.95;
+  var LEG_BOTTOM = 0.2;
   var BODY_R = 0.32;
-  var HEAD_R = 0.17;
+  var ZONE_MULT = { head: 2.7, torso: 1, limb: 0.55 };
   var sharedGeo = null;
   function geos() {
     if (!sharedGeo) {
       sharedGeo = {
         torso: new BoxGeometry(0.46, 0.62, 0.26),
-        vest: new BoxGeometry(0.5, 0.42, 0.32),
+        vest: new BoxGeometry(0.5, 0.44, 0.32),
         head: new BoxGeometry(0.21, 0.24, 0.23),
-        helmet: new BoxGeometry(0.25, 0.12, 0.27),
+        helmet: new BoxGeometry(0.26, 0.13, 0.28),
+        beret: new BoxGeometry(0.27, 0.08, 0.29),
         arm: new BoxGeometry(0.12, 0.5, 0.13),
-        leg: new BoxGeometry(0.16, 0.72, 0.18),
-        gun: new BoxGeometry(0.07, 0.09, 0.55)
+        leg: new BoxGeometry(0.16, 0.74, 0.18),
+        gun: new BoxGeometry(0.07, 0.09, 0.55),
+        radio: new BoxGeometry(0.09, 0.16, 0.06)
       };
     }
     return sharedGeo;
   }
   var Enemy = class {
-    constructor(world2, position, scene) {
+    constructor(world2, position, scene, opts = {}) {
       this.world = world2;
+      this.facility = world2.facility;
       this.scene = scene;
       this.pos = position.clone();
       this.pos.y = 0;
       this.vel = new Vector3();
-      this.health = 100;
+      this.maxHealth = opts.health || 100;
+      this.health = this.maxHealth;
+      this.damage = opts.damage || 9;
+      this.accuracy = opts.accuracy == null ? 0.05 : opts.accuracy;
+      this.reaction = opts.reaction == null ? 0.5 : opts.reaction;
+      this.commander = !!opts.commander;
+      if (this.commander) {
+        this.maxHealth = this.health = this.maxHealth * 2.2;
+      }
+      this.weaponId = opts.weapon || GUARD_WEAPONS[Math.floor(Math.random() * GUARD_WEAPONS.length)];
       this.alive = true;
-      this.state = "idle";
-      this.fireTimer = 0;
+      this.state = "patrol";
+      this.yaw = Math.random() * Math.PI * 2;
+      this.walkCycle = Math.random() * 10;
+      this.fireTimer = 0.6;
       this.burst = 0;
       this.reactTimer = 0;
+      this.callTimer = 0;
+      this.searchTimer = 0;
       this.strafe = Math.random() > 0.5 ? 1 : -1;
       this.strafeTimer = 0;
-      this.walkCycle = Math.random() * 10;
-      this.yaw = Math.random() * Math.PI * 2;
+      this.path = null;
+      this.repathTimer = Math.random() * 0.5;
+      this.target = null;
+      this.lastKnown = null;
+      this.heardUntil = 0;
+      this.stagger = null;
       this.deathTimer = 0;
+      this.patrolAnchor = position.clone();
       this.build();
     }
     build() {
       const g = geos();
-      const cloth = new MeshStandardMaterial({ color: 5593674, roughness: 0.92 });
-      const vest = new MeshStandardMaterial({ color: 3882808, roughness: 0.8 });
+      const clothColor = this.commander ? 3095108 : 5593674;
+      const cloth = new MeshStandardMaterial({ color: clothColor, roughness: 0.92 });
+      const vest = new MeshStandardMaterial({
+        color: this.commander ? 2304046 : 3882808,
+        roughness: 0.8
+      });
       const skin = new MeshStandardMaterial({ color: 10122836, roughness: 0.85 });
       const gear = new MeshStandardMaterial({ color: 2764072, roughness: 0.7, metalness: 0.3 });
       this.group = new Group();
@@ -48463,15 +49196,18 @@ void main() {
       this.torso = add(g.torso, cloth, 0, 1.16, 0);
       add(g.vest, vest, 0, 1.2, 0);
       this.head = add(g.head, skin, 0, HEAD_Y, 0);
-      add(g.helmet, gear, 0, HEAD_Y + 0.15, -0.01);
+      this.hat = add(this.commander ? g.beret : g.helmet, gear, 0, HEAD_Y + 0.15, -0.01);
+      if (this.commander) this.hat.material = new MeshStandardMaterial({ color: 7154475, roughness: 0.9 });
       this.armL = add(g.arm, cloth, -0.3, 1.12, -0.02);
       this.armR = add(g.arm, cloth, 0.3, 1.12, -0.02);
       this.legL = add(g.leg, cloth, -0.13, 0.42, 0);
       this.legR = add(g.leg, cloth, 0.13, 0.42, 0);
       this.gun = add(g.gun, gear, 0.22, 1.16, -0.3);
+      this.radio = add(g.radio, gear, -0.3, 1.3, 0.1);
+      this.radio.visible = false;
       this.scene.add(this.group);
     }
-    /** Ray against the body capsule and the head sphere. */
+    /* --- damage ---------------------------------------------------------- */
     rayHit(origin, dir, maxT) {
       const c = this.pos;
       const hx = origin.x - c.x, hy = origin.y - (c.y + HEAD_Y), hz = origin.z - c.z;
@@ -48480,7 +49216,7 @@ void main() {
       const disc = b * b - cc;
       if (disc > 0) {
         const t = -b - Math.sqrt(disc);
-        if (t > 0 && t < maxT) return { t, head: true };
+        if (t > 0 && t < maxT) return { t, zone: "head" };
       }
       const dx = origin.x - c.x, dz = origin.z - c.z;
       const a2 = dir.x * dir.x + dir.z * dir.z;
@@ -48492,121 +49228,285 @@ void main() {
           const t = (-b2 - Math.sqrt(d2)) / a2;
           if (t > 0 && t < maxT) {
             const y = origin.y + dir.y * t - c.y;
-            if (y > BODY_BOTTOM && y < BODY_TOP) return { t, head: false };
+            if (y >= TORSO_BOTTOM && y <= TORSO_TOP) return { t, zone: "torso" };
+            if (y >= LEG_BOTTOM && y < TORSO_BOTTOM) return { t, zone: "limb" };
           }
         }
       }
       return null;
     }
-    hit(damage, dir) {
+    hit(damage, zone, dir, ctx) {
       if (!this.alive) return;
-      this.health -= damage;
-      this.state = "engage";
-      this.reactTimer = Math.min(this.reactTimer, 0.15);
-      if (this.health <= 0) {
-        this.alive = false;
-        this.deathTimer = 0;
-        this.deathDir = dir.clone();
+      this.health -= damage * (ZONE_MULT[zone] || 1);
+      this.stagger = { zone, t: 0.34 };
+      if (this.state === "patrol" || this.state === "suspicious") {
+        this.state = "engage";
+        this.reactTimer = this.reaction * 0.4;
+        this.lastKnown = ctx && ctx.player ? ctx.player.pos.clone() : null;
+      }
+      if (this.health <= 0) this.die(ctx, dir);
+    }
+    die(ctx, dir) {
+      this.alive = false;
+      this.deathTimer = 0;
+      this.deathDir = dir ? dir.clone() : new Vector3(0, 0, 1);
+      this.radio.visible = false;
+      if (ctx && ctx.mission) {
+        if (this.commander) ctx.mission.dropIntel(this.pos);
+        else if (Math.random() < 0.45) ctx.mission.dropWeapon(this.pos, this.weaponId);
       }
     }
-    canSee(target) {
-      const from = new Vector3(this.pos.x, this.pos.y + 1.45, this.pos.z);
-      const to = target.clone();
+    /* --- senses ---------------------------------------------------------- */
+    eyePos() {
+      return new Vector3(this.pos.x, this.pos.y + 1.45, this.pos.z);
+    }
+    canSee(player2) {
+      if (!player2.alive) return false;
+      const from = this.eyePos();
+      const to = new Vector3(player2.pos.x, player2.pos.y + player2.eyeOffset, player2.pos.z);
       const dir = to.clone().sub(from);
       const dist = dir.length();
-      if (dist > 95) return false;
+      if (dist > 68) return false;
       dir.divideScalar(dist);
-      const hit = this.world.raycast(from, dir, dist);
+      const facing = new Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+      const cone = this.state === "engage" || this.state === "search" ? -0.2 : 0.35;
+      if (facing.dot(dir) < cone) return false;
+      const hit = this.world.raycast(from, dir, dist - 0.2);
       return !hit;
     }
-    update(dt, player2, sfx2, onShoot) {
+    hear(mission2) {
+      for (const n of mission2.noiseEvents) {
+        if (n.handled && n.handled.has(this)) continue;
+        if (this.pos.distanceTo(n.pos) > n.radius) continue;
+        (n.handled = n.handled || /* @__PURE__ */ new Set()).add(this);
+        if (this.state === "patrol") {
+          this.state = "suspicious";
+          this.searchTimer = 9;
+        }
+        this.lastKnown = n.pos.clone();
+        this.path = null;
+        this.repathTimer = 0;
+      }
+    }
+    /* --- movement -------------------------------------------------------- */
+    moveAlongPath(dt, speed) {
+      if (!this.path || !this.path.length) return false;
+      const next = this.path[0];
+      const to = new Vector3(next.x - this.pos.x, 0, next.z - this.pos.z);
+      const d = to.length();
+      if (d < 0.7) {
+        this.path.shift();
+        return this.path.length > 0;
+      }
+      to.divideScalar(d);
+      this.vel.lerp(to.multiplyScalar(speed), Math.min(1, 7 * dt));
+      this.yaw = Math.atan2(to.x, to.z);
+      return true;
+    }
+    repath(dt, goal) {
+      this.repathTimer -= dt;
+      if (this.repathTimer > 0 && this.path && this.path.length) return;
+      this.repathTimer = 0.7 + Math.random() * 0.4;
+      if (this.facility && this.facility.inside(this.pos) && this.facility.inside(goal)) {
+        this.path = this.facility.path(this.pos, goal);
+      } else {
+        this.path = [goal.clone()];
+      }
+    }
+    pickPatrolGoal() {
+      const posts = this.facility ? this.facility.guardPosts : [];
+      if (posts.length && Math.random() < 0.75) {
+        return posts[Math.floor(Math.random() * posts.length)].clone();
+      }
+      const jitter = new Vector3((Math.random() - 0.5) * 14, 0, (Math.random() - 0.5) * 14);
+      return this.patrolAnchor.clone().add(jitter);
+    }
+    /* --- frame ----------------------------------------------------------- */
+    update(dt, ctx) {
+      const { player: player2, mission: mission2, sfx: sfx2 } = ctx;
       if (!this.alive) {
         this.deathTimer += dt;
-        const t = Math.min(1, this.deathTimer / 0.65);
+        const t = Math.min(1, this.deathTimer / 0.7);
         const fall = t * t * (3 - 2 * t);
         this.group.rotation.x = fall * (Math.PI / 2) * 0.95;
-        this.group.position.y = this.pos.y - fall * 0.42;
-        if (this.deathTimer > 8) this.group.visible = false;
+        this.group.position.y = this.pos.y - fall * 0.44;
+        if (this.deathTimer > 20) this.group.visible = false;
         return;
       }
-      const eye = new Vector3(player2.pos.x, player2.pos.y + player2.eyeOffset, player2.pos.z);
-      const toPlayer = new Vector3(player2.pos.x - this.pos.x, 0, player2.pos.z - this.pos.z);
-      const dist = toPlayer.length();
-      const sees = player2.alive && this.canSee(eye);
-      if (this.state === "idle") {
-        if (sees && dist < 70) {
-          this.state = "alert";
-          this.reactTimer = 0.35 + Math.random() * 0.45;
-        }
-      } else if (this.state === "alert") {
-        this.reactTimer -= dt;
-        if (this.reactTimer <= 0) this.state = "engage";
+      this.hear(mission2);
+      const sees = this.canSee(player2);
+      if (sees) this.lastKnown = player2.pos.clone();
+      if (this.stagger) {
+        this.stagger.t -= dt;
+        if (this.stagger.t <= 0) this.stagger = null;
       }
-      let move = new Vector3();
-      if (this.state === "engage") {
-        this.yaw = Math.atan2(toPlayer.x, toPlayer.z);
-        const forward = toPlayer.clone().normalize();
-        const right = new Vector3(forward.z, 0, -forward.x);
-        this.strafeTimer -= dt;
-        if (this.strafeTimer <= 0) {
-          this.strafeTimer = 0.8 + Math.random() * 1.4;
-          this.strafe = Math.random() > 0.5 ? 1 : -1;
-        }
-        const want = 14;
-        const closing = MathUtils.clamp((dist - want) / 8, -1, 1);
-        move.addScaledVector(forward, closing * 2.9);
-        move.addScaledVector(right, this.strafe * (sees ? 1.6 : 0.4));
-        if (sees) {
-          this.fireTimer -= dt;
-          if (this.fireTimer <= 0) {
-            if (this.burst > 0) {
-              this.burst--;
-              this.fireTimer = 0.12;
-              this._shoot(player2, sfx2, onShoot, dist);
-            } else {
-              this.burst = 2 + Math.floor(Math.random() * 4);
-              this.fireTimer = 0.9 + Math.random() * 1.1;
-            }
+      let speed = 2.6;
+      switch (this.state) {
+        case "patrol": {
+          speed = 1.7;
+          if (sees) {
+            this.state = "alert";
+            this.reactTimer = this.reaction;
+            this.path = null;
+            break;
           }
+          if (!this.path || !this.path.length) {
+            this.target = this.pickPatrolGoal();
+            this.repathTimer = 0;
+          }
+          if (this.target) this.repath(dt, this.target);
+          if (!this.moveAlongPath(dt, speed)) this.vel.multiplyScalar(0.85);
+          break;
         }
-      } else if (sees) {
-        this.yaw = Math.atan2(toPlayer.x, toPlayer.z);
+        case "suspicious": {
+          speed = 2.4;
+          this.searchTimer -= dt;
+          if (sees) {
+            this.state = "alert";
+            this.reactTimer = this.reaction * 0.6;
+            break;
+          }
+          if (this.lastKnown) this.repath(dt, this.lastKnown);
+          if (!this.moveAlongPath(dt, speed) || this.searchTimer <= 0) {
+            this.state = "patrol";
+            this.path = null;
+          }
+          break;
+        }
+        case "alert": {
+          this.vel.multiplyScalar(0.8);
+          this.reactTimer -= dt;
+          if (this.lastKnown) {
+            const to = this.lastKnown.clone().sub(this.pos);
+            this.yaw = Math.atan2(to.x, to.z);
+          }
+          if (this.reactTimer <= 0) this.state = "engage";
+          break;
+        }
+        case "engage": {
+          speed = 3;
+          if (!mission2.alarmDisabled && !mission2.alarmActive) {
+            this.callTimer += dt;
+            this.radio.visible = this.callTimer > 0.4;
+            if (this.callTimer > 2.4) {
+              mission2.raiseAlarm();
+              this.radio.visible = false;
+            }
+          } else {
+            this.radio.visible = false;
+          }
+          if (sees) {
+            const to = new Vector3(player2.pos.x - this.pos.x, 0, player2.pos.z - this.pos.z);
+            const dist = to.length();
+            this.yaw = Math.atan2(to.x, to.z);
+            this.path = null;
+            this.strafeTimer -= dt;
+            if (this.strafeTimer <= 0) {
+              this.strafeTimer = 0.9 + Math.random() * 1.3;
+              this.strafe = Math.random() > 0.5 ? 1 : -1;
+            }
+            const fwd = to.normalize();
+            const right = new Vector3(fwd.z, 0, -fwd.x);
+            const want = MathUtils.clamp((dist - 11) / 7, -1, 1);
+            const move = fwd.multiplyScalar(want * 2.6).addScaledVector(right, this.strafe * 1.5);
+            this.vel.lerp(move, Math.min(1, 6 * dt));
+            this.fireTimer -= dt;
+            if (this.fireTimer <= 0) {
+              if (this.burst > 0) {
+                this.burst--;
+                this.fireTimer = 0.13;
+                this.shoot(player2, mission2, sfx2, dist);
+              } else {
+                this.burst = 2 + Math.floor(Math.random() * 4);
+                this.fireTimer = 0.8 + Math.random() * 1;
+              }
+            }
+          } else if (this.lastKnown) {
+            this.repath(dt, this.lastKnown);
+            if (!this.moveAlongPath(dt, speed)) {
+              this.state = "search";
+              this.searchTimer = 8;
+            }
+          } else {
+            this.state = "search";
+            this.searchTimer = 8;
+          }
+          break;
+        }
+        case "search": {
+          speed = 2.5;
+          this.searchTimer -= dt;
+          if (sees) {
+            this.state = "engage";
+            break;
+          }
+          if (!this.path || !this.path.length) {
+            this.target = this.pickPatrolGoal();
+            this.repathTimer = 0;
+          }
+          if (this.target) this.repath(dt, this.target);
+          this.moveAlongPath(dt, speed);
+          if (this.searchTimer <= 0) {
+            this.state = "patrol";
+            this.callTimer = 0;
+          }
+          break;
+        }
+        default:
+          break;
       }
-      this.vel.lerp(move, Math.min(1, 6 * dt));
       this.pos.addScaledVector(this.vel, dt);
-      this.pos.y += 0;
-      const probe = new Vector3(this.pos.x, 0.9, this.pos.z);
-      this.world.resolve(probe, 0.36, 0.85);
+      const probe = new Vector3(this.pos.x, 0.95, this.pos.z);
+      this.world.resolve(probe, 0.36, 0.9);
       this.pos.x = probe.x;
       this.pos.z = probe.z;
-      const speed = Math.hypot(this.vel.x, this.vel.z);
-      this.walkCycle += speed * dt * 2.6;
-      const swing = Math.sin(this.walkCycle) * Math.min(1, speed / 2.5);
-      this.legL.rotation.x = swing * 0.75;
-      this.legR.rotation.x = -swing * 0.75;
-      this.armL.rotation.x = -swing * 0.4;
-      this.torso.rotation.z = Math.sin(this.walkCycle * 2) * 0.02 * Math.min(1, speed / 2);
+      this.animate(dt);
       this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
       this.group.rotation.y = this.yaw;
     }
-    _shoot(player2, sfx2, onShoot, dist) {
-      const from = new Vector3(this.pos.x, this.pos.y + 1.45, this.pos.z);
+    animate(dt) {
+      const speed = Math.hypot(this.vel.x, this.vel.z);
+      this.walkCycle += speed * dt * 2.6;
+      const swing = Math.sin(this.walkCycle) * Math.min(1, speed / 2.5);
+      this.legL.rotation.x = swing * 0.8;
+      this.legR.rotation.x = -swing * 0.8;
+      this.armL.rotation.x = -swing * 0.45;
+      this.torso.rotation.z = Math.sin(this.walkCycle * 2) * 0.02 * Math.min(1, speed / 2);
+      this.torso.rotation.x = 0;
+      this.head.rotation.z = 0;
+      if (this.stagger) {
+        const k = this.stagger.t / 0.34;
+        if (this.stagger.zone === "head") {
+          this.head.rotation.z = k * 0.5;
+          this.torso.rotation.x = -k * 0.2;
+        } else if (this.stagger.zone === "torso") {
+          this.torso.rotation.x = -k * 0.35;
+          this.armL.rotation.x = -k * 0.6;
+        } else {
+          this.legL.rotation.x = swing * 0.8 - k * 0.5;
+          this.torso.rotation.z = k * 0.25;
+        }
+      }
+    }
+    shoot(player2, mission2, sfx2, dist) {
+      const from = this.eyePos();
       const eye = new Vector3(player2.pos.x, player2.pos.y + player2.eyeOffset, player2.pos.z);
       const dir = eye.clone().sub(from).normalize();
-      const spread = MathUtils.clamp(0.02 + dist * 16e-4, 0.02, 0.1);
+      const spread = MathUtils.clamp(this.accuracy + dist * 12e-4, 0.02, 0.12);
       dir.x += (Math.random() - 0.5) * spread;
       dir.y += (Math.random() - 0.5) * spread;
       dir.z += (Math.random() - 0.5) * spread;
       dir.normalize();
       sfx2.distantShot();
-      onShoot(from, dir);
+      mission2.noise(this.pos, 30);
       const wall = this.world.raycast(from, dir, dist + 2);
-      if (wall && wall.t < dist - 0.5) return;
+      if (wall && wall.t < dist - 0.6) return;
       const rel = eye.clone().sub(from);
       const along = rel.dot(dir);
       const perp = rel.clone().addScaledVector(dir, -along).length();
-      if (perp < 0.42 && along > 0) {
-        player2.damage(7 + Math.random() * 6);
+      if (perp < 0.45 && along > 0) {
+        player2.damage(this.damage + Math.random() * 4);
+        mission2.stats.damageTaken += this.damage;
         sfx2.hurt();
       }
     }
@@ -48614,13 +49514,30 @@ void main() {
       this.scene.remove(this.group);
     }
   };
-  function spawnWave(world2, scene, count, avoid) {
+  function spawnGuards(world2, scene, mission2, count, avoid) {
+    const f = world2.facility;
+    const cells = f.spawnCells(avoid, 18);
     const list = [];
-    const pool = world2.spawns.filter((p) => p.distanceTo(avoid) > 26);
+    const d = mission2.diff;
     for (let i = 0; i < count; i++) {
-      const p = pool.length ? pool[(i * 7 + 3) % pool.length] : new Vector3(0, 0, -40);
-      const jitter = new Vector3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 6);
-      list.push(new Enemy(world2, p.clone().add(jitter), scene));
+      const p = cells.length ? cells[Math.floor(Math.random() * cells.length)] : avoid.clone();
+      list.push(new Enemy(world2, p, scene, {
+        health: d.health,
+        damage: d.damage,
+        accuracy: d.accuracy,
+        reaction: d.reaction
+      }));
+    }
+    if (mission2.wants("intel")) {
+      const far = cells.sort((a, b) => b.distanceTo(avoid) - a.distanceTo(avoid))[0] || avoid;
+      list.push(new Enemy(world2, far, scene, {
+        health: d.health,
+        damage: d.damage,
+        accuracy: d.accuracy * 0.7,
+        reaction: d.reaction * 0.7,
+        commander: true,
+        weapon: "rifle"
+      }));
     }
     return list;
   }
@@ -48628,23 +49545,26 @@ void main() {
   // src/hud.js
   var Hud = class {
     constructor(root) {
-      this.root = root;
       root.innerHTML = `
       <div class="hud">
-        <div class="minimap"><canvas width="220" height="220"></canvas><span class="mm-label">SECTOR 07</span></div>
+        <div class="minimap"><canvas width="220" height="220"></canvas><span class="mm-label">FACILITY</span></div>
+        <div class="objectives"><h4>OBJECTIVES</h4><ul></ul></div>
         <div class="compass"><div class="strip"></div><div class="needle"></div></div>
+        <div class="alarmflag">ALARM ACTIVE</div>
+        <div class="mtimer"></div>
         <div class="killfeed"></div>
         <div class="toast"></div>
         <div class="crosshair">
           <i class="c-dot"></i><i class="c-t"></i><i class="c-b"></i><i class="c-l"></i><i class="c-r"></i>
           <i class="hitmark"></i>
         </div>
+        <div class="prompt"><b></b><span class="ring"><i></i></span></div>
         <div class="vitals">
           <div class="hp"><div class="hp-fill"></div></div>
           <div class="hp-num">100</div>
         </div>
-        <div class="ammo"><span class="mag">30</span><span class="res">/ 210</span><span class="wep">MK-4 CARBINE</span></div>
-        <div class="score"><span class="kills">0</span> ELIMINATED<br><span class="wave">WAVE 1</span></div>
+        <div class="ammo"><span class="mag">12</span><span class="res">/ 60</span><span class="wep">PP-9</span></div>
+        <div class="slots"></div>
         <div class="lowammo">RELOAD</div>
       </div>`;
       const q = (s) => root.querySelector(s);
@@ -48655,21 +49575,29 @@ void main() {
         hpNum: q(".hp-num"),
         mag: q(".mag"),
         res: q(".res"),
-        kills: q(".kills"),
-        wave: q(".wave"),
+        wep: q(".wep"),
+        slots: q(".slots"),
+        obj: q(".objectives ul"),
+        alarm: q(".alarmflag"),
+        timer: q(".mtimer"),
         toast: q(".toast"),
         feed: q(".killfeed"),
         hit: q(".hitmark"),
         cross: q(".crosshair"),
-        low: q(".lowammo")
+        low: q(".lowammo"),
+        prompt: q(".prompt"),
+        promptText: q(".prompt b"),
+        ring: q(".prompt .ring i")
       };
       this.toastTimer = 0;
       this.hitTimer = 0;
+      this.objSignature = "";
+      this.slotSignature = "";
     }
     toast(text) {
       this.el.toast.textContent = text;
       this.el.toast.style.opacity = "1";
-      this.toastTimer = 1.9;
+      this.toastTimer = 2.2;
     }
     feed(text) {
       const line = document.createElement("div");
@@ -48679,25 +49607,55 @@ void main() {
       setTimeout(() => line.classList.add("fade"), 2600);
       setTimeout(() => line.remove(), 3400);
     }
-    hitMarker(head) {
+    hitMarker(zone) {
       this.el.hit.style.opacity = "1";
-      this.el.hit.classList.toggle("head", !!head);
+      this.el.hit.classList.toggle("head", zone === "head");
       this.hitTimer = 0.16;
     }
     update(dt, state) {
-      const { player: player2, weapon: weapon2, enemies: enemies2, kills: kills2, wave: wave2 } = state;
+      const { player: player2, weapon: weapon2, enemies: enemies2, mission: mission2, loadout: loadout2 } = state;
       const hp = Math.round(player2.health);
       this.el.hpFill.style.width = hp + "%";
       this.el.hpFill.style.background = hp > 55 ? "#cfd6d8" : hp > 25 ? "#d8b25a" : "#c8493c";
       this.el.hpNum.textContent = hp;
       this.el.mag.textContent = weapon2.ammo;
       this.el.res.textContent = "/ " + weapon2.reserve;
-      this.el.kills.textContent = kills2;
-      this.el.wave.textContent = "WAVE " + wave2;
+      this.el.wep.textContent = weapon2.def.name;
       this.el.low.style.opacity = weapon2.ammo === 0 && weapon2.reloading <= 0 ? "1" : "0";
+      const sig = loadout2.slots.map((s) => s.id).join(",") + "|" + loadout2.index;
+      if (sig !== this.slotSignature) {
+        this.slotSignature = sig;
+        this.el.slots.innerHTML = loadout2.slots.map((s, i) => `<span class="${i === loadout2.index ? "on" : ""}">${i + 1} ${s.def.short}</span>`).join("");
+      }
+      const osig = mission2.objectives.map((o) => o.id + (o.done ? "1" : "0")).join();
+      if (osig !== this.objSignature) {
+        this.objSignature = osig;
+        this.el.obj.innerHTML = mission2.objectives.map((o) => `<li class="${o.done ? "done" : ""}"><b>${o.letter}</b>${o.text}</li>`).join("");
+      }
+      this.el.alarm.style.opacity = mission2.alarmActive ? "1" : "0";
+      if (mission2.timeLimit) {
+        const left = Math.max(0, mission2.timeLimit - mission2.time);
+        const m = Math.floor(left / 60);
+        const s = Math.floor(left % 60);
+        this.el.timer.textContent = m + ":" + String(s).padStart(2, "0");
+        this.el.timer.classList.toggle("urgent", left < 60);
+      } else {
+        this.el.timer.textContent = "";
+      }
+      const p = mission2.prompt;
+      if (p) {
+        this.el.prompt.style.opacity = "1";
+        this.el.promptText.textContent = p.hold ? p.blocked ? p.label : "HOLD F \u2014 " + p.label : p.blocked ? p.label : "F \u2014 " + p.label;
+        this.el.prompt.classList.toggle("blocked", !!p.blocked);
+        this.el.ring.style.width = Math.round((p.progress || 0) * 100) + "%";
+      } else {
+        this.el.prompt.style.opacity = "0";
+        this.el.ring.style.width = "0%";
+      }
       const spread = 6 + weapon2.recoil * 26 + (player2.sprinting ? 16 : 0) + (1 - weapon2.ads) * 6;
       this.el.cross.style.setProperty("--gap", spread.toFixed(1) + "px");
-      this.el.cross.style.opacity = weapon2.ads > 0.75 ? "0.25" : "1";
+      this.el.cross.style.opacity = weapon2.ads > 0.75 ? "0.2" : "1";
+      if (mission2.banner) this.toast(mission2.banner);
       if (this.toastTimer > 0) {
         this.toastTimer -= dt;
         if (this.toastTimer <= 0) this.el.toast.style.opacity = "0";
@@ -48708,35 +49666,54 @@ void main() {
       }
       const deg = (-player2.yaw * 180 / Math.PI % 360 + 360) % 360;
       this.el.strip.style.transform = `translateX(${-deg * 4}px)`;
-      this.drawMinimap(player2, enemies2);
+      this.drawMinimap(player2, enemies2, mission2);
     }
-    drawMinimap(player2, enemies2) {
+    /* Top-down slice of the floorplan around the player, plus contacts. */
+    drawMinimap(player2, enemies2, mission2) {
       const g = this.el.mm;
       const w = 220;
-      const scale = 1.5;
+      const scale = 3.2;
+      const f = mission2.facility;
       g.clearRect(0, 0, w, w);
       g.save();
       g.translate(w / 2, w / 2);
       g.rotate(player2.yaw + Math.PI);
-      g.fillStyle = "rgba(18,20,22,0.55)";
+      g.fillStyle = "rgba(18,20,22,0.5)";
       g.fillRect(-w, -w, w * 2, w * 2);
-      g.fillStyle = "rgba(150,158,160,0.30)";
-      g.fillRect(-9 * scale - player2.pos.x * scale, -200, 18 * scale, 400);
-      g.strokeStyle = "rgba(190,198,200,0.35)";
-      g.lineWidth = 1;
-      for (let i = -8; i <= 8; i++) {
-        const z = (i * 20 - player2.pos.z % 20) * scale;
-        g.beginPath();
-        g.moveTo(-w, z);
-        g.lineTo(w, z);
-        g.stroke();
+      if (f) {
+        const cell = 2.6 * scale;
+        const c = f.cellOf(player2.pos);
+        const span = 11;
+        for (let dy = -span; dy <= span; dy++) {
+          for (let dx = -span; dx <= span; dx++) {
+            const x = c.x + dx;
+            const y = c.y + dy;
+            if (x < 0 || y < 0 || x >= f.w || y >= f.h) continue;
+            if (!f.walkable(x, y)) continue;
+            const p = f.worldPos(x, y);
+            g.fillStyle = "rgba(150,162,166,0.34)";
+            g.fillRect(
+              (p.x - player2.pos.x) * scale - cell / 2,
+              (p.z - player2.pos.z) * scale - cell / 2,
+              cell - 1,
+              cell - 1
+            );
+          }
+        }
+        for (const d of f.doors) {
+          const dx = (d.pos.x - player2.pos.x) * scale;
+          const dz = (d.pos.z - player2.pos.z) * scale;
+          if (Math.hypot(dx, dz) > w / 2) continue;
+          g.fillStyle = d.locked ? "#c8a24a" : "rgba(210,220,224,0.7)";
+          g.fillRect(dx - 3, dz - 3, 6, 6);
+        }
       }
       for (const e of enemies2) {
         if (!e.alive) continue;
         const dx = (e.pos.x - player2.pos.x) * scale;
         const dz = (e.pos.z - player2.pos.z) * scale;
         if (Math.hypot(dx, dz) > w / 2 - 8) continue;
-        g.fillStyle = "#d4483c";
+        g.fillStyle = e.state === "engage" || e.state === "alert" ? "#d4483c" : "#c98a3c";
         g.beginPath();
         g.arc(dx, dz, 4, 0, Math.PI * 2);
         g.fill();
@@ -48858,6 +49835,471 @@ void main() {
     }
   };
 
+  // src/mission.js
+  var DIFFICULTIES = {
+    agent: {
+      id: "agent",
+      label: "AGENT",
+      blurb: "Two objectives. Guards are slow to react.",
+      objectives: ["alarm", "data", "escape"],
+      guards: 11,
+      health: 70,
+      damage: 6,
+      accuracy: 0.075,
+      reaction: 0.85,
+      timeLimit: 0
+    },
+    secret: {
+      id: "secret",
+      label: "SECRET AGENT",
+      blurb: "Destroy the server bank as well. Guards hit harder.",
+      objectives: ["alarm", "data", "servers", "escape"],
+      guards: 15,
+      health: 100,
+      damage: 9,
+      accuracy: 0.05,
+      reaction: 0.5,
+      timeLimit: 0
+    },
+    "00": {
+      id: "00",
+      label: "00 AGENT",
+      blurb: "Everything, plus the commander\u2019s intel. Eight minutes.",
+      objectives: ["alarm", "data", "servers", "intel", "escape"],
+      guards: 19,
+      health: 130,
+      damage: 13,
+      accuracy: 0.032,
+      reaction: 0.28,
+      timeLimit: 480
+    }
+  };
+  var OBJECTIVE_TEXT = {
+    alarm: "Disable the alarm system",
+    data: "Download the research data",
+    servers: "Destroy the server bank",
+    intel: "Recover the intel from the commander",
+    escape: "Reach the extraction point"
+  };
+  var Mission = class {
+    constructor({ world: world2, scene, sfx: sfx2, difficulty: difficulty2 }) {
+      this.world = world2;
+      this.facility = world2.facility;
+      this.scene = scene;
+      this.sfx = sfx2;
+      this.diff = DIFFICULTIES[difficulty2] || DIFFICULTIES.agent;
+      this.objectives = this.diff.objectives.map((id, i) => ({
+        id,
+        letter: String.fromCharCode(65 + i),
+        text: OBJECTIVE_TEXT[id],
+        done: false
+      }));
+      this.state = "active";
+      this.time = 0;
+      this.timeLimit = this.diff.timeLimit;
+      this.alarmActive = false;
+      this.alarmDisabled = false;
+      this.alarmTimer = 0;
+      this.reinforceTimer = 0;
+      this.hasKeycard = false;
+      this.hasDetonator = false;
+      this.minesPlanted = 0;
+      this.prompt = null;
+      this.holdProgress = 0;
+      this.holdTarget = null;
+      this.banner = null;
+      this.bannerTimer = 0;
+      this.noiseEvents = [];
+      this.stats = { shots: 0, hits: 0, headshots: 0, kills: 0, alarms: 0, damageTaken: 0 };
+      this.interactables = [];
+      this.buildInteractables();
+    }
+    wants(id) {
+      return this.objectives.some((o) => o.id === id);
+    }
+    objective(id) {
+      return this.objectives.find((o) => o.id === id);
+    }
+    buildInteractables() {
+      const f = this.facility;
+      for (const a of f.alarms) {
+        this.interactables.push({
+          kind: "alarm",
+          pos: a.pos.clone().setY(1.5),
+          hold: 2.4,
+          data: a,
+          label: () => "DISABLE ALARM SYSTEM",
+          available: () => !this.alarmDisabled,
+          finish: () => this.disableAlarm()
+        });
+      }
+      for (const c of f.consoles) {
+        this.interactables.push({
+          kind: "data",
+          pos: c.pos.clone().setY(1.2),
+          hold: 4.5,
+          data: c,
+          label: () => "DOWNLOAD RESEARCH DATA",
+          available: () => this.wants("data") && !this.objective("data").done,
+          finish: () => {
+            c.done = true;
+            c.screen.material.emissive.setHex(3117012);
+            this.completeObjective("data");
+          }
+        });
+      }
+      for (const s of f.servers) {
+        this.interactables.push({
+          kind: "server",
+          pos: s.pos.clone().setY(1.2),
+          hold: 1.4,
+          data: s,
+          label: () => "PLANT REMOTE MINE",
+          available: () => this.wants("servers") && !s.mined,
+          finish: () => this.plantMine(s)
+        });
+      }
+      for (const k of f.keycards) {
+        this.interactables.push({
+          kind: "keycard",
+          pos: k.pos.clone(),
+          hold: 0,
+          data: k,
+          label: () => "TAKE SECURITY KEY CARD",
+          available: () => !k.taken,
+          finish: () => {
+            k.taken = true;
+            this.hasKeycard = true;
+            this.say("KEY CARD ACQUIRED");
+            this.sfx.hitmarker();
+          }
+        });
+      }
+      if (f.extraction) {
+        this.interactables.push({
+          kind: "escape",
+          pos: f.extraction.clone().setY(1),
+          hold: 1.6,
+          radius: 3.2,
+          label: () => this.remainingBefore("escape") ? "OBJECTIVES INCOMPLETE" : "EXTRACT",
+          available: () => true,
+          blocked: () => this.remainingBefore("escape") > 0,
+          finish: () => this.completeObjective("escape")
+        });
+        const pad = new Mesh(
+          new CircleGeometry(2.4, 24),
+          new MeshStandardMaterial({
+            color: 1323039,
+            emissive: 3593338,
+            emissiveIntensity: 0.7,
+            roughness: 0.6
+          })
+        );
+        pad.rotation.x = -Math.PI / 2;
+        pad.position.copy(f.extraction).setY(0.04);
+        this.scene.add(pad);
+        this.extractPad = pad;
+      }
+    }
+    remainingBefore(id) {
+      return this.objectives.filter((o) => o.id !== id && !o.done).length;
+    }
+    say(text) {
+      this.banner = text;
+      this.bannerTimer = 2.6;
+    }
+    completeObjective(id) {
+      const o = this.objective(id);
+      if (!o || o.done) return;
+      o.done = true;
+      this.sfx.kill();
+      this.say("OBJECTIVE " + o.letter + " COMPLETE");
+      if (this.objectives.every((x) => x.done)) {
+        this.state = "complete";
+      }
+    }
+    /* --- alarm ----------------------------------------------------------- */
+    raiseAlarm() {
+      if (this.alarmActive || this.alarmDisabled) return;
+      this.alarmActive = true;
+      this.stats.alarms++;
+      this.reinforceTimer = 14;
+      this.say("ALARM RAISED");
+      this.sfx.hurt();
+    }
+    disableAlarm() {
+      this.alarmDisabled = true;
+      this.alarmActive = false;
+      for (const a of this.facility.alarms) {
+        a.done = true;
+        a.light.material.emissive.setHex(1191960);
+      }
+      this.completeObjective("alarm");
+    }
+    /* Guards hear gunfire. A silenced weapon has a radius small enough that
+       only the room you are in reacts. */
+    noise(pos, radius) {
+      this.noiseEvents.push({ pos: pos.clone(), radius, life: 0.2 });
+    }
+    /* --- gadgets --------------------------------------------------------- */
+    plantMine(server) {
+      server.mined = true;
+      this.minesPlanted++;
+      const mine = new Mesh(
+        new BoxGeometry(0.3, 0.16, 0.12),
+        new MeshStandardMaterial({
+          color: 2830131,
+          emissive: 16724770,
+          emissiveIntensity: 1.1,
+          roughness: 0.6
+        })
+      );
+      mine.position.copy(server.pos).setY(1.5);
+      mine.position.z += 0.5;
+      this.scene.add(mine);
+      server.mine = mine;
+      this.sfx.reload();
+      if (this.facility.servers.every((s) => s.mined)) {
+        this.hasDetonator = true;
+        this.say("ALL CHARGES SET \u2014 PRESS G TO DETONATE");
+      } else {
+        this.say("CHARGE " + this.minesPlanted + "/" + this.facility.servers.length + " SET");
+      }
+    }
+    detonate(player2) {
+      if (!this.hasDetonator) return false;
+      let close = false;
+      for (const s of this.facility.servers) {
+        if (!s.mined || s.destroyed) continue;
+        s.destroyed = true;
+        s.leds.material.emissive.setHex(1181444);
+        s.leds.material.emissiveIntensity = 0.15;
+        if (s.mine) {
+          s.mine.material.emissive.setHex(1116936);
+          s.mine.material.emissiveIntensity = 0.1;
+        }
+        const flash = new PointLight(16757866, 60, 16, 2);
+        flash.position.copy(s.pos).setY(1.4);
+        this.scene.add(flash);
+        this.blasts = this.blasts || [];
+        this.blasts.push({ light: flash, life: 0.5 });
+        if (player2.pos.distanceTo(s.pos) < 6.5) close = true;
+      }
+      this.hasDetonator = false;
+      this.sfx.shot();
+      this.sfx.distantShot();
+      if (close) {
+        player2.damage(38);
+        this.say("TOO CLOSE");
+      }
+      this.completeObjective("servers");
+      return true;
+    }
+    /* Guards drop what they were carrying, which is how you get off the
+       silenced pistol and onto something that can fight back. */
+    dropWeapon(pos, weaponId) {
+      const box = new Mesh(
+        new BoxGeometry(0.62, 0.12, 0.14),
+        new MeshStandardMaterial({ color: 2830131, roughness: 0.6, metalness: 0.5 })
+      );
+      box.position.copy(pos).setY(0.12);
+      box.rotation.y = Math.random() * Math.PI;
+      this.scene.add(box);
+      const item = {
+        kind: "weapon",
+        pos: box.position.clone().setY(0.8),
+        hold: 0,
+        radius: 2.2,
+        mesh: box,
+        weaponId,
+        label: () => "PICK UP " + (this.weaponName ? this.weaponName(weaponId) : "WEAPON"),
+        available: () => !item.taken,
+        finish: () => {
+          item.taken = true;
+          box.visible = false;
+          if (this.onPickupWeapon) this.onPickupWeapon(weaponId);
+        }
+      };
+      this.interactables.push(item);
+    }
+    dropIntel(pos) {
+      const briefcase = new Mesh(
+        new BoxGeometry(0.5, 0.36, 0.16),
+        new MeshStandardMaterial({
+          color: 3811868,
+          emissive: 14197308,
+          emissiveIntensity: 0.5,
+          roughness: 0.6,
+          metalness: 0.3
+        })
+      );
+      briefcase.position.copy(pos).setY(0.22);
+      this.scene.add(briefcase);
+      const item = {
+        kind: "intel",
+        pos: briefcase.position.clone().setY(0.9),
+        hold: 0.9,
+        mesh: briefcase,
+        label: () => "RECOVER INTEL",
+        available: () => !item.taken,
+        finish: () => {
+          item.taken = true;
+          briefcase.visible = false;
+          this.completeObjective("intel");
+        }
+      };
+      this.interactables.push(item);
+      this.say("COMMANDER DOWN \u2014 INTEL DROPPED");
+    }
+    /* --- doors ----------------------------------------------------------- */
+    updateDoors(dt, player2, enemies2) {
+      const f = this.facility;
+      for (const d of f.doors) {
+        let near = player2.pos.distanceTo(d.pos) < 2.9;
+        if (!near) {
+          for (const e of enemies2) {
+            if (e.alive && e.pos.distanceTo(d.pos) < 2.6) {
+              near = true;
+              break;
+            }
+          }
+        }
+        if (d.locked && near && this.hasKeycard) {
+          d.locked = false;
+          d.mesh.material.color.setHex(5462108);
+          this.sfx.hitmarker();
+          this.say("DOOR UNLOCKED");
+        }
+        const want = near && !d.locked ? 1 : 0;
+        const speed = d.shutter ? 1.1 : 2.6;
+        const before = d.open;
+        d.open += (want - d.open) * Math.min(1, speed * dt);
+        if (Math.abs(d.open - before) > 5e-4) f.updateDoorBox(d);
+      }
+    }
+    /* --- interaction ----------------------------------------------------- */
+    findTarget(player2, camera) {
+      const eye = new Vector3(player2.pos.x, player2.pos.y + player2.eyeOffset, player2.pos.z);
+      const dir = new Vector3();
+      camera.getWorldDirection(dir);
+      let best = null;
+      let bestScore = Infinity;
+      for (const it of this.interactables) {
+        if (it.available && !it.available()) continue;
+        const reach = it.radius || 2.6;
+        const to = it.pos.clone().sub(eye);
+        const dist = to.length();
+        if (dist > reach) continue;
+        const facing = to.normalize().dot(dir);
+        if (facing < 0.35 && !it.radius) continue;
+        if (dist < bestScore) {
+          bestScore = dist;
+          best = it;
+        }
+      }
+      return best;
+    }
+    interact(dt, player2, camera, held) {
+      const target = this.findTarget(player2, camera);
+      this.prompt = null;
+      if (!target) {
+        this.holdProgress = 0;
+        this.holdTarget = null;
+        return;
+      }
+      const blocked = target.blocked ? target.blocked() : false;
+      this.prompt = {
+        label: target.label(),
+        hold: target.hold,
+        blocked,
+        progress: this.holdTarget === target ? this.holdProgress / Math.max(1e-3, target.hold) : 0
+      };
+      if (blocked || !held) {
+        if (this.holdTarget === target && !held) this.holdProgress = 0;
+        return;
+      }
+      if (this.holdTarget !== target) {
+        this.holdTarget = target;
+        this.holdProgress = 0;
+      }
+      this.holdProgress += dt;
+      if (this.holdProgress >= target.hold) {
+        this.holdProgress = 0;
+        this.holdTarget = null;
+        target.finish();
+      }
+    }
+    /* --- frame ----------------------------------------------------------- */
+    update(dt, player2, enemies2, camera) {
+      if (this.state !== "active") return;
+      this.time += dt;
+      if (this.timeLimit && this.time > this.timeLimit) {
+        this.state = "failed";
+        this.failReason = "OUT OF TIME";
+        return;
+      }
+      if (!player2.alive) {
+        this.state = "failed";
+        this.failReason = "AGENT DOWN";
+        return;
+      }
+      this.updateDoors(dt, player2, enemies2);
+      if (this.bannerTimer > 0) {
+        this.bannerTimer -= dt;
+        if (this.bannerTimer <= 0) this.banner = null;
+      }
+      if (this.alarmActive) {
+        this.alarmTimer += dt;
+        const pulse = 0.5 + Math.sin(this.alarmTimer * 7) * 0.5;
+        for (const a of this.facility.alarms) {
+          a.light.material.emissiveIntensity = 0.4 + pulse * 3.2;
+        }
+        this.reinforceTimer -= dt;
+        if (this.reinforceTimer <= 0) {
+          this.reinforceTimer = 22;
+          this.wantReinforcements = 3;
+        }
+      }
+      for (let i = this.noiseEvents.length - 1; i >= 0; i--) {
+        this.noiseEvents[i].life -= dt;
+        if (this.noiseEvents[i].life <= 0) this.noiseEvents.splice(i, 1);
+      }
+      if (this.blasts) {
+        for (let i = this.blasts.length - 1; i >= 0; i--) {
+          const b = this.blasts[i];
+          b.life -= dt;
+          b.light.intensity = Math.max(0, b.life / 0.5) * 60;
+          if (b.life <= 0) {
+            this.scene.remove(b.light);
+            this.blasts.splice(i, 1);
+          }
+        }
+      }
+      if (this.extractPad) {
+        const ready = this.remainingBefore("escape") === 0;
+        this.extractPad.material.emissiveIntensity = ready ? 0.7 + Math.sin(this.time * 4) * 0.5 : 0.12;
+        this.extractPad.material.emissive.setHex(ready ? 3593338 : 5594970);
+      }
+    }
+    debrief() {
+      const acc = this.stats.shots ? this.stats.hits / this.stats.shots * 100 : 0;
+      const done = this.objectives.filter((o) => o.done).length;
+      const score = done * 1e3 + this.stats.kills * 25 + this.stats.headshots * 40 + Math.round(acc) * 8 - this.stats.alarms * 400 - Math.round(this.stats.damageTaken);
+      return {
+        difficulty: this.diff.label,
+        objectives: done + " / " + this.objectives.length,
+        time: this.time,
+        accuracy: acc,
+        kills: this.stats.kills,
+        headshots: this.stats.headshots,
+        alarms: this.stats.alarms,
+        score: Math.max(0, score),
+        state: this.state,
+        reason: this.failReason || ""
+      };
+    }
+  };
+
   // src/main.js
   var canvas = document.getElementById("view");
   var overlay = document.getElementById("overlay");
@@ -48865,19 +50307,20 @@ void main() {
   var loading2 = document.getElementById("loading");
   var bar = document.getElementById("bar");
   var loadMsg = document.getElementById("loadmsg");
+  var briefing = document.getElementById("briefing");
   var engine = new Engine(canvas);
   var world = new World(7);
   var sfx = new Sfx();
   var player;
   var weapon;
   var hud;
+  var lights;
+  var mission;
+  var loadout;
   var enemies = [];
-  var kills = 0;
-  var wave = 1;
   var running = false;
-  var started = false;
   var lastTime = 0;
-  var respawnTimer = 0;
+  var difficulty = "agent";
   var input = {
     forward: false,
     back: false,
@@ -48887,33 +50330,61 @@ void main() {
     crouch: false,
     sprint: false,
     ads: false,
-    fire: false
+    fire: false,
+    use: false
   };
   async function boot() {
     await world.buildMaterials((p, msg) => {
-      bar.style.width = Math.round(p * 88) + "%";
+      bar.style.width = Math.round(p * 80) + "%";
       loadMsg.textContent = msg;
     });
-    loadMsg.textContent = "building sector";
+    loadMsg.textContent = "building the compound";
     await frame();
     world.build();
     engine.scene.add(world.group);
     bar.style.width = "100%";
     player = new Player(world, engine.camera);
-    player.onStep = (power) => sfx.step(power);
-    weapon = new Weapon(engine.camera, engine.scene, world, sfx);
+    player.onStep = (power) => {
+      sfx.step(power);
+      if (mission && !player.crouch) mission.noise(player.pos, player.sprinting ? 12 : 6);
+    };
+    loadout = new Loadout("pistol_s");
+    weapon = new Weapon(engine.camera, engine.scene, world, sfx, loadout);
     engine.scene.add(engine.camera);
     hud = new Hud(hudRoot);
-    enemies = spawnWave(world, engine.scene, 6, player.pos);
+    lights = new LightPool(engine.scene, 6);
     const touchDevice = matchMedia("(hover: none)").matches || "ontouchstart" in window;
     setQuality(touchDevice ? "medium" : "high");
     resize();
+    newMission(difficulty);
     loading2.classList.add("done");
-    overlay.classList.add("show");
+    showMenu("GREYLINE", DIFFICULTIES[difficulty].blurb, "DEPLOY");
     window.__ready = true;
     requestAnimationFrame(loop);
   }
   var frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  function newMission(diffId) {
+    difficulty = diffId;
+    enemies.forEach((e) => e.dispose());
+    enemies = [];
+    mission = new Mission({ world, scene: engine.scene, sfx, difficulty: diffId });
+    mission.weaponName = (id) => WEAPONS[id] ? WEAPONS[id].name : "WEAPON";
+    mission.onPickupWeapon = (id) => {
+      const slot = loadout.add(id);
+      hud.feed("PICKED UP " + WEAPONS[id].name);
+      if (slot) weapon.switchTo(loadout.slots.indexOf(slot));
+    };
+    player.health = player.maxHealth;
+    player.alive = true;
+    player.pos.copy(world.playerStart);
+    player.vel.set(0, 0, 0);
+    player.yaw = 0;
+    player.pitch = 0;
+    loadout = new Loadout("pistol_s");
+    weapon.loadout = loadout;
+    weapon.configure();
+    enemies = spawnGuards(world, engine.scene, mission, mission.diff.guards, player.pos);
+  }
   var KEYS = {
     KeyW: "forward",
     ArrowUp: "forward",
@@ -48927,23 +50398,28 @@ void main() {
     ShiftLeft: "sprint",
     ShiftRight: "sprint",
     ControlLeft: "crouch",
-    KeyC: "crouch"
+    KeyC: "crouch",
+    KeyF: "use"
   };
   addEventListener("keydown", (e) => {
     if (KEYS[e.code]) {
       input[KEYS[e.code]] = true;
       e.preventDefault();
     }
-    if (e.code === "KeyR") weapon && weapon.startReload();
+    if (!running) return;
+    if (e.code === "KeyR") weapon.startReload();
+    if (e.code === "KeyQ") weapon.cycle(1);
+    if (e.code === "KeyG" && mission.hasDetonator) mission.detonate(player);
+    if (/^Digit[1-5]$/.test(e.code)) weapon.switchTo(Number(e.code.slice(5)) - 1);
     if (e.code === "Escape") pause();
-    if (e.code === "KeyM") sfx.setMuted(!sfx.muted);
   });
   addEventListener("keyup", (e) => {
     if (KEYS[e.code]) input[KEYS[e.code]] = false;
   });
-  addEventListener("blur", () => {
-    Object.keys(input).forEach((k) => input[k] = false);
-  });
+  addEventListener("blur", () => Object.keys(input).forEach((k) => input[k] = false));
+  addEventListener("wheel", (e) => {
+    if (running) weapon.cycle(e.deltaY > 0 ? 1 : -1);
+  }, { passive: true });
   var dragging = false;
   var lockAvailable = true;
   canvas.addEventListener("mousedown", (e) => {
@@ -48964,9 +50440,8 @@ void main() {
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   addEventListener("mousemove", (e) => {
     if (!running) return;
-    const locked = document.pointerLockElement === canvas;
-    if (!locked && !dragging) return;
-    const s = 22e-4 * (weapon && weapon.ads > 0.5 ? 0.55 : 1);
+    if (document.pointerLockElement !== canvas && !dragging) return;
+    const s = 22e-4 * (weapon.ads > 0.5 ? 0.55 : 1);
     player.look(e.movementX * s, e.movementY * s);
     weapon.onLook(e.movementX * s, e.movementY * s);
   });
@@ -48978,9 +50453,7 @@ void main() {
     document.body.classList.add("nolock");
   });
   var touch = { moveId: null, lookId: null, moveOrigin: null, lookPrev: null };
-  function isButton(t) {
-    return t.target && t.target.closest && t.target.closest(".tbtn");
-  }
+  var isButton = (t) => t.target && t.target.closest && t.target.closest(".tbtn");
   canvas.addEventListener("touchstart", (e) => {
     if (!running) return;
     for (const t of e.changedTouches) {
@@ -49001,19 +50474,17 @@ void main() {
       if (t.identifier === touch.moveId) {
         const dx = t.clientX - touch.moveOrigin.x;
         const dy = t.clientY - touch.moveOrigin.y;
-        const dead = 12;
-        input.forward = dy < -dead;
-        input.back = dy > dead;
-        input.left = dx < -dead;
-        input.right = dx > dead;
+        input.forward = dy < -12;
+        input.back = dy > 12;
+        input.left = dx < -12;
+        input.right = dx > 12;
         input.sprint = dy < -70;
       } else if (t.identifier === touch.lookId) {
         const dx = t.clientX - touch.lookPrev.x;
         const dy = t.clientY - touch.lookPrev.y;
         touch.lookPrev = { x: t.clientX, y: t.clientY };
-        const s = 55e-4;
-        player.look(dx * s, dy * s);
-        weapon.onLook(dx * s, dy * s);
+        player.look(dx * 55e-4, dy * 55e-4);
+        weapon.onLook(dx * 55e-4, dy * 55e-4);
       }
     }
     e.preventDefault();
@@ -49035,10 +50506,15 @@ void main() {
       if (act === "fire") input.fire = v;
       else if (act === "ads") input.ads = v;
       else if (act === "jump") input.jump = v;
+      else if (act === "use") input.use = v;
       else if (act === "crouch") {
         if (v) input.crouch = !input.crouch;
       } else if (act === "reload") {
         if (v) weapon.startReload();
+      } else if (act === "swap") {
+        if (v) weapon.cycle(1);
+      } else if (act === "detonate") {
+        if (v && mission.hasDetonator) mission.detonate(player);
       }
       btn.classList.toggle("on", v);
     };
@@ -49053,9 +50529,24 @@ void main() {
     btn.addEventListener("mousedown", () => set(true));
     btn.addEventListener("mouseup", () => set(false));
   });
+  function showMenu(title, sub, action) {
+    overlay.querySelector(".title").textContent = title;
+    overlay.querySelector(".sub").textContent = sub;
+    overlay.querySelector(".play").textContent = action;
+    overlay.classList.add("show");
+    document.body.classList.remove("playing");
+  }
+  function showBriefing() {
+    briefing.querySelector(".bdiff").textContent = mission.diff.label;
+    briefing.querySelector("ul").innerHTML = mission.objectives.map((o) => `<li><b>${o.letter}</b>${o.text}</li>`).join("");
+    briefing.classList.add("show");
+    setTimeout(() => {
+      briefing.classList.remove("show");
+      start();
+    }, 3200);
+  }
   function start() {
     sfx.resume();
-    started = true;
     running = true;
     overlay.classList.remove("show");
     document.body.classList.add("playing");
@@ -49071,17 +50562,51 @@ void main() {
   function pause() {
     if (!running) return;
     running = false;
+    showMenu("PAUSED", mission.diff.label + " \u2014 " + mission.objectives.filter((o) => o.done).length + "/" + mission.objectives.length + " objectives", "RESUME");
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  function debrief() {
+    running = false;
+    const d = mission.debrief();
+    const done = d.state === "complete";
+    overlay.querySelector(".title").textContent = done ? "MISSION COMPLETE" : "MISSION FAILED";
+    overlay.querySelector(".sub").textContent = done ? d.difficulty : d.reason || "AGENT DOWN";
+    overlay.querySelector(".play").textContent = "REDEPLOY";
+    const table = overlay.querySelector(".debrief");
+    const mm = Math.floor(d.time / 60);
+    const ss = Math.floor(d.time % 60);
+    table.innerHTML = `
+    <div><span>OBJECTIVES</span><b>${d.objectives}</b></div>
+    <div><span>TIME</span><b>${mm}:${String(ss).padStart(2, "0")}</b></div>
+    <div><span>ACCURACY</span><b>${d.accuracy.toFixed(1)}%</b></div>
+    <div><span>ELIMINATED</span><b>${d.kills}</b></div>
+    <div><span>HEADSHOTS</span><b>${d.headshots}</b></div>
+    <div><span>ALARMS RAISED</span><b>${d.alarms}</b></div>
+    <div class="tot"><span>SCORE</span><b>${d.score}</b></div>`;
+    table.classList.add("show");
     overlay.classList.add("show");
     document.body.classList.remove("playing");
-    overlay.querySelector(".title").textContent = "PAUSED";
-    overlay.querySelector(".sub").textContent = "Sector 07 \u2014 hostiles active";
-    overlay.querySelector(".play").textContent = "RESUME";
     if (document.pointerLockElement) document.exitPointerLock();
   }
   document.getElementById("play").addEventListener("click", () => {
     if (!player) return;
-    if (!player.alive) respawn();
-    start();
+    overlay.querySelector(".debrief").classList.remove("show");
+    if (mission.state !== "active" || !player.alive) {
+      newMission(difficulty);
+      showBriefing();
+    } else if (document.body.classList.contains("playing") === false && mission.time === 0) {
+      showBriefing();
+    } else {
+      start();
+    }
+  });
+  document.querySelectorAll("[data-diff]").forEach((b) => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("[data-diff]").forEach((x) => x.classList.remove("sel"));
+      b.classList.add("sel");
+      newMission(b.dataset.diff);
+      overlay.querySelector(".sub").textContent = mission.diff.blurb;
+    });
   });
   function setQuality(q) {
     engine.setQuality(q);
@@ -49107,30 +50632,6 @@ void main() {
     const i = QUALITY_ORDER.indexOf(engine.quality);
     if (fps < 40 && i < QUALITY_ORDER.length - 1) setQuality(QUALITY_ORDER[i + 1]);
   }
-  function respawn() {
-    player.health = player.maxHealth;
-    player.alive = true;
-    player.pos.copy(world.playerStart);
-    player.vel.set(0, 0, 0);
-    weapon.ammo = weapon.magSize;
-    weapon.reserve = 210;
-    enemies.forEach((e) => e.dispose());
-    enemies = spawnWave(world, engine.scene, 5 + wave, player.pos);
-  }
-  function onKill(enemy, head) {
-    kills++;
-    sfx.kill();
-    hud.toast(head ? "HEADSHOT \u2014 ENEMY ELIMINATED" : "ENEMY ELIMINATED");
-    hud.feed("YOU \u25B8 " + (head ? "HEADSHOT" : "HOSTILE"));
-    if (enemies.every((e) => !e.alive)) {
-      wave++;
-      setTimeout(() => {
-        if (!player) return;
-        hud.toast("WAVE " + wave + " INBOUND");
-        enemies = enemies.concat(spawnWave(world, engine.scene, 4 + wave, player.pos));
-      }, 2200);
-    }
-  }
   function resize() {
     engine.resize(innerWidth, innerHeight);
     const portrait = innerHeight > innerWidth;
@@ -49138,6 +50639,29 @@ void main() {
     document.body.classList.toggle("rotate-hint", portrait && touchDevice);
   }
   addEventListener("resize", resize);
+  function spawnReinforcements() {
+    if (!mission.wantReinforcements) return;
+    const n = mission.wantReinforcements;
+    mission.wantReinforcements = 0;
+    const alive = enemies.filter((e) => e.alive).length;
+    if (alive > mission.diff.guards + 6) return;
+    const entry = world.facility.entry || player.pos;
+    const d = mission.diff;
+    for (let i = 0; i < n; i++) {
+      const p = entry.clone().add(new Vector3((Math.random() - 0.5) * 3, 0, i * 1.6));
+      const e = new Enemy(world, p, engine.scene, {
+        health: d.health,
+        damage: d.damage,
+        accuracy: d.accuracy,
+        reaction: d.reaction
+      });
+      e.state = "search";
+      e.lastKnown = player.pos.clone();
+      e.searchTimer = 30;
+      enemies.push(e);
+    }
+    hud.feed("REINFORCEMENTS INBOUND");
+  }
   function loop(now) {
     requestAnimationFrame(loop);
     const dt = Math.min(0.05, (now - lastTime) / 1e3) || 0;
@@ -49147,46 +50671,49 @@ void main() {
       player.update(dt, input);
       input.jump = false;
       weapon.update(dt, player, input);
-      if (input.fire && player.alive) {
-        weapon.fire(player, enemies, (head, enemy, point) => {
-          hud.hitMarker(head);
+      const ctx = {
+        player,
+        mission,
+        sfx,
+        onHit: (zone, enemy, point, killed) => {
+          hud.hitMarker(zone);
           sfx.hitmarker();
-          if (!enemy.alive) onKill(enemy, head);
-        });
-      }
-      if (weapon.ammo === 0 && weapon.reloading <= 0 && weapon.reserve > 0) weapon.startReload();
-      for (const e of enemies) e.update(dt, player, sfx, () => {
-      });
-      if (!player.alive) {
-        respawnTimer -= dt;
-        if (respawnTimer <= 0) {
-          running = false;
-          overlay.classList.add("show");
-          document.body.classList.remove("playing");
-          overlay.querySelector(".title").textContent = "YOU WERE KILLED";
-          overlay.querySelector(".sub").textContent = kills + " hostiles eliminated \xB7 wave " + wave;
-          overlay.querySelector(".play").textContent = "REDEPLOY";
-          if (document.pointerLockElement) document.exitPointerLock();
+          if (zone === "head") mission.stats.headshots++;
+          if (killed) {
+            mission.stats.kills++;
+            hud.feed(zone === "head" ? "HEADSHOT" : "HOSTILE DOWN");
+          }
         }
-      } else {
-        respawnTimer = 2.2;
-      }
+      };
+      if (input.fire && player.alive) weapon.fire(player, enemies, ctx);
+      if (weapon.ammo === 0 && weapon.reloading <= 0 && weapon.reserve > 0) weapon.startReload();
+      mission.interact(dt, player, engine.camera, input.use);
+      for (const e of enemies) e.update(dt, ctx);
+      mission.update(dt, player, enemies, engine.camera);
+      spawnReinforcements();
+      if (world.facility) lights.update(world.facility.lightSpots, player.pos);
       engine.followShadow(player.pos);
-      const targetH = MathUtils.lerp(103, 74, weapon.ads) + (player.sprinting ? 4 : 0);
+      const zoom = weapon.def.zoom || 1;
+      const targetH = (weapon.ads > 0.5 ? 103 / zoom : 103) + (player.sprinting ? 4 : 0);
       const aspect2 = Math.max(0.35, engine.camera.aspect);
-      const vFov = 2 * Math.atan(Math.tan(MathUtils.degToRad(targetH) / 2) / aspect2);
-      engine.camera.fov = MathUtils.clamp(MathUtils.radToDeg(vFov), 55, 82);
+      const vFov = 2 * Math.atan(Math.tan(MathUtils.degToRad(
+        MathUtils.lerp(103, targetH, weapon.ads)
+      ) / 2) / aspect2);
+      engine.camera.fov = MathUtils.clamp(MathUtils.radToDeg(vFov), 20, 82);
       engine.camera.updateProjectionMatrix();
       engine.grade.uniforms.uHurt.value = Math.max(0, player.hurtTimer / 0.55);
-      hud.update(dt, { player, weapon, enemies, kills, wave });
+      hud.update(dt, { player, weapon, enemies, mission, loadout });
+      if (mission.state !== "active") debrief();
     }
     engine.render(dt, now / 1e3);
   }
   window.__engine = engine;
   window.__world = world;
   window.__THREE = three_module_exports;
-  window.__state = () => ({ player, weapon, enemies, kills, wave, running });
-  window.__start = start;
+  window.__state = () => ({ player, weapon, enemies, mission, loadout, running });
+  window.__start = () => {
+    if (mission) start();
+  };
   boot();
 })();
 /*! Bundled license information:

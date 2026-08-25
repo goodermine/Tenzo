@@ -48,7 +48,7 @@ const GradeShader = {
       vec2 centred = uv - 0.5;
 
       /* motion blur: smear along the view velocity, a few taps is enough */
-      vec2 vel = clamp(uVelocity, -0.03, 0.03);
+      vec2 vel = clamp(uVelocity, -0.012, 0.012);
       vec3 col = vec3(0.0);
       float total = 0.0;
       for (int i = 0; i < 5; i++) {
@@ -291,7 +291,7 @@ export class Engine {
     const turn = new THREE.Vector2(dir.x - this._prevDir.x, dir.y - this._prevDir.y);
     this._prevDir.copy(dir);
     /* ease the smear so a flick does not strobe */
-    this._velocity.lerp(turn.multiplyScalar(0.45), 0.35);
+    this._velocity.lerp(turn.multiplyScalar(0.16), 0.3);
     this.grade.uniforms.uVelocity.value.copy(this._velocity);
     this.grade.uniforms.uTime.value = time;
     this.composer.render(dt);

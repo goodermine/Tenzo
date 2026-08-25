@@ -217,3 +217,106 @@ h1 {
 #rotate span { display: block; margin-top: 6px; color: var(--dim); letter-spacing: 0.12em; }
 body.rotate-hint #rotate { display: block; }
 body.playing.rotate-hint #rotate { opacity: 0.55; }
+
+/* ------------------------------------------------------- mission chrome */
+
+.objectives {
+  position: absolute;
+  top: calc(158px + env(safe-area-inset-top));
+  left: calc(14px + env(safe-area-inset-left));
+  width: 210px; font-size: 10px; letter-spacing: 0.08em;
+}
+.objectives h4 {
+  margin: 0 0 6px; font-size: 9px; font-weight: 500;
+  letter-spacing: 0.3em; color: var(--dim);
+}
+.objectives ul { margin: 0; padding: 0; list-style: none; }
+.objectives li {
+  display: flex; gap: 7px; line-height: 1.5; margin-bottom: 3px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.objectives li b { color: var(--dim); font-weight: 500; }
+.objectives li.done { color: var(--dim); text-decoration: line-through; opacity: 0.65; }
+.objectives li.done b { color: #7fc79a; }
+
+.alarmflag {
+  position: absolute; top: calc(46px + env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%);
+  color: var(--warn); font-size: 11px; letter-spacing: 0.34em;
+  opacity: 0; transition: opacity 0.2s;
+  animation: blink 1s steps(2, end) infinite;
+}
+@keyframes blink { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .alarmflag { animation: none; } }
+
+.mtimer {
+  position: absolute; top: calc(66px + env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px; letter-spacing: 0.14em; font-variant-numeric: tabular-nums;
+}
+.mtimer.urgent { color: var(--warn); }
+
+.prompt {
+  position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
+  text-align: center; opacity: 0; transition: opacity 0.12s;
+}
+.prompt b { font-weight: 500; font-size: 12px; letter-spacing: 0.2em; }
+.prompt.blocked b { color: var(--warn); }
+.prompt .ring {
+  display: block; width: 132px; height: 3px; margin: 8px auto 0;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid var(--line);
+}
+.prompt .ring i { display: block; height: 100%; width: 0; background: var(--ink); }
+
+.slots {
+  position: absolute; right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  display: flex; gap: 6px; font-size: 9px; letter-spacing: 0.16em;
+}
+.slots span { color: var(--dim); border: 1px solid transparent; padding: 2px 5px; }
+.slots span.on { color: var(--ink); border-color: var(--line); background: rgba(0, 0, 0, 0.35); }
+
+.use { right: calc(126px + env(safe-area-inset-right)); bottom: calc(232px + env(safe-area-inset-bottom)); width: 58px; height: 58px; }
+.swap { left: calc(26px + env(safe-area-inset-left)); bottom: calc(110px + env(safe-area-inset-bottom)); width: 56px; height: 56px; }
+.det { left: calc(96px + env(safe-area-inset-left)); bottom: calc(40px + env(safe-area-inset-bottom)); width: 56px; height: 56px; }
+
+/* ------------------------------------------------------------- briefing */
+
+#briefing {
+  position: fixed; inset: 0; z-index: 6;
+  display: grid; place-items: center;
+  background: rgba(6, 7, 8, 0.92);
+  opacity: 0; pointer-events: none; transition: opacity 0.35s;
+}
+#briefing.show { opacity: 1; }
+.bwrap { max-width: 520px; padding: 30px; }
+.beyebrow { margin: 0 0 10px; font-size: 10px; letter-spacing: 0.34em; color: var(--dim); }
+.bwrap h2 { margin: 0 0 22px; font-size: clamp(18px, 3.6vw, 26px); letter-spacing: 0.16em; font-weight: 500; }
+.bwrap ul { margin: 0; padding: 0; list-style: none; }
+.bwrap li {
+  display: flex; gap: 12px; padding: 9px 0; font-size: 12px; letter-spacing: 0.08em;
+  border-top: 1px solid var(--line);
+}
+.bwrap li b { color: var(--dim); font-weight: 500; }
+
+/* ------------------------------------------------------------- debrief */
+
+.debrief { display: none; margin: 6px auto 20px; width: min(88vw, 360px); }
+.debrief.show { display: block; }
+.debrief div {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 0; font-size: 11px; letter-spacing: 0.14em;
+  border-bottom: 1px solid rgba(214, 226, 230, 0.14);
+}
+.debrief span { color: var(--dim); }
+.debrief b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.debrief .tot { border-bottom: 0; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; }
+.debrief .tot b { font-size: 18px; }
+
+.difficulty { margin-top: 18px; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.difficulty span { font-size: 10px; letter-spacing: 0.24em; color: var(--dim); margin-right: 6px; }
+.difficulty button {
+  font: inherit; font-size: 10px; letter-spacing: 0.18em; padding: 8px 12px;
+  background: transparent; color: var(--dim); border: 1px solid var(--line); cursor: pointer;
+}
+.difficulty button.sel { color: #0b0d0e; background: var(--ink); border-color: var(--ink); }

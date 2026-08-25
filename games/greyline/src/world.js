@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeSurface } from './textures.js';
+import { Facility } from './facility.js';
 
 function mulberry32(a) {
   return function () {
@@ -24,6 +25,7 @@ export class World {
     this.rand = mulberry32(seed);
     this.group = new THREE.Group();
     this.boxes = [];          /* THREE.Box3 - collision and bullet targets */
+    this.dynamicBoxes = [];   /* doors and anything else that moves */
     this.buckets = new Map(); /* material name -> geometry[] */
     this.materials = {};
     this.lights = [];
@@ -137,6 +139,9 @@ export class World {
     }
 
     this.archway(-LEN / 2 + 4);
+    this.facility = new Facility(this, -LEN / 2 - 2).build();
+    /* start on the street, in sight of the compound gate */
+    this.playerStart = new THREE.Vector3(0, 1.0, -48);
     this.streetCover(LEN, HALF);
     this.wires(LEN, HALF);
     this.finish();
@@ -427,6 +432,20 @@ export class World {
     let hitSign = 1;
     const ox = origin.x, oy = origin.y, oz = origin.z;
     const ix = 1 / dir.x, iy = 1 / dir.y, iz = 1 / dir.z;
+
+    /* doors move, so they live outside the packed static array */
+    for (let k = 0; k < this.dynamicBoxes.length; k++) {
+      const b = this.dynamicBoxes[k];
+      if (b.min.y > 1e5) continue;
+      const hit = this._slab(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z,
+        ox, oy, oz, ix, iy, iz, bestT);
+      if (hit) {
+        bestT = hit.t;
+        hitAxis = hit.axis;
+        hitSign = hit.sign;
+      }
+    }
+
     for (let i = 0; i < d.length; i += 6) {
       let t1 = (d[i] - ox) * ix, t2 = (d[i + 3] - ox) * ix;
       let axis = 0, sign = t1 > t2 ? 1 : -1;
@@ -449,17 +468,42 @@ export class World {
     return { t: bestT, normal, point: origin.clone().addScaledVector(dir, bestT) };
   }
 
+  _slab(x0, y0, z0, x1, y1, z1, ox, oy, oz, ix, iy, iz, limit) {
+    let t1 = (x0 - ox) * ix, t2 = (x1 - ox) * ix;
+    let axis = 0, sign = t1 > t2 ? 1 : -1;
+    let tmin = Math.min(t1, t2), tmax = Math.max(t1, t2);
+    t1 = (y0 - oy) * iy; t2 = (y1 - oy) * iy;
+    if (Math.min(t1, t2) > tmin) { tmin = Math.min(t1, t2); axis = 1; sign = t1 > t2 ? 1 : -1; }
+    tmax = Math.min(tmax, Math.max(t1, t2));
+    t1 = (z0 - oz) * iz; t2 = (z1 - oz) * iz;
+    if (Math.min(t1, t2) > tmin) { tmin = Math.min(t1, t2); axis = 2; sign = t1 > t2 ? 1 : -1; }
+    tmax = Math.min(tmax, Math.max(t1, t2));
+    if (tmax >= Math.max(tmin, 0) && tmin > 0 && tmin < limit) return { t: tmin, axis, sign };
+    return null;
+  }
+
   /** Push an axis-aligned capsule out of the world. Mutates `pos`. */
   resolve(pos, radius, halfHeight) {
     const d = this._boxData;
+    const dyn = this.dynamicBoxes;
     let grounded = false;
     for (let pass = 0; pass < 2; pass++) {
-      for (let i = 0; i < d.length; i += 6) {
-        const minX = d[i] - radius, maxX = d[i + 3] + radius;
-        const minY = d[i + 1] - halfHeight, maxY = d[i + 4] + halfHeight;
-        const minZ = d[i + 2] - radius, maxZ = d[i + 5] + radius;
+      for (let i = -dyn.length; i < d.length; i += (i < 0 ? 1 : 6)) {
+        let minX, maxX, minY, maxY, minZ, maxZ;
+        if (i < 0) {
+          const b = dyn[i + dyn.length];
+          if (b.min.y > 1e5) continue;
+          minX = b.min.x - radius; maxX = b.max.x + radius;
+          minY = b.min.y - halfHeight; maxY = b.max.y + halfHeight;
+          minZ = b.min.z - radius; maxZ = b.max.z + radius;
+        } else {
+        minX = d[i] - radius; maxX = d[i + 3] + radius;
+        minY = d[i + 1] - halfHeight; maxY = d[i + 4] + halfHeight;
+        minZ = d[i + 2] - radius; maxZ = d[i + 5] + radius;
+        }
         if (pos.x <= minX || pos.x >= maxX || pos.y <= minY || pos.y >= maxY ||
             pos.z <= minZ || pos.z >= maxZ) continue;
+
         /* eject along the axis of least penetration */
         const px = Math.min(pos.x - minX, maxX - pos.x);
         const py = Math.min(pos.y - minY, maxY - pos.y);

@@ -1,12 +1,15 @@
-/* Greyline - game loop, input and flow. */
+/* Greyline - mission flow, input and the frame loop. */
 import * as THREE from 'three';
 import { Engine } from './engine.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { Weapon } from './weapon.js';
-import { spawnWave } from './enemies.js';
+import { Enemy, spawnGuards } from './enemies.js';
 import { Hud } from './hud.js';
 import { Sfx } from './audio.js';
+import { Mission, DIFFICULTIES } from './mission.js';
+import { Loadout, WEAPONS } from './weapons.js';
+import { LightPool } from './facility.js';
 
 const canvas = document.getElementById('view');
 const overlay = document.getElementById('overlay');
@@ -14,56 +17,81 @@ const hudRoot = document.getElementById('hud');
 const loading = document.getElementById('loading');
 const bar = document.getElementById('bar');
 const loadMsg = document.getElementById('loadmsg');
+const briefing = document.getElementById('briefing');
 
 const engine = new Engine(canvas);
 const world = new World(7);
 const sfx = new Sfx();
 
-let player, weapon, hud, enemies = [];
-let kills = 0;
-let wave = 1;
+let player, weapon, hud, lights, mission, loadout;
+let enemies = [];
 let running = false;
-let started = false;
 let lastTime = 0;
-let respawnTimer = 0;
+let difficulty = 'agent';
 
 const input = {
   forward: false, back: false, left: false, right: false,
-  jump: false, crouch: false, sprint: false, ads: false, fire: false
+  jump: false, crouch: false, sprint: false, ads: false, fire: false, use: false
 };
 
 /* ------------------------------------------------------------------ boot */
 
 async function boot() {
   await world.buildMaterials((p, msg) => {
-    bar.style.width = Math.round(p * 88) + '%';
+    bar.style.width = Math.round(p * 80) + '%';
     loadMsg.textContent = msg;
   });
-  loadMsg.textContent = 'building sector';
+  loadMsg.textContent = 'building the compound';
   await frame();
   world.build();
   engine.scene.add(world.group);
   bar.style.width = '100%';
 
   player = new Player(world, engine.camera);
-  player.onStep = power => sfx.step(power);
-  weapon = new Weapon(engine.camera, engine.scene, world, sfx);
+  player.onStep = power => {
+    sfx.step(power);
+    if (mission && !player.crouch) mission.noise(player.pos, player.sprinting ? 12 : 6);
+  };
+  loadout = new Loadout('pistol_s');
+  weapon = new Weapon(engine.camera, engine.scene, world, sfx, loadout);
   engine.scene.add(engine.camera);
   hud = new Hud(hudRoot);
-  enemies = spawnWave(world, engine.scene, 6, player.pos);
+  lights = new LightPool(engine.scene, 6);
 
-  /* Touch devices start a notch down: a phone GPU will not hold 60 with
-     screen-space AO at full pixel ratio. */
   const touchDevice = matchMedia('(hover: none)').matches || 'ontouchstart' in window;
   setQuality(touchDevice ? 'medium' : 'high');
-
   resize();
+
+  newMission(difficulty);
   loading.classList.add('done');
-  overlay.classList.add('show');
+  showMenu('GREYLINE', DIFFICULTIES[difficulty].blurb, 'DEPLOY');
   window.__ready = true;
   requestAnimationFrame(loop);
 }
 const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+
+function newMission(diffId) {
+  difficulty = diffId;
+  enemies.forEach(e => e.dispose());
+  enemies = [];
+  mission = new Mission({ world, scene: engine.scene, sfx, difficulty: diffId });
+  mission.weaponName = id => (WEAPONS[id] ? WEAPONS[id].name : 'WEAPON');
+  mission.onPickupWeapon = id => {
+    const slot = loadout.add(id);
+    hud.feed('PICKED UP ' + WEAPONS[id].name);
+    if (slot) weapon.switchTo(loadout.slots.indexOf(slot));
+  };
+  player.health = player.maxHealth;
+  player.alive = true;
+  player.pos.copy(world.playerStart);
+  player.vel.set(0, 0, 0);
+  player.yaw = 0;
+  player.pitch = 0;
+  loadout = new Loadout('pistol_s');
+  weapon.loadout = loadout;
+  weapon.configure();
+  enemies = spawnGuards(world, engine.scene, mission, mission.diff.guards, player.pos);
+}
 
 /* ----------------------------------------------------------------- input */
 
@@ -74,7 +102,8 @@ const KEYS = {
   KeyD: 'right', ArrowRight: 'right',
   Space: 'jump',
   ShiftLeft: 'sprint', ShiftRight: 'sprint',
-  ControlLeft: 'crouch', KeyC: 'crouch'
+  ControlLeft: 'crouch', KeyC: 'crouch',
+  KeyF: 'use'
 };
 
 addEventListener('keydown', e => {
@@ -82,20 +111,23 @@ addEventListener('keydown', e => {
     input[KEYS[e.code]] = true;
     e.preventDefault();
   }
-  if (e.code === 'KeyR') weapon && weapon.startReload();
+  if (!running) return;
+  if (e.code === 'KeyR') weapon.startReload();
+  if (e.code === 'KeyQ') weapon.cycle(1);
+  if (e.code === 'KeyG' && mission.hasDetonator) mission.detonate(player);
+  if (/^Digit[1-5]$/.test(e.code)) weapon.switchTo(Number(e.code.slice(5)) - 1);
   if (e.code === 'Escape') pause();
-  if (e.code === 'KeyM') sfx.setMuted(!sfx.muted);
 });
 addEventListener('keyup', e => {
   if (KEYS[e.code]) input[KEYS[e.code]] = false;
 });
-addEventListener('blur', () => {
-  Object.keys(input).forEach(k => (input[k] = false));
-});
+addEventListener('blur', () => Object.keys(input).forEach(k => (input[k] = false)));
+addEventListener('wheel', e => {
+  if (running) weapon.cycle(e.deltaY > 0 ? 1 : -1);
+}, { passive: true });
 
 let dragging = false;
 let lockAvailable = true;
-
 canvas.addEventListener('mousedown', e => {
   if (!running) return;
   if (e.button === 0) {
@@ -114,28 +146,21 @@ addEventListener('mouseup', e => {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('mousemove', e => {
   if (!running) return;
-  const locked = document.pointerLockElement === canvas;
-  if (!locked && !dragging) return;
-  const s = 0.0022 * (weapon && weapon.ads > 0.5 ? 0.55 : 1);
+  if (document.pointerLockElement !== canvas && !dragging) return;
+  const s = 0.0022 * (weapon.ads > 0.5 ? 0.55 : 1);
   player.look(e.movementX * s, e.movementY * s);
   weapon.onLook(e.movementX * s, e.movementY * s);
 });
-
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement !== canvas && running && lockAvailable) pause();
 });
 document.addEventListener('pointerlockerror', () => {
-  /* embedded without allow="pointer-lock": drag to look instead, and put the
-     on-screen buttons up so aim and reload are still reachable */
   lockAvailable = false;
   document.body.classList.add('nolock');
 });
 
-/* touch: left stick moves, right side looks, buttons fire and aim */
 const touch = { moveId: null, lookId: null, moveOrigin: null, lookPrev: null };
-function isButton(t) {
-  return t.target && t.target.closest && t.target.closest('.tbtn');
-}
+const isButton = t => t.target && t.target.closest && t.target.closest('.tbtn');
 canvas.addEventListener('touchstart', e => {
   if (!running) return;
   for (const t of e.changedTouches) {
@@ -156,19 +181,17 @@ canvas.addEventListener('touchmove', e => {
     if (t.identifier === touch.moveId) {
       const dx = t.clientX - touch.moveOrigin.x;
       const dy = t.clientY - touch.moveOrigin.y;
-      const dead = 12;
-      input.forward = dy < -dead;
-      input.back = dy > dead;
-      input.left = dx < -dead;
-      input.right = dx > dead;
+      input.forward = dy < -12;
+      input.back = dy > 12;
+      input.left = dx < -12;
+      input.right = dx > 12;
       input.sprint = dy < -70;
     } else if (t.identifier === touch.lookId) {
       const dx = t.clientX - touch.lookPrev.x;
       const dy = t.clientY - touch.lookPrev.y;
       touch.lookPrev = { x: t.clientX, y: t.clientY };
-      const s = 0.0055;
-      player.look(dx * s, dy * s);
-      weapon.onLook(dx * s, dy * s);
+      player.look(dx * 0.0055, dy * 0.0055);
+      weapon.onLook(dx * 0.0055, dy * 0.0055);
     }
   }
   e.preventDefault();
@@ -191,8 +214,11 @@ document.querySelectorAll('.tbtn').forEach(btn => {
     if (act === 'fire') input.fire = v;
     else if (act === 'ads') input.ads = v;
     else if (act === 'jump') input.jump = v;
+    else if (act === 'use') input.use = v;
     else if (act === 'crouch') { if (v) input.crouch = !input.crouch; }
     else if (act === 'reload') { if (v) weapon.startReload(); }
+    else if (act === 'swap') { if (v) weapon.cycle(1); }
+    else if (act === 'detonate') { if (v && mission.hasDetonator) mission.detonate(player); }
     btn.classList.toggle('on', v);
   };
   btn.addEventListener('touchstart', e => { e.preventDefault(); set(true); }, { passive: false });
@@ -203,9 +229,27 @@ document.querySelectorAll('.tbtn').forEach(btn => {
 
 /* ------------------------------------------------------------------ flow */
 
+function showMenu(title, sub, action) {
+  overlay.querySelector('.title').textContent = title;
+  overlay.querySelector('.sub').textContent = sub;
+  overlay.querySelector('.play').textContent = action;
+  overlay.classList.add('show');
+  document.body.classList.remove('playing');
+}
+
+function showBriefing() {
+  briefing.querySelector('.bdiff').textContent = mission.diff.label;
+  briefing.querySelector('ul').innerHTML = mission.objectives
+    .map(o => `<li><b>${o.letter}</b>${o.text}</li>`).join('');
+  briefing.classList.add('show');
+  setTimeout(() => {
+    briefing.classList.remove('show');
+    start();
+  }, 3200);
+}
+
 function start() {
   sfx.resume();
-  started = true;
   running = true;
   overlay.classList.remove('show');
   document.body.classList.add('playing');
@@ -215,21 +259,60 @@ function start() {
   }
   lastTime = performance.now();
 }
+
 function pause() {
   if (!running) return;
   running = false;
-  overlay.classList.add('show');
-  document.body.classList.remove('playing');
-  overlay.querySelector('.title').textContent = 'PAUSED';
-  overlay.querySelector('.sub').textContent = 'Sector 07 — hostiles active';
-  overlay.querySelector('.play').textContent = 'RESUME';
+  showMenu('PAUSED', mission.diff.label + ' — ' +
+    mission.objectives.filter(o => o.done).length + '/' + mission.objectives.length + ' objectives', 'RESUME');
   if (document.pointerLockElement) document.exitPointerLock();
 }
+
+function debrief() {
+  running = false;
+  const d = mission.debrief();
+  const done = d.state === 'complete';
+  overlay.querySelector('.title').textContent = done ? 'MISSION COMPLETE' : 'MISSION FAILED';
+  overlay.querySelector('.sub').textContent = done ? d.difficulty : (d.reason || 'AGENT DOWN');
+  overlay.querySelector('.play').textContent = 'REDEPLOY';
+  const table = overlay.querySelector('.debrief');
+  const mm = Math.floor(d.time / 60);
+  const ss = Math.floor(d.time % 60);
+  table.innerHTML = `
+    <div><span>OBJECTIVES</span><b>${d.objectives}</b></div>
+    <div><span>TIME</span><b>${mm}:${String(ss).padStart(2, '0')}</b></div>
+    <div><span>ACCURACY</span><b>${d.accuracy.toFixed(1)}%</b></div>
+    <div><span>ELIMINATED</span><b>${d.kills}</b></div>
+    <div><span>HEADSHOTS</span><b>${d.headshots}</b></div>
+    <div><span>ALARMS RAISED</span><b>${d.alarms}</b></div>
+    <div class="tot"><span>SCORE</span><b>${d.score}</b></div>`;
+  table.classList.add('show');
+  overlay.classList.add('show');
+  document.body.classList.remove('playing');
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
 document.getElementById('play').addEventListener('click', () => {
   if (!player) return;
-  if (!player.alive) respawn();
-  start();
+  overlay.querySelector('.debrief').classList.remove('show');
+  if (mission.state !== 'active' || !player.alive) {
+    newMission(difficulty);
+    showBriefing();
+  } else if (document.body.classList.contains('playing') === false && mission.time === 0) {
+    showBriefing();
+  } else {
+    start();
+  }
 });
+document.querySelectorAll('[data-diff]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('[data-diff]').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+    newMission(b.dataset.diff);
+    overlay.querySelector('.sub').textContent = mission.diff.blurb;
+  });
+});
+
 function setQuality(q) {
   engine.setQuality(q);
   document.querySelectorAll('[data-quality]').forEach(x => x.classList.toggle('sel', x.dataset.quality === q));
@@ -237,13 +320,11 @@ function setQuality(q) {
 }
 document.querySelectorAll('[data-quality]').forEach(b => {
   b.addEventListener('click', () => {
-    perf.locked = true;          /* an explicit choice stops the auto-tuner */
+    perf.locked = true;
     setQuality(b.dataset.quality);
   });
 });
 
-/* Watch the frame rate and drop a quality step if the device cannot keep up.
-   It only ever steps down, so it settles instead of oscillating. */
 const perf = { frames: 0, time: 0, locked: false };
 const QUALITY_ORDER = ['high', 'medium', 'low'];
 function sampleFrame(dt) {
@@ -258,34 +339,6 @@ function sampleFrame(dt) {
   if (fps < 40 && i < QUALITY_ORDER.length - 1) setQuality(QUALITY_ORDER[i + 1]);
 }
 
-function respawn() {
-  player.health = player.maxHealth;
-  player.alive = true;
-  player.pos.copy(world.playerStart);
-  player.vel.set(0, 0, 0);
-  weapon.ammo = weapon.magSize;
-  weapon.reserve = 210;
-  enemies.forEach(e => e.dispose());
-  enemies = spawnWave(world, engine.scene, 5 + wave, player.pos);
-}
-
-function onKill(enemy, head) {
-  kills++;
-  sfx.kill();
-  hud.toast(head ? 'HEADSHOT — ENEMY ELIMINATED' : 'ENEMY ELIMINATED');
-  hud.feed('YOU ▸ ' + (head ? 'HEADSHOT' : 'HOSTILE'));
-  if (enemies.every(e => !e.alive)) {
-    wave++;
-    setTimeout(() => {
-      if (!player) return;
-      hud.toast('WAVE ' + wave + ' INBOUND');
-      enemies = enemies.concat(spawnWave(world, engine.scene, 4 + wave, player.pos));
-    }, 2200);
-  }
-}
-
-/* ------------------------------------------------------------------ loop */
-
 function resize() {
   engine.resize(innerWidth, innerHeight);
   const portrait = innerHeight > innerWidth;
@@ -293,6 +346,29 @@ function resize() {
   document.body.classList.toggle('rotate-hint', portrait && touchDevice);
 }
 addEventListener('resize', resize);
+
+/* ------------------------------------------------------------------ loop */
+
+function spawnReinforcements() {
+  if (!mission.wantReinforcements) return;
+  const n = mission.wantReinforcements;
+  mission.wantReinforcements = 0;
+  const alive = enemies.filter(e => e.alive).length;
+  if (alive > mission.diff.guards + 6) return;
+  const entry = world.facility.entry || player.pos;
+  const d = mission.diff;
+  for (let i = 0; i < n; i++) {
+    const p = entry.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, 0, i * 1.6));
+    const e = new Enemy(world, p, engine.scene, {
+      health: d.health, damage: d.damage, accuracy: d.accuracy, reaction: d.reaction
+    });
+    e.state = 'search';
+    e.lastKnown = player.pos.clone();
+    e.searchTimer = 30;
+    enemies.push(e);
+  }
+  hud.feed('REINFORCEMENTS INBOUND');
+}
 
 function loop(now) {
   requestAnimationFrame(loop);
@@ -305,42 +381,42 @@ function loop(now) {
     input.jump = false;
     weapon.update(dt, player, input);
 
-    if (input.fire && player.alive) {
-      weapon.fire(player, enemies, (head, enemy, point) => {
-        hud.hitMarker(head);
+    const ctx = {
+      player, mission, sfx,
+      onHit: (zone, enemy, point, killed) => {
+        hud.hitMarker(zone);
         sfx.hitmarker();
-        if (!enemy.alive) onKill(enemy, head);
-      });
-    }
+        if (zone === 'head') mission.stats.headshots++;
+        if (killed) {
+          mission.stats.kills++;
+          hud.feed(zone === 'head' ? 'HEADSHOT' : 'HOSTILE DOWN');
+        }
+      }
+    };
+
+    if (input.fire && player.alive) weapon.fire(player, enemies, ctx);
     if (weapon.ammo === 0 && weapon.reloading <= 0 && weapon.reserve > 0) weapon.startReload();
 
-    for (const e of enemies) e.update(dt, player, sfx, () => {});
+    mission.interact(dt, player, engine.camera, input.use);
+    for (const e of enemies) e.update(dt, ctx);
+    mission.update(dt, player, enemies, engine.camera);
+    spawnReinforcements();
 
-    if (!player.alive) {
-      respawnTimer -= dt;
-      if (respawnTimer <= 0) {
-        running = false;
-        overlay.classList.add('show');
-        document.body.classList.remove('playing');
-        overlay.querySelector('.title').textContent = 'YOU WERE KILLED';
-        overlay.querySelector('.sub').textContent = kills + ' hostiles eliminated · wave ' + wave;
-        overlay.querySelector('.play').textContent = 'REDEPLOY';
-        if (document.pointerLockElement) document.exitPointerLock();
-      }
-    } else {
-      respawnTimer = 2.2;
-    }
-
+    if (world.facility) lights.update(world.facility.lightSpots, player.pos);
     engine.followShadow(player.pos);
-    /* three's fov is vertical, so a tall phone screen would otherwise render
-       a fisheye. Aim for a horizontal field of view and clamp the vertical. */
-    const targetH = THREE.MathUtils.lerp(103, 74, weapon.ads) + (player.sprinting ? 4 : 0);
+
+    const zoom = weapon.def.zoom || 1;
+    const targetH = (weapon.ads > 0.5 ? 103 / zoom : 103) + (player.sprinting ? 4 : 0);
     const aspect = Math.max(0.35, engine.camera.aspect);
-    const vFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(targetH) / 2) / aspect);
-    engine.camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(vFov), 55, 82);
+    const vFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(
+      THREE.MathUtils.lerp(103, targetH, weapon.ads)) / 2) / aspect);
+    engine.camera.fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(vFov), 20, 82);
     engine.camera.updateProjectionMatrix();
     engine.grade.uniforms.uHurt.value = Math.max(0, player.hurtTimer / 0.55);
-    hud.update(dt, { player, weapon, enemies, kills, wave });
+
+    hud.update(dt, { player, weapon, enemies, mission, loadout });
+
+    if (mission.state !== 'active') debrief();
   }
 
   engine.render(dt, now / 1000);
@@ -349,6 +425,6 @@ function loop(now) {
 window.__engine = engine;
 window.__world = world;
 window.__THREE = THREE;
-window.__state = () => ({ player, weapon, enemies, kills, wave, running });
-window.__start = start;
+window.__state = () => ({ player, weapon, enemies, mission, loadout, running });
+window.__start = () => { if (mission) start(); };
 boot();
