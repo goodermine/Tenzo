@@ -135,17 +135,69 @@ loop as a phone recording: the session lands in `GET /agent/pending` (and fires 
 Telegram push if configured), your agent transcribes and assimilates it, and posts the note back
 to `note_endpoint`.
 
-### A practical Hermes routine
+### Hermes "Import Dropbox recordings" task prompt (copy-paste)
 
-1. Pull new files from the Dropbox folder (Hermes already has Dropbox access) into a local
-   working directory.
-2. Look at each file's start time (and Dropbox's `modified_time`, a good proxy for when
-   recording stopped) to decide which files belong to the same session — files that resume
-   within a couple of seconds of each other are one continuous recording; anything separated
-   by more than a few minutes is a new session.
-3. Write that grouping out as a manifest and run the import script.
-4. Continue exactly as normal — `/agent/pending` now shows these sessions alongside any
-   phone-recorded ones, indistinguishable from them.
+Standalone, idempotent (safe to run repeatedly — only touches files it hasn't seen before), and
+cheap on an empty folder (a listing call, then stop). Trigger it the same two ways as the queue
+task: on demand (e.g. a "Import Dropbox recordings" Telegram message) and on the slow heartbeat.
+Run it *before* the Ramblbox queue task in the same firing — newly imported sessions are queued
+immediately and the queue task picks them up in the same pass.
+
+```text
+You are importing new recordings from Dropbox into Ramblbox. Do this now, then stop.
+
+SETTINGS (adjust if mine differ):
+  DROPBOX_FOLDER   = /Insta360mic
+  RAMBLBOX_URL     = http://127.0.0.1:8000
+  REPO_DIR         = ~/Tenzo   (wherever the Ramblbox checkout lives)
+  WORK_DIR         = ~/ramblbox_import/incoming
+  LOG_FILE         = ~/ramblbox_import/imported.log
+  GROUP_GAP_SECONDS = 300   (files resuming within this gap count as one session)
+
+1. List files in DROPBOX_FOLDER. Keep only audio files (.wav, .mp3, .m4a, etc).
+2. Read LOG_FILE (create it empty if it doesn't exist yet — one filename per line). Drop any
+   listed file whose name already appears in LOG_FILE — it's already been imported.
+3. If nothing is left after that, stop silently. Do not message me.
+4. For each remaining file, determine:
+     start_time    = parsed from the filename if it encodes one (e.g. Insta360's
+                     "audio_YYMMDD_HHMMSS_..." pattern -> YYYY-MM-DD HH:MM:SS), otherwise use
+                     the file's Dropbox created/client-modified time as a fallback.
+     end_time_proxy = the file's Dropbox `modified_time` (server_modified) — a reasonable proxy
+                     for when the recorder finished writing that file.
+5. Sort the remaining files by start_time. Walk them in order and group into sessions:
+     - The first file starts a new group.
+     - For each next file: if (its start_time - previous file's end_time_proxy) <=
+       GROUP_GAP_SECONDS, add it to the same group (this is very likely one continuous
+       recording the device auto-split, e.g. at a 30-minute file-length cap). Otherwise start a
+       new group.
+   Use your judgment on top of this rule where the content or context makes the grouping
+   obviously wrong (e.g. two files a device split mid-word are clearly one take even if the gap
+   is a little over the threshold) — the rule is a strong default, not a hard law.
+6. Download each remaining file into WORK_DIR, preserving its original filename.
+7. Write WORK_DIR/manifest.json:
+     { "sessions": [ { "files": ["<name1>", "<name2>", ...] }, ... ] }
+   with each group as one entry, files listed in start_time order within the group.
+8. Run:
+     cd REPO_DIR && . .venv/bin/activate && \
+     python3 scripts/import_to_ramblbox.py \
+       --base-url RAMBLBOX_URL --dir WORK_DIR --manifest WORK_DIR/manifest.json
+   This creates one Ramblbox session per group and marks each Done — they're now queued for
+   assimilation exactly like a phone recording.
+9. On success, append every imported filename to LOG_FILE (one per line) so they're never
+   re-imported. If the script reports a failure for a particular group, do NOT log those
+   filenames — leave them for the next run to retry.
+10. Immediately continue into the "Ramblbox queue" task (above) so the sessions you just queued
+    get transcribed and assimilated in the same pass, rather than waiting for the next firing.
+11. If you imported at least one session, send me a one-line Telegram summary, e.g.:
+    "Ramblbox: imported 2 new sessions from Dropbox (3 files, 1 skipped as already-imported)."
+```
+
+Two things worth knowing about this design:
+- **The gap rule is exactly the heuristic used to reconstruct today's test set correctly** — a
+  ~2-second gap between an Insta360 file ending and the next starting means the recorder just
+  auto-split one take; anything longer is a real pause between separate rambles.
+- **`LOG_FILE` is what makes this safe to run on every heartbeat.** Without it, the same
+  recordings would be re-imported (and re-queued, re-transcribed) every time this fires.
 
 ## Optional: get notified (push)
 
