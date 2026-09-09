@@ -85,6 +85,68 @@ sessions that are waiting for a structured note. Do this now, then stop.
    wrote none, stay silent.
 ```
 
+## A second capture path: importing externally-recorded audio (e.g. Insta360 mic + Dropbox)
+
+Not every ramble has to start on the phone. If you've got an always-on recorder (like an
+Insta360 mic) that you sync to Dropbox after the fact, `scripts/import_to_ramblbox.py` gets
+those files into Ramblbox through the **exact same endpoints** the phone UI uses — `/session`,
+`/segment`, `/done` — so an imported session is indistinguishable from a phone-recorded one
+once it's in the queue. No app changes, no separate code path for the agent to handle.
+
+This is a **separate, equal path**, not a replacement for the phone recorder — use whichever
+fits the moment.
+
+### Who decides the grouping
+
+A recorder like the Insta360 mic auto-splits a long continuous recording into multiple files
+(e.g. every 30 minutes). Whether several files belong in *one* Ramblbox session or several is a
+judgment call — the script does not guess it. That decision belongs to you or your agent,
+looking at the actual file timestamps (e.g. two files whose start/end are seconds apart are
+almost certainly one continuous recording; files an hour apart are not).
+
+### The manifest
+
+Describe the grouping as a small JSON file:
+
+```json
+{
+  "sessions": [
+    { "note": "date night dinner", "files": ["audio_260909_171205_orig.wav", "audio_260909_174207_orig.wav"] },
+    { "files": ["audio_260909_125501_orig_stereo.wav"] }
+  ]
+}
+```
+
+`files` are resolved relative to `--dir` and uploaded in the listed order (that order becomes
+each segment's position in the session). `note` is a human label only — ignored by the script.
+
+### Running it
+
+```bash
+python3 scripts/import_to_ramblbox.py \
+  --base-url http://127.0.0.1:8000 \
+  --dir ~/downloads/insta360mic \
+  --manifest manifest.json
+```
+
+Each group becomes one session and is marked **Done** immediately (pass `--no-done` to leave
+sessions active instead, e.g. if you want to add more segments first). From there it's the same
+loop as a phone recording: the session lands in `GET /agent/pending` (and fires the webhook/
+Telegram push if configured), your agent transcribes and assimilates it, and posts the note back
+to `note_endpoint`.
+
+### A practical Hermes routine
+
+1. Pull new files from the Dropbox folder (Hermes already has Dropbox access) into a local
+   working directory.
+2. Look at each file's start time (and Dropbox's `modified_time`, a good proxy for when
+   recording stopped) to decide which files belong to the same session — files that resume
+   within a couple of seconds of each other are one continuous recording; anything separated
+   by more than a few minutes is a new session.
+3. Write that grouping out as a manifest and run the import script.
+4. Continue exactly as normal — `/agent/pending` now shows these sessions alongside any
+   phone-recorded ones, indistinguishable from them.
+
 ## Optional: get notified (push)
 
 Set `AGENT_WEBHOOK_URL` in `.env` to an endpoint your agent listens on. The instant Done is pressed,

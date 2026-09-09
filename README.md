@@ -1,8 +1,16 @@
 # Ramblbox
 
-A personal, self-hosted capture loop for thinking out loud. You record a **session** made of many
-short segments on your phone (record → stop → think → record again), press **Done**, and your own
-agent transcribes the audio and turns the whole session into one structured note.
+A personal, self-hosted capture loop for thinking out loud. A **session** is made of many short
+segments — record → stop → think → record again — assimilated into one structured note once you
+(or an import) mark it **Done**. Two equal capture paths feed the same pipeline:
+
+- **Phone**: record segments in the browser, press Done.
+- **Import** (e.g. an always-on Insta360 mic synced to Dropbox): `scripts/import_to_ramblbox.py`
+  uploads externally-recorded audio through the same endpoints, so imported sessions are
+  indistinguishable from phone-recorded ones once queued. See
+  [`docs/agent-integration.md`](docs/agent-integration.md#a-second-capture-path-importing-externally-recorded-audio-eg-insta360-mic--dropbox).
+
+Either way, your own agent transcribes the audio and turns the session into one structured note.
 
 **The app calls no LLM and does no transcription.** It captures + stores audio and notifies your
 agent; the agent downloads the audio, transcribes it, and writes the note back. So there's no API
@@ -53,6 +61,17 @@ Tailscale HTTPS URL — required for the microphone — see
     status `assimilated`. `409` once archived.
 
 Segment audio is stored under `RAMBLBOX_AUDIO_DIR`; sessions/notes in SQLite at `RAMBLBOX_DB_PATH`.
+
+## Importing externally-recorded audio
+
+```bash
+python3 scripts/import_to_ramblbox.py --base-url http://127.0.0.1:8000 \
+  --dir ~/downloads/insta360mic --manifest manifest.json
+```
+
+Groups files into sessions per a manifest you (or your agent) write, uploads them as segments via
+the normal `/session` + `/segment` API, and marks each Done. Details, manifest format, and a
+practical Hermes routine: [`docs/agent-integration.md`](docs/agent-integration.md).
 
 ## Docs
 
