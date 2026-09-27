@@ -91,7 +91,7 @@ export class Facility {
     const depth = this.h * CELL;
 
     /* slab and ceiling for the whole footprint */
-    w.box('concrete', 0, -0.15, cz, this.w * CELL, 0.3, depth, { uvScale: 0.32 });
+    w.box('floor', 0, -0.15, cz, this.w * CELL, 0.3, depth, { uvScale: 0.32 });
     w.box('concrete', 0, WALL_H + 0.25, cz, this.w * CELL, 0.5, depth, { uvScale: 0.28 });
 
     for (let y = 0; y < this.h; y++) {

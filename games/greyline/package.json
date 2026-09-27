@@ -5,13 +5,15 @@
   "description": "A browser first-person shooter built on three.js with fully procedural geometry, textures and audio.",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --minify --outfile=dist/greyline.js --log-level=warning",
-    "dev": "esbuild src/main.js --bundle --format=iife --outfile=dist/greyline.js --sourcemap --watch"
+    "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=dist/greyline.js --log-level=warning",
+    "dev": "esbuild src/main.js --bundle --format=esm --outfile=dist/greyline.js --sourcemap --watch"
   },
   "dependencies": {
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "ktx2-encoder": "^0.6.0",
+    "sharp": "^0.35.5"
   }
 }

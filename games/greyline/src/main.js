@@ -10,6 +10,7 @@ import { Sfx } from './audio.js';
 import { Mission, DIFFICULTIES } from './mission.js';
 import { Loadout, WEAPONS } from './weapons.js';
 import { LightPool } from './facility.js';
+import { onProgress as onAssetProgress, assetErrors } from './assets.js';
 
 const canvas = document.getElementById('view');
 const overlay = document.getElementById('overlay');
@@ -37,10 +38,16 @@ const input = {
 /* ------------------------------------------------------------------ boot */
 
 async function boot() {
-  await world.buildMaterials((p, msg) => {
+  /* Real transfer progress now that there are assets to download. */
+  onAssetProgress(frac => {
+    bar.style.width = Math.round(frac * 78) + '%';
+  });
+  await world.buildMaterials(engine.renderer, (p, msg) => {
     bar.style.width = Math.round(p * 80) + '%';
     loadMsg.textContent = msg;
   });
+  loadMsg.textContent = 'capturing the sky';
+  await engine.loadEnvironment();
   loadMsg.textContent = 'building the compound';
   await frame();
   world.build();

@@ -4,6 +4,8 @@
    tone mapping and a grade pass. */
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { assetUrl, manager } from './assets.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
@@ -99,7 +101,7 @@ export class Engine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.78;
+    this.renderer.toneMappingExposure = 0.95;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.scene = new THREE.Scene();
@@ -143,10 +145,43 @@ export class Engine {
        it is not used for the env map: its sun disc carries HDR values large
        enough to overflow the PMREM blur to NaN, which renders every PBR
        surface black. A hand-built equirect keeps the range sane. */
+    /* The painted equirect goes in immediately so nothing is ever unlit,
+       then a real HDRI replaces it once it arrives. */
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmrem.fromEquirectangular(this._envTexture()).texture;
+    this._paintedEnv = pmrem.fromEquirectangular(this._envTexture()).texture;
+    this.scene.environment = this._paintedEnv;
     this.scene.environmentIntensity = 1.0;
     pmrem.dispose();
+  }
+
+  /** Swap in a captured HDRI for image-based lighting. CC0, Poly Haven.
+   * Must be an HDRI *with ground*: a sky-only capture leaves every
+   * downward-facing surface unlit and the road reads black. */
+  loadEnvironment() {
+    return new Promise(resolve => {
+      new RGBELoader(manager).load(
+        assetUrl('env/sky_1k.hdr'),
+        hdr => {
+          const pmrem = new THREE.PMREMGenerator(this.renderer);
+          const env = pmrem.fromEquirectangular(hdr).texture;
+          pmrem.dispose();
+          hdr.dispose();
+          this.scene.environment = env;
+          this.scene.environmentIntensity = 1.15;
+          if (this._paintedEnv) {
+            this._paintedEnv.dispose();
+            this._paintedEnv = null;
+          }
+          this.envIsHDRI = true;
+          resolve(true);
+        },
+        undefined,
+        () => {
+          console.warn('[greyline] HDRI unavailable, keeping painted environment');
+          resolve(false);
+        }
+      );
+    });
   }
 
   _envTexture() {
@@ -207,7 +242,7 @@ export class Engine {
     this.sun = sun;
 
     /* bounce: warm from the sunlit ground, cool from the sky */
-    const bounce = new THREE.HemisphereLight(0xbcd2e8, 0x6b6156, 0.55);
+    const bounce = new THREE.HemisphereLight(0xbcd2e8, 0x6b6156, 0.8);
     this.scene.add(bounce);
 
     this.scene.fog = new THREE.FogExp2(0xb6bab6, 0.0022);

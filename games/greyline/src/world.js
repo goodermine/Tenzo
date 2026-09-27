@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeSurface } from './textures.js';
 import { Facility } from './facility.js';
+import { MaterialLibrary } from './materials.js';
 
 function mulberry32(a) {
   return function () {
@@ -83,21 +84,30 @@ export class World {
 
   /* --- materials ------------------------------------------------------- */
 
-  async buildMaterials(onProgress) {
+  async buildMaterials(renderer, onProgress) {
+    /* Scanned CC0 sets where available, procedural generation where not -
+     * every surface has a fallback so a missing asset degrades the look
+     * instead of breaking the level. */
+    const lib = new MaterialLibrary(renderer);
+    await lib.init();
+    this.materialLibrary = lib;
+
     const defs = [
-      ['concrete', { kind: 'concrete', seed: 1.5, repeat: [1, 1] }],
-      ['plaster', { kind: 'plaster', seed: 4.5, repeat: [1, 1] }],
-      ['brick', { kind: 'brick', seed: 9.5, repeat: [1, 1] }],
-      ['asphalt', { kind: 'asphalt', seed: 13.5, repeat: [1, 1] }],
-      ['metal', { kind: 'metal', seed: 21.5, repeat: [1, 1] }],
-      ['sandbag', { kind: 'sandbag', seed: 27.5, repeat: [1, 1] }]
+      ['concrete', 'concrete', 1.5],
+      ['plaster', 'plaster', 4.5],
+      ['brick', 'brick', 9.5],
+      ['asphalt', 'asphalt', 13.5],
+      ['metal', 'metal', 21.5],
+      ['sandbag', 'sandbag', 27.5],
+      ['floor', 'concrete', 31.5]
     ];
     for (let i = 0; i < defs.length; i++) {
-      const [name, opts] = defs[i];
-      this.materials[name] = makeSurface(opts.kind, { size: 1024, seed: opts.seed, repeat: opts.repeat });
+      const [name, kind, seed] = defs[i];
+      this.materials[name] = await lib.get(name, kind, { seed });
       if (onProgress) onProgress((i + 1) / (defs.length + 1), 'surfacing ' + name);
       await new Promise(r => setTimeout(r, 0));
     }
+
     /* untextured helpers */
     this.materials.dark = new THREE.MeshStandardMaterial({ color: 0x2b3034, roughness: 0.95, metalness: 0 });
     /* Glass is what stops a window reading as a hole: it has to catch the
