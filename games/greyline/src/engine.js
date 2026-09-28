@@ -13,6 +13,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { VolumetricLightPass, DustMotes } from './fx.js';
 
 /* Final grade: bleach, vignette, chromatic aberration, grain and a cheap
@@ -311,8 +312,15 @@ export class Engine {
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(this.grade);
 
+    /* SMAA finds edges by pattern rather than by contrast, so it keeps thin
+       geometry - railings, window frames, the guards' limbs at distance -
+       that FXAA smears. It costs more, so FXAA stays as the low-tier
+       fallback and only one of them is ever enabled. */
+    this.smaa = new SMAAPass();
+    this.composer.addPass(this.smaa);
+
     this.fxaa = new ShaderPass(FXAAShader);
-    this.fxaa.renderToScreen = true;
+    this.fxaa.enabled = false;
     this.composer.addPass(this.fxaa);
   }
 
@@ -328,6 +336,10 @@ export class Engine {
        that can go without the scene falling apart. */
     this.volumetrics.enabled = q !== 'low';
     this.volumetrics.setQuality(q);
+    /* Desktop first: the pattern-based pass is the default and the cheap one
+       is the fallback, not the other way round. */
+    this.smaa.enabled = q !== 'low';
+    this.fxaa.enabled = q === 'low';
     if (this.dust) {
       this.dust.points.visible = q !== 'low';
       this.dust.setPixelRatio(this.renderer.getPixelRatio());
