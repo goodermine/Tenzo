@@ -74,6 +74,10 @@ function check(name, ok, detail) {
     args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader']
   });
   const page = await browser.newPage({ viewport: { width: 1000, height: 560 } });
+  /* A single frame on a software rasteriser can take longer than Playwright's
+     30s default, and a screenshot waits for one. The corridor - volumetrics
+     plus two shadow-casting spotlights - is the shot that trips it. */
+  page.setDefaultTimeout(180000);
 
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));

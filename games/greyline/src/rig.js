@@ -17,6 +17,7 @@
    walking, and that is one pose driven by two things. */
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { computeBoneAxes, applyOverlay } from './rig-pose.js';
 
 /* Bind pose, in metres from the ground. Positions are relative to the parent
    bone, which is what makes the hierarchy do the work. */
@@ -282,6 +283,10 @@ export class GuardRig {
     this.mesh.bind(new THREE.Skeleton(bones));
 
     this.bones = byName;
+    /* Taken from the bind pose, so this has to follow bind(). For this rig
+       they come out as the world axes; the point of measuring them is that a
+       downloaded skeleton's will not. */
+    this.axes = computeBoneAxes(byName);
     this.mixer = new THREE.AnimationMixer(this.mesh);
     this.actions = {};
     for (const [name, clip] of Object.entries(sharedClips)) {
@@ -295,8 +300,6 @@ export class GuardRig {
     this.current = null;
     this.play('idle', 0);
 
-    this._q = new THREE.Quaternion();
-    this._e = new THREE.Euler();
   }
 
   play(name, fade = 0.22) {
@@ -307,57 +310,9 @@ export class GuardRig {
     this.current = next;
   }
 
-  /**
-   * Locomotion comes from the clips; everything that has to respond to the
-   * player is applied here, after the mixer has written its pose.
-   *
-   * @param aim      0..1, how much the guard is levelling its weapon
-   * @param lookYaw  head turn, radians, relative to the body
-   * @param lookPitch head tilt, radians
-   * @param recoil   0..1, decaying kick after a shot
-   * @param stagger  {zone, k} hit reaction, k decaying 1..0
-   */
-  overlay({ aim = 0, lookYaw = 0, lookPitch = 0, recoil = 0, stagger = null }) {
-    const add = (bone, x, y, z) => {
-      const b = this.bones.get(bone);
-      if (!b) return;
-      this._e.set(x, y, z);
-      this._q.setFromEuler(this._e);
-      b.quaternion.multiply(this._q);
-    };
-
-    if (aim > 0) {
-      /* Trigger arm close to the body with the elbow flared a little, support
-         arm brought further up and across to the handguard. */
-      add('armR', 0.5 * aim, 0, 0.12 * aim);
-      add('forearmR', 0.75 * aim, 0, -0.1 * aim);
-      add('armL', 0.72 * aim, 0, 0.26 * aim);
-      add('forearmL', 0.8 * aim, -0.3 * aim, 0);
-      add('chest', 0, -0.18 * aim, 0);
-    }
-
-    if (recoil > 0) {
-      /* The kick drives the weapon back, so the arm goes the other way. */
-      add('armR', -0.22 * recoil, 0, 0);
-      add('forearmR', -0.16 * recoil, 0, 0);
-      add('chest', -0.1 * recoil, 0, 0);
-    }
-
-    add('head', lookPitch, lookYaw, 0);
-
-    if (stagger) {
-      const k = stagger.k;
-      if (stagger.zone === 'head') {
-        add('head', -0.35 * k, 0.2 * k, 0.45 * k);
-        add('chest', -0.18 * k, 0, 0);
-      } else if (stagger.zone === 'torso') {
-        add('chest', -0.3 * k, 0, 0.12 * k);
-        add('spine', -0.15 * k, 0, 0);
-      } else {
-        add('hips', 0, 0, 0.2 * k);
-        add('thighL', -0.35 * k, 0, 0);
-      }
-    }
+  /** Layered on top of the mixer's pose; see src/rig-pose.js. */
+  overlay(params) {
+    applyOverlay(this.bones, this.axes, params);
   }
 
   update(dt) {
