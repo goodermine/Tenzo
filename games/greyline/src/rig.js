@@ -329,10 +329,10 @@ export class GuardRig {
     if (aim > 0) {
       /* Trigger arm close to the body with the elbow flared a little, support
          arm brought further up and across to the handguard. */
-      add('armR', 0.85 * aim, 0, 0.18 * aim);
-      add('forearmR', 0.8 * aim, 0, 0);
-      add('armL', 1.1 * aim, 0, 0.3 * aim);
-      add('forearmL', 0.85 * aim, -0.35 * aim, 0);
+      add('armR', 0.5 * aim, 0, 0.12 * aim);
+      add('forearmR', 0.75 * aim, 0, -0.1 * aim);
+      add('armL', 0.72 * aim, 0, 0.26 * aim);
+      add('forearmL', 0.8 * aim, -0.3 * aim, 0);
       add('chest', 0, -0.18 * aim, 0);
     }
 

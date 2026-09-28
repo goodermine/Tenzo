@@ -475,3 +475,300 @@ export class DustMotes {
     if (this.points.parent) this.points.parent.remove(this.points);
   }
 }
+
+/* --- impacts ----------------------------------------------------------- */
+
+function holeTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 30);
+  g.addColorStop(0, 'rgba(10,9,8,0.95)');
+  g.addColorStop(0.35, 'rgba(38,34,30,0.75)');
+  g.addColorStop(0.75, 'rgba(120,114,104,0.30)');
+  g.addColorStop(1, 'rgba(150,144,134,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  /* A few radial cracks stop every hole reading as the same circle. */
+  x.strokeStyle = 'rgba(30,27,24,0.5)';
+  x.lineWidth = 1.4;
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + Math.random();
+    const r = 12 + Math.random() * 16;
+    x.beginPath();
+    x.moveTo(32, 32);
+    x.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r);
+    x.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/* Bullet holes as oriented quads on a fixed ring buffer.
+   three's DecalGeometry would wrap them around corners, but it needs the mesh
+   and face that were hit, and this world raycasts analytically against boxes -
+   there is no face to hand it, and projecting onto a quarter-million-triangle
+   merged mesh per shot would not be affordable anyway. On a level built out
+   of boxes a quad sits flat on the surface regardless.
+
+   The ring buffer is the point: decals that are only ever added are a classic
+   way to leak until the frame rate goes. */
+export class DecalPool {
+  constructor(scene, capacity = 64) {
+    this.capacity = capacity;
+    this.next = 0;
+    this.texture = holeTexture();
+    this.material = new THREE.MeshBasicMaterial({
+      map: this.texture,
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      fog: true
+    });
+    this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), this.material, capacity);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1;
+    this.mesh.count = capacity;
+    /* Unused slots are scaled to nothing rather than left at the origin. */
+    const m = new THREE.Matrix4().makeScale(0, 0, 0);
+    for (let i = 0; i < capacity; i++) this.mesh.setMatrixAt(i, m);
+    this.mesh.instanceMatrix.needsUpdate = true;
+    scene.add(this.mesh);
+
+    this._m = new THREE.Matrix4();
+    this._q = new THREE.Quaternion();
+    this._up = new THREE.Vector3(0, 0, 1);
+    this._pos = new THREE.Vector3();
+    this._scale = new THREE.Vector3();
+  }
+
+  add(point, normal, size = 0.11) {
+    /* Lift it off the surface: coplanar with the wall it z-fights. */
+    this._pos.copy(point).addScaledVector(normal, 0.012);
+    this._q.setFromUnitVectors(this._up, normal);
+    /* Random roll so repeated hits on one wall are not identical. */
+    const roll = new THREE.Quaternion().setFromAxisAngle(normal, Math.random() * Math.PI * 2);
+    this._q.premultiply(roll);
+    const s = size * (0.8 + Math.random() * 0.5);
+    this._scale.set(s, s, s);
+    this._m.compose(this._pos, this._q, this._scale);
+    this.mesh.setMatrixAt(this.next, this._m);
+    this.mesh.instanceMatrix.needsUpdate = true;
+    this.next = (this.next + 1) % this.capacity;
+  }
+
+  dispose() {
+    this.mesh.geometry.dispose();
+    this.material.dispose();
+    this.texture.dispose();
+    if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
+  }
+}
+
+/* Particles, as one Points system per blend mode.
+
+   Position is computed in the vertex shader from a spawn time, a velocity and
+   a gravity scale, so firing a burst writes each particle once and the CPU
+   does nothing further. The alternative - stepping several hundred positions
+   every frame and re-uploading the buffer - is the usual reason particles
+   show up in a profile. */
+const KINDS = {
+  smoke: { color: 0x8d867a, size: 0.16, life: 1.2, gravity: -0.2, drag: 2.1, grow: 1.1, additive: false },
+  blood: { color: 0x6d1410, size: 0.07, life: 0.7, gravity: 9.5, drag: 0.4, grow: 0.2, additive: false },
+  spark: { color: 0xffc06a, size: 0.035, life: 0.4, gravity: 7.0, drag: 1.2, grow: -0.4, additive: true },
+  dust: { color: 0xa9a294, size: 0.10, life: 0.9, gravity: 0.9, drag: 2.4, grow: 0.9, additive: false }
+};
+
+const PARTICLE_VERT = /* glsl */`
+  attribute vec3 aVelocity;
+  attribute float aStart;
+  attribute float aLife;
+  attribute float aSize;
+  attribute float aGravity;
+  attribute float aDrag;
+  attribute float aGrow;
+  attribute vec3 aColor;
+
+  uniform float uTime;
+  /* Pixels per metre at one metre: viewportHeight / (2 * tan(fov/2)). A
+     hard-coded constant here only suits the viewport it was tuned at, and
+     makes every puff the wrong size at any other resolution. */
+  uniform float uSizeScale;
+
+  varying float vAlpha;
+  varying vec3 vColor;
+
+  void main() {
+    float t = uTime - aStart;
+    float k = t / aLife;
+    vColor = aColor;
+
+    if (t < 0.0 || k > 1.0) {
+      /* Dead particles are collapsed rather than drawn transparent, so they
+         cost no fill. */
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      gl_PointSize = 0.0;
+      vAlpha = 0.0;
+      return;
+    }
+
+    /* Velocity with exponential drag, plus gravity. */
+    float decay = aDrag > 0.001 ? (1.0 - exp(-aDrag * t)) / aDrag : t;
+    vec3 p = position + aVelocity * decay - vec3(0.0, 0.5 * aGravity * t * t, 0.0);
+
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    float size = aSize * (1.0 + aGrow * k);
+    gl_PointSize = max(0.0, size * uSizeScale / max(-mv.z, 0.25));
+    gl_Position = projectionMatrix * mv;
+
+    /* Fade in fast, out slowly: a puff that appears at full opacity pops. */
+    vAlpha = smoothstep(0.0, 0.12, k) * (1.0 - smoothstep(0.55, 1.0, k));
+  }
+`;
+
+const PARTICLE_FRAG = /* glsl */`
+  varying float vAlpha;
+  varying vec3 vColor;
+  void main() {
+    float d = length(gl_PointCoord - 0.5);
+    if (d > 0.5) discard;
+    float a = smoothstep(0.5, 0.12, d) * vAlpha * 0.7;
+    gl_FragColor = vec4(vColor, a);
+  }
+`;
+
+class ParticleBatch {
+  constructor(scene, capacity, additive) {
+    this.capacity = capacity;
+    this.next = 0;
+
+    const geo = new THREE.BufferGeometry();
+    const f = n => new THREE.BufferAttribute(new Float32Array(capacity * n), n);
+    geo.setAttribute('position', f(3));
+    geo.setAttribute('aVelocity', f(3));
+    geo.setAttribute('aColor', f(3));
+    geo.setAttribute('aStart', f(1));
+    geo.setAttribute('aLife', f(1));
+    geo.setAttribute('aSize', f(1));
+    geo.setAttribute('aGravity', f(1));
+    geo.setAttribute('aDrag', f(1));
+    geo.setAttribute('aGrow', f(1));
+    /* Every particle starts dead: aLife 0 would divide by zero, so they are
+       given a life that has already elapsed. */
+    geo.attributes.aLife.array.fill(1);
+    geo.attributes.aStart.array.fill(-1000);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
+
+    this.geometry = geo;
+    this.material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSizeScale: { value: 400 } },
+      vertexShader: PARTICLE_VERT,
+      fragmentShader: PARTICLE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending
+    });
+    this.points = new THREE.Points(geo, this.material);
+    this.points.frustumCulled = false;
+    this.points.renderOrder = 3;
+    scene.add(this.points);
+    this._dirty = false;
+  }
+
+  emit(origin, velocity, spec, now) {
+    const i = this.next;
+    const a = this.geometry.attributes;
+    a.position.array[i * 3] = origin.x;
+    a.position.array[i * 3 + 1] = origin.y;
+    a.position.array[i * 3 + 2] = origin.z;
+    a.aVelocity.array[i * 3] = velocity.x;
+    a.aVelocity.array[i * 3 + 1] = velocity.y;
+    a.aVelocity.array[i * 3 + 2] = velocity.z;
+    a.aColor.array[i * 3] = spec.r;
+    a.aColor.array[i * 3 + 1] = spec.g;
+    a.aColor.array[i * 3 + 2] = spec.b;
+    a.aStart.array[i] = now;
+    a.aLife.array[i] = spec.life;
+    a.aSize.array[i] = spec.size;
+    a.aGravity.array[i] = spec.gravity;
+    a.aDrag.array[i] = spec.drag;
+    a.aGrow.array[i] = spec.grow;
+    this.next = (this.next + 1) % this.capacity;
+    this._dirty = true;
+  }
+
+  flush() {
+    if (!this._dirty) return;
+    for (const a of Object.values(this.geometry.attributes)) a.needsUpdate = true;
+    this._dirty = false;
+  }
+
+  dispose() {
+    this.geometry.dispose();
+    this.material.dispose();
+    if (this.points.parent) this.points.parent.remove(this.points);
+  }
+}
+
+export class Particles {
+  constructor(scene, { capacity = 320 } = {}) {
+    this.normal = new ParticleBatch(scene, capacity, false);
+    this.additive = new ParticleBatch(scene, capacity, true);
+    this.time = 0;
+    this._v = new THREE.Vector3();
+    this._c = new THREE.Color();
+  }
+
+  /**
+   * @param kind  one of KINDS
+   * @param count how many
+   * @param spread  cone half-angle about `normal`, radians
+   * @param speed   base speed, randomised per particle
+   */
+  burst(kind, origin, normal, count = 8, speed = 2.2, spread = 0.8) {
+    const k = KINDS[kind];
+    if (!k) return;
+    const batch = k.additive ? this.additive : this.normal;
+    this._c.setHex(k.color);
+
+    for (let i = 0; i < count; i++) {
+      /* Scatter around the surface normal rather than uniformly: debris comes
+         off the wall it was knocked out of. */
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * spread;
+      this._v.set(Math.cos(a) * r, Math.sin(a) * r, 1).normalize();
+      const basis = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+      this._v.applyQuaternion(basis).multiplyScalar(speed * (0.45 + Math.random()));
+
+      batch.emit(origin, this._v, {
+        r: this._c.r, g: this._c.g, b: this._c.b,
+        life: k.life * (0.7 + Math.random() * 0.6),
+        size: k.size * (0.7 + Math.random() * 0.6),
+        gravity: k.gravity, drag: k.drag, grow: k.grow
+      }, this.time);
+    }
+  }
+
+  update(dt) {
+    this.time += dt;
+    for (const b of [this.normal, this.additive]) {
+      b.material.uniforms.uTime.value = this.time;
+      b.flush();
+    }
+  }
+
+  /** Call on resize and whenever the camera's field of view changes. */
+  setViewport(heightPx, fovDegrees) {
+    const scale = heightPx / (2 * Math.tan(THREE.MathUtils.degToRad(fovDegrees) / 2));
+    this.normal.material.uniforms.uSizeScale.value = scale;
+    this.additive.material.uniforms.uSizeScale.value = scale;
+  }
+
+  dispose() {
+    this.normal.dispose();
+    this.additive.dispose();
+  }
+}

@@ -132,6 +132,15 @@ function check(name, ok, detail) {
     check('texture count sane', scene.textures < 90, scene.textures + ' textures');
 
     await page.evaluate(() => window.__start());
+
+    /* Record the spawn before anything moves the camera: the guard shots are
+       staged relative to it, and by the time they run the player has been
+       teleported indoors. */
+    const spawn = await page.evaluate(() => {
+      const p = window.__state().player;
+      return { x: p.pos.x, y: p.pos.y, z: p.pos.z, yaw: p.yaw };
+    });
+
     await page.waitForTimeout(8000);
     await page.evaluate(SETTLE);
     await page.waitForTimeout(1200);
@@ -165,48 +174,110 @@ function check(name, ok, detail) {
     await page.waitForTimeout(1200);
     await page.screenshot({ path: join(OUT, 'corridor.png') });
 
-    /* Stand in front of a guard so the rig is visible in a screenshot. */
-    const posed = await page.evaluate(() => {
+    /* Guard photography, staged on the street rather than indoors. The
+       corridors are one or two cells wide, so a camera placed a few metres
+       off to the side ends up behind a wall looking at it - which is what
+       the first attempt at these shots produced. The street is open, wide
+       and lit by the sun. */
+    const posed = await page.evaluate(sp => {
       const st = window.__state();
       const g = st.enemies && st.enemies.find(e => e.alive);
       if (!g) return false;
-      const p = st.player;
-      /* Move the guard into a skylight's pool of sun: a guard picked at
-         random is usually standing somewhere dim, which shows the silhouette
-         but none of the shading. */
-      const sky = window.__world.facility.skylights[0];
-      if (sky) {
-        g.pos.set(sky.x - 1.6, g.pos.y, sky.z - 1.1);
-        g.yaw = Math.PI * 0.75;
-      }
-      const fx = -Math.sin(g.yaw), fz = -Math.cos(g.yaw);
-      p.pos.set(g.pos.x + fx * 2.6, g.pos.y + 0.15, g.pos.z + fz * 2.6);
-      p.yaw = g.yaw + Math.PI;
-      p.pitch = -0.04;
+      /* Five metres down the street from the spawn, turned to face back. */
+      const fx = -Math.sin(sp.yaw), fz = -Math.cos(sp.yaw);
+      g.pos.set(sp.x + fx * 5, sp.y, sp.z + fz * 5);
+      g.yaw = sp.yaw + Math.PI;
+      g.vel.set(0, 0, 0);
+      /* Pinned: it would otherwise patrol out of shot between screenshots,
+         and into whatever light it found on the way. The stub has to carry
+         the transform itself - update() is what normally copies pos and yaw
+         onto the mesh, so without this the body stays where it last was
+         while its position moves. */
+      g.update = () => {
+        g.animate(0.016, null);
+        g.group.position.set(g.pos.x, g.pos.y, g.pos.z);
+        g.group.rotation.y = g.yaw;
+      };
+      window.__testGuard = g;
       return true;
-    });
+    }, spawn);
     check('a guard exists to look at', posed);
-    if (posed) {
-      await page.waitForTimeout(8000);
+
+    /* theta is a world-space bearing from the guard, 0 being back towards the
+       spawn, so every shot stays out in the street. */
+    const viewGuard = async (name, { dist, theta, height, pitch, before }) => {
+      await page.evaluate(([d, th, h, pi, b]) => {
+        const g = window.__testGuard, p = window.__state().player;
+        if (b) new Function('g', b)(g);
+        p.pos.set(g.pos.x + Math.sin(th) * d, g.pos.y + h, g.pos.z + Math.cos(th) * d);
+        p.yaw = th;
+        p.pitch = pi;
+      }, [dist, theta, height, pitch, before || null]);
+      await page.waitForTimeout(6000);
       await page.evaluate(SETTLE);
       await page.waitForTimeout(1200);
-      await page.screenshot({ path: join(OUT, 'guard.png') });
+      await page.screenshot({ path: join(OUT, name) });
+    };
+
+    if (posed) {
+      const back = spawn.yaw;   /* bearing from guard back towards the spawn */
+      await viewGuard('guard.png', { dist: 3.0, theta: back, height: 0.25, pitch: -0.03 });
+      await viewGuard('guard-aim.png', {
+        dist: 4.0, theta: back + 0.7, height: 0.45, pitch: -0.09,
+        before: 'g.aim = 1; g.state = "engage";'
+      });
+    }
+
+    /* Fire into a wall so the decal ring and the particle bursts are on
+       screen, then photograph it. */
+    const fired = await page.evaluate(() => {
+      const st = window.__state();
+      const w = st.weapon;
+      if (!w || !w.decalPool) return false;
+      const p = st.player;
+      const dir = new window.__THREE.Vector3(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
+      const origin = new window.__THREE.Vector3(p.pos.x, p.pos.y + 1.5, p.pos.z);
+      /* Drive the pools directly: routing through the fire path would need
+         ammo, cooldowns and a live mission. */
+      for (let i = 0; i < 12; i++) {
+        const hit = origin.clone().addScaledVector(dir, 2.2 + i * 0.05);
+        hit.x += (Math.random() - 0.5) * 0.9;
+        hit.y += (Math.random() - 0.5) * 0.7;
+        w.spawnImpact(hit, dir.clone().negate());
+      }
+      return true;
+    });
+    check('impact effects spawn', fired);
+    if (fired) {
+      await page.waitForTimeout(2500);
+      await page.evaluate(SETTLE);
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: join(OUT, 'impacts.png') });
+
+      /* Again with the particles hidden: a burst can cover the marks it made,
+         and a decal that never drew looks the same as one that did. */
+      await page.evaluate(() => {
+        const w = window.__state().weapon;
+        w.particles.normal.points.visible = false;
+        w.particles.additive.points.visible = false;
+      });
+      await page.waitForTimeout(2000);
+      await page.evaluate(SETTLE);
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: join(OUT, 'decals.png') });
     }
 
     /* The same guard with the mixer stopped and every bone back at its bind
        rotation. A limb that looks detached here is a geometry fault; one that
-       only looks wrong in the shot above is a pose fault. */
+       only looks wrong posed is a pose fault. */
     if (posed) {
       await page.evaluate(() => {
-        const g = window.__state().enemies.find(e => e.alive);
+        const g = window.__testGuard;
         g.rig.mixer.stopAllAction();
-        for (const b of g.rig.bones.values()) b.quaternion.identity();
         g.animate = () => {};
+        for (const b of g.rig.bones.values()) b.quaternion.identity();
       });
-      await page.waitForTimeout(4000);
-      await page.evaluate(SETTLE);
-      await page.waitForTimeout(1200);
-      await page.screenshot({ path: join(OUT, 'guard-bind.png') });
+      await viewGuard('guard-bind.png', { dist: 3.2, theta: spawn.yaw - 0.5, height: 0.35, pitch: -0.06 });
     }
 
     /* A* still has to cross the plan now that skylight cells are in it. */

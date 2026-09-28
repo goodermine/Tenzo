@@ -3,6 +3,7 @@
    weapon rather than modelled five times. Firing reads the stats from the
    loadout slot, so a silenced pistol and a breacher differ in data only. */
 import * as THREE from 'three';
+import { DecalPool, Particles } from './fx.js';
 import { WEAPONS } from './weapons.js';
 
 export class Weapon {
@@ -31,8 +32,11 @@ export class Weapon {
     camera.add(this.group);
 
     this.tracers = [];
-    this.decals = [];
     this.shells = [];
+    /* Both are fixed-size pools. Impact effects that allocate per shot are
+       the easy version and the one that leaks. */
+    this.decalPool = new DecalPool(scene, 64);
+    this.particles = new Particles(scene);
     this.muzzleLight = new THREE.PointLight(0xffcf8a, 0, 14, 2);
     scene.add(this.muzzleLight);
 
@@ -257,6 +261,7 @@ export class Weapon {
         anyHit = true;
         const wasAlive = victim.enemy.alive;
         victim.enemy.hit(def.damage, victim.zone, dir, ctx);
+        this.spawnFleshImpact(end, dir);
         this.sfx.flesh();
         ctx.onHit(victim.zone, victim.enemy, end, wasAlive && !victim.enemy.alive);
       } else if (worldHit) {
@@ -284,14 +289,18 @@ export class Weapon {
     this.tracers.push({ line, life: 0.05 });
   }
 
+  /* A lasting mark plus the debris that made it: dust off the surface and a
+     few sparks, thrown back along the normal. */
   spawnImpact(point, normal) {
-    const puff = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08, 6, 5),
-      new THREE.MeshBasicMaterial({ color: 0xb9b2a4, transparent: true, opacity: 0.5, fog: false })
-    );
-    puff.position.copy(point).addScaledVector(normal, 0.04);
-    this.scene.add(puff);
-    this.decals.push({ mesh: puff, life: 0.35 });
+    this.decalPool.add(point, normal);
+    this.particles.burst('dust', point, normal, 6, 1.9, 0.85);
+    this.particles.burst('smoke', point, normal, 2, 0.7, 0.9);
+    if (Math.random() < 0.55) this.particles.burst('spark', point, normal, 4, 3.4, 0.7);
+  }
+
+  /* Blood sprays along the shot, not off the surface. */
+  spawnFleshImpact(point, dir) {
+    this.particles.burst('blood', point, dir, 9, 2.6, 0.55);
   }
 
   ejectShell(origin, dir) {
@@ -371,18 +380,8 @@ export class Weapon {
         this.tracers.splice(i, 1);
       }
     }
-    for (let i = this.decals.length - 1; i >= 0; i--) {
-      const d = this.decals[i];
-      d.life -= dt;
-      d.mesh.scale.setScalar(1 + (0.35 - d.life) * 3);
-      d.mesh.material.opacity = Math.max(0, d.life / 0.35) * 0.5;
-      if (d.life <= 0) {
-        this.scene.remove(d.mesh);
-        d.mesh.geometry.dispose();
-        d.mesh.material.dispose();
-        this.decals.splice(i, 1);
-      }
-    }
+    this.particles.update(dt);
+
     for (let i = this.shells.length - 1; i >= 0; i--) {
       const sh = this.shells[i];
       sh.life -= dt;

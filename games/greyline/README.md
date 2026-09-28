@@ -147,7 +147,8 @@ so that is the part this repo does not close.
 | `src/engine.js` | renderer, sky, IBL, shadows, post chain, quality presets |
 | `src/textures.js` | procedural PBR surfaces, used as the asset fallback |
 | `src/materials.js` | scanned KTX2 material loading, with fallback |
-| `src/fx.js` | volumetric light shafts, dust motes |
+| `src/fx.js` | light shafts, dust motes, bullet decals, particles |
+| `src/rig.js` | guard skeleton, skinning and animation clips |
 | `src/assets.js` | asset URLs, load manager, KTX2 transcoder |
 | `tools/fetch-materials.mjs` | asset build step: download, ORM pack, KTX2 encode |
 | `tools/verify.cjs` | headless checks: assets, lighting, budgets, navigation |

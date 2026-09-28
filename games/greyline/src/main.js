@@ -327,6 +327,10 @@ document.querySelectorAll('[data-diff]').forEach(b => {
 function setQuality(q) {
   engine.setQuality(q);
   if (lights) lights.setQuality(q);
+  /* The pixel ratio moves with the preset, and sprite size depends on it. */
+  if (weapon && weapon.particles) {
+    weapon.particles.setViewport(innerHeight * engine.renderer.getPixelRatio(), engine.camera.fov);
+  }
   document.querySelectorAll('[data-quality]').forEach(x => x.classList.toggle('sel', x.dataset.quality === q));
   resize();
 }
@@ -353,6 +357,11 @@ function sampleFrame(dt) {
 
 function resize() {
   engine.resize(innerWidth, innerHeight);
+  /* Point sprites are sized from the viewport, so they have to be told when
+     it changes or they come out the wrong size at other resolutions. */
+  if (weapon && weapon.particles) {
+    weapon.particles.setViewport(innerHeight * engine.renderer.getPixelRatio(), engine.camera.fov);
+  }
   const portrait = innerHeight > innerWidth;
   const touchDevice = matchMedia('(hover: none)').matches || 'ontouchstart' in window;
   document.body.classList.toggle('rotate-hint', portrait && touchDevice);
