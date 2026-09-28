@@ -102,6 +102,23 @@ headshots are a real thing to aim for. The soldiers hold position until they
 have line of sight, then close to a fighting distance, strafe, and fire in
 bursts; they check line of sight against the same AABB world.
 
+## Verifying a change
+
+```bash
+npm run build
+NODE_PATH=$(npm root -g) node tools/verify.cjs /tmp/greyline-shots
+```
+
+It boots the game headless and checks that the scanned materials loaded
+without falling back, the HDRI and the volumetric pass are live, the
+skylights are cut, A* still crosses the level, every quality preset survives
+being switched into, and the draw-call and triangle counts have not blown up.
+It also writes screenshots of the street and a corridor.
+
+It deliberately says nothing about frame rate: the only browser available in
+this environment runs on a software rasteriser, which is a few frames a
+second whatever the scene does. Speed has to be measured on real hardware.
+
 ## Performance
 
 Quality presets trade the expensive passes first: **high** is AO + bloom at
@@ -130,8 +147,10 @@ so that is the part this repo does not close.
 | `src/engine.js` | renderer, sky, IBL, shadows, post chain, quality presets |
 | `src/textures.js` | procedural PBR surfaces, used as the asset fallback |
 | `src/materials.js` | scanned KTX2 material loading, with fallback |
+| `src/fx.js` | volumetric light shafts, dust motes |
 | `src/assets.js` | asset URLs, load manager, KTX2 transcoder |
 | `tools/fetch-materials.mjs` | asset build step: download, ORM pack, KTX2 encode |
+| `tools/verify.cjs` | headless checks: assets, lighting, budgets, navigation |
 | `src/world.js` | level generation, merging, collision and raycasts |
 | `src/player.js` | first-person controller and movement feel |
 | `src/weapon.js` | viewmodel, recoil springs, firing, tracers, shells |

@@ -13,6 +13,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
+import { VolumetricLightPass, DustMotes } from './fx.js';
 
 /* Final grade: bleach, vignette, chromatic aberration, grain and a cheap
    camera-motion blur driven by how fast the view is turning. */
@@ -112,6 +113,10 @@ export class Engine {
     this._buildLights();
     this._buildComposer();
 
+    /* Motes are what make a shaft read as volume rather than as a gradient. */
+    this.dust = new DustMotes(this.scene, { count: 900, radius: 14, height: 6 });
+    this.dust.setPixelRatio(this.renderer.getPixelRatio());
+
     this._prevDir = new THREE.Vector3();
     this._velocity = new THREE.Vector2();
   }
@@ -128,8 +133,14 @@ export class Engine {
 
     this.sunPosition = new THREE.Vector3();
     /* Sun behind the spawn, so the street ahead is lit rather than
-       backlit into a white wall. */
-    const elevation = 42;
+       backlit into a white wall.
+
+       The elevation matters more than it looks: four-storey buildings either
+       side of a street this width throw a shadow the full width of the road
+       at 42 degrees, which put the entire playable street in shade. High
+       enough to clear it leaves a hard diagonal of light down the road, which
+       is the whole point of having a sun. */
+    const elevation = 58;
     const azimuth = 55;
     const phi = THREE.MathUtils.degToRad(90 - elevation);
     const theta = THREE.MathUtils.degToRad(azimuth);
@@ -167,7 +178,7 @@ export class Engine {
           pmrem.dispose();
           hdr.dispose();
           this.scene.environment = env;
-          this.scene.environmentIntensity = 1.15;
+          this.scene.environmentIntensity = 0.45;
           if (this._paintedEnv) {
             this._paintedEnv.dispose();
             this._paintedEnv = null;
@@ -223,8 +234,15 @@ export class Engine {
     return tex;
   }
 
+  /* Weighting: the sun carries the exterior and the image-based light is held
+     well back. An IBL is applied without regard to occlusion, so at the
+     intensity that looked right outdoors it also lit every interior as though
+     the roof were not there - corridors came out as bright as the street, and
+     a light shaft is only visible against a room that is darker than it. The
+     sun cannot reach inside, so shifting the weight onto it darkens interiors
+     without touching the exterior. */
   _buildLights() {
-    const sun = new THREE.DirectionalLight(0xfff3e2, 2.6);
+    const sun = new THREE.DirectionalLight(0xfff3e2, 4.6);
     sun.position.copy(this.sunPosition).multiplyScalar(120);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -242,7 +260,7 @@ export class Engine {
     this.sun = sun;
 
     /* bounce: warm from the sunlit ground, cool from the sky */
-    const bounce = new THREE.HemisphereLight(0xbcd2e8, 0x6b6156, 0.8);
+    const bounce = new THREE.HemisphereLight(0xbcd2e8, 0x6b6156, 0.32);
     this.scene.add(bounce);
 
     this.scene.fog = new THREE.FogExp2(0xb6bab6, 0.0022);
@@ -251,8 +269,22 @@ export class Engine {
   _buildComposer() {
     const size = new THREE.Vector2();
     this.renderer.getSize(size);
-    this.composer = new EffectComposer(this.renderer);
+
+    /* The volumetric pass needs scene depth, which the composer's default
+       target does not keep. */
+    const rt = new THREE.WebGLRenderTarget(size.x || 1, size.y || 1, {
+      type: THREE.HalfFloatType,
+      depthTexture: new THREE.DepthTexture(size.x || 1, size.y || 1, THREE.FloatType)
+    });
+    this.composer = new EffectComposer(this.renderer, rt);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+    /* Light shafts go immediately after the scene render, before anything
+       swaps buffers: RenderPass writes colour and depth into the read buffer
+       and does not swap, so this is the only point in the chain where the
+       depth texture provably belongs to the frame being composited. */
+    this.volumetrics = new VolumetricLightPass(this.camera, this.sun, size.x || 1, size.y || 1);
+    this.composer.addPass(this.volumetrics);
 
     this.gtao = new GTAOPass(this.scene, this.camera, size.x, size.y);
     this.gtao.output = GTAOPass.OUTPUT.Default;
@@ -292,6 +324,14 @@ export class Engine {
     this.renderer.setPixelRatio(ratio);
     this.gtao.enabled = q === 'high';
     this.bloom.enabled = q !== 'low';
+    /* Shafts are the second most expensive pass and the first thing after AO
+       that can go without the scene falling apart. */
+    this.volumetrics.enabled = q !== 'low';
+    this.volumetrics.setQuality(q);
+    if (this.dust) {
+      this.dust.points.visible = q !== 'low';
+      this.dust.setPixelRatio(this.renderer.getPixelRatio());
+    }
     this.renderer.shadowMap.enabled = true;
     this.sun.shadow.mapSize.set(q === 'high' ? 2048 : 1024, q === 'high' ? 2048 : 1024);
     if (this.sun.shadow.map) {
@@ -310,6 +350,7 @@ export class Engine {
     this.composer.setSize(w, h);
     const pr = this.renderer.getPixelRatio();
     this.fxaa.material.uniforms.resolution.value.set(1 / (w * pr), 1 / (h * pr));
+    this.volumetrics.setSize(w * pr, h * pr);
     this.grade.uniforms.uResolution.value.set(w, h);
   }
 
@@ -329,6 +370,8 @@ export class Engine {
     this._velocity.lerp(turn.multiplyScalar(0.16), 0.3);
     this.grade.uniforms.uVelocity.value.copy(this._velocity);
     this.grade.uniforms.uTime.value = time;
+    this.volumetrics.setTime(time);
+    if (this.dust) this.dust.update(this.camera.position, time);
     this.composer.render(dt);
   }
 }

@@ -51,6 +51,10 @@ async function boot() {
   loadMsg.textContent = 'building the compound';
   await frame();
   world.build();
+
+  /* The compound's interior is a denser medium than the street outside it. */
+  const interior = world.facility.bounds();
+  engine.volumetrics.setInteriorVolume(interior.min, interior.max);
   engine.scene.add(world.group);
   bar.style.width = '100%';
 
@@ -63,7 +67,7 @@ async function boot() {
   weapon = new Weapon(engine.camera, engine.scene, world, sfx, loadout);
   engine.scene.add(engine.camera);
   hud = new Hud(hudRoot);
-  lights = new LightPool(engine.scene, 6);
+  lights = new LightPool(engine.scene, { count: 6, shadowed: 2 });
 
   const touchDevice = matchMedia('(hover: none)').matches || 'ontouchstart' in window;
   setQuality(touchDevice ? 'medium' : 'high');
@@ -322,6 +326,7 @@ document.querySelectorAll('[data-diff]').forEach(b => {
 
 function setQuality(q) {
   engine.setQuality(q);
+  if (lights) lights.setQuality(q);
   document.querySelectorAll('[data-quality]').forEach(x => x.classList.toggle('sel', x.dataset.quality === q));
   resize();
 }
@@ -434,4 +439,5 @@ window.__world = world;
 window.__THREE = THREE;
 window.__state = () => ({ player, weapon, enemies, mission, loadout, running });
 window.__start = () => { if (mission) start(); };
+window.__setQuality = q => setQuality(q);
 boot();

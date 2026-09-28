@@ -13,7 +13,7 @@ export const WALL_H = 3.6;
     C  data console    A  alarm panel     V  server rack
     K  key card        W  weapon pickup   M  ammo crate
     T  crate / cover   G  guard post      P  player entry
-    X  extraction pad  o  ceiling light                                      */
+    X  extraction pad  o  ceiling light  *  floor under a roof skylight     */
 const PLAN = [
   '##############################',
   '#....#.........#....#........#',
@@ -22,21 +22,21 @@ const PLAN = [
   '#....#.........#....#...V....#',
   '#....#....G....#....D........#',
   '#######.########....#####D####',
-  '#..........o........D...o....#',
-  '#..T...G............#...T....#',
+  '#....*..*..o........D...o....#',
+  '#..T...G....*...*...#...T....#',
   '#........#####D#####.........#',
   '####D#####....o....#####.#####',
-  '#....#....#...T....#....#....#',
+  '#....#....#...T*...#....#....#',
   '#.A..D....#...G....D....D..K.#',
   '#..o.#....#........#..o.#....#',
   '#....#....#........#....#....#',
   '#######.###...#..#.######D####',
-  '#.........o..#....#..........#',
-  '#...T..G.....#....#...T...G..#',
+  '#....*....o..#..*.#....*.....#',
+  '#...T..G..*..#....#...T...G..#',
   '#............#....#..........#',
   '###L##########....########L###',
   '#....#........E....#.........#',
-  '#.X..#...o.........#....o....#',
+  '#.X..#...o....*....#....o....#',
   '#....#.............#.........#',
   '##############P###############'
 ];
@@ -65,6 +65,7 @@ export class Facility {
     this.pickups = [];
     this.guardPosts = [];
     this.lightSpots = [];
+    this.skylights = [];
     this.extraction = null;
     this.entry = null;
   }
@@ -90,9 +91,25 @@ export class Facility {
     const cz = this.originZ + ((this.h - 1) * CELL) / 2;
     const depth = this.h * CELL;
 
-    /* slab and ceiling for the whole footprint */
+    /* slab for the whole footprint */
     w.box('floor', 0, -0.15, cz, this.w * CELL, 0.3, depth, { uvScale: 0.32 });
-    w.box('concrete', 0, WALL_H + 0.25, cz, this.w * CELL, 0.5, depth, { uvScale: 0.28 });
+
+    /* The ceiling is built a cell at a time rather than as one slab, so the
+       skylights can be left out of it. Everything in a bucket merges into a
+       single mesh, so the extra boxes cost no draw calls - and without a hole
+       in the roof there is no sunlight inside, which means no light shafts. */
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        const c = this.at(x, y);
+        if (c === ' ') continue;
+        const p = this.worldPos(x, y);
+        if (c === '*') {
+          this.skylight(p);
+          continue;
+        }
+        w.box('concrete', p.x, WALL_H + 0.25, p.z, CELL, 0.5, CELL, { uvScale: 0.28 });
+      }
+    }
 
     for (let y = 0; y < this.h; y++) {
       for (let x = 0; x < this.w; x++) {
@@ -130,7 +147,7 @@ export class Facility {
      solid blocks of the plan do not fill the level with hidden geometry. */
   wall(x, y, p) {
     const w = this.world;
-    const exposed = ['.', 'D', 'L', 'E', 'C', 'A', 'V', 'K', 'W', 'M', 'T', 'G', 'o', 'X', 'P'];
+    const exposed = ['.', 'D', 'L', 'E', 'C', 'A', 'V', 'K', 'W', 'M', 'T', 'G', 'o', 'X', 'P', '*'];
     const near = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) =>
       exposed.includes(this.at(x + dx, y + dy)));
     if (!near) return;
@@ -259,6 +276,19 @@ export class Facility {
     if (h > 1.2) w.box('metal', p.x + 0.2, h + 0.3, p.z - 0.1, 0.9, 0.6, 0.9, { uvScale: 0.9 });
   }
 
+  /* A rim around the opening so it reads as a built skylight rather than a
+     missing piece of roof. */
+  skylight(p) {
+    const w = this.world;
+    const y = WALL_H + 0.25;
+    const t = 0.32;
+    w.box('metal', p.x, y, p.z - CELL / 2 + t / 2, CELL, 0.5, t, { solid: false, uvScale: 1.0 });
+    w.box('metal', p.x, y, p.z + CELL / 2 - t / 2, CELL, 0.5, t, { solid: false, uvScale: 1.0 });
+    w.box('metal', p.x - CELL / 2 + t / 2, y, p.z, t, 0.5, CELL - t * 2, { solid: false, uvScale: 1.0 });
+    w.box('metal', p.x + CELL / 2 - t / 2, y, p.z, t, 0.5, CELL - t * 2, { solid: false, uvScale: 1.0 });
+    this.skylights.push(new THREE.Vector3(p.x, y, p.z));
+  }
+
   ceilingLight(p) {
     const housing = new THREE.Mesh(
       new THREE.BoxGeometry(1.5, 0.12, 0.42),
@@ -277,8 +307,27 @@ export class Facility {
     const w = this.world;
     const halfW = (this.w * CELL) / 2;
     const zFront = this.originZ + (this.h - 0.5) * CELL;
-    w.box('concrete', 0, WALL_H + 1.6, this.originZ + ((this.h - 1) * CELL) / 2,
-      this.w * CELL + 1.2, 2.4, this.h * CELL + 1.2, { uvScale: 0.2 });
+    const cz = this.originZ + ((this.h - 1) * CELL) / 2;
+
+    /* The upper mass that gives the compound its bulk from the street. It is
+       built per cell for the same reason as the ceiling: it sits directly on
+       top of the skylights, and a solid slab here caps every one of them, so
+       the holes below would let in no light at all. */
+    for (let y = 0; y < this.h; y++) {
+      for (let x = 0; x < this.w; x++) {
+        if (this.at(x, y) === '*') continue;
+        const p = this.worldPos(x, y);
+        w.box('concrete', p.x, WALL_H + 1.6, p.z, CELL, 2.4, CELL, { uvScale: 0.2 });
+      }
+    }
+    /* The slab used to overhang the plan by 0.6m on every side; keep that lip
+       so the roofline still reads as one mass rather than a grid of blocks. */
+    const spanX = this.w * CELL + 1.2;
+    const spanZ = this.h * CELL + 1.2;
+    w.box('concrete', 0, WALL_H + 1.6, cz - (this.h * CELL) / 2 - 0.3, spanX, 2.4, 0.6, { uvScale: 0.2 });
+    w.box('concrete', 0, WALL_H + 1.6, cz + (this.h * CELL) / 2 + 0.3, spanX, 2.4, 0.6, { uvScale: 0.2 });
+    w.box('concrete', -(this.w * CELL) / 2 - 0.3, WALL_H + 1.6, cz, 0.6, 2.4, spanZ, { uvScale: 0.2 });
+    w.box('concrete', (this.w * CELL) / 2 + 0.3, WALL_H + 1.6, cz, 0.6, 2.4, spanZ, { uvScale: 0.2 });
     for (const sx of [-1, 1]) {
       w.box('concrete', sx * (halfW + 1.2), 3.2, this.originZ + ((this.h - 1) * CELL) / 2,
         2.4, 7.4, this.h * CELL, { uvScale: 0.25 });
@@ -359,6 +408,17 @@ export class Facility {
     return null;
   }
 
+  /** World-space bounds of the interior, for the atmospheric fog volume. */
+  bounds() {
+    const cz = this.originZ + ((this.h - 1) * CELL) / 2;
+    const hx = (this.w * CELL) / 2;
+    const hz = (this.h * CELL) / 2;
+    return {
+      min: new THREE.Vector3(-hx, 0, cz - hz),
+      max: new THREE.Vector3(hx, WALL_H, cz + hz)
+    };
+  }
+
   /** Walkable cells at least `minDist` from `avoid`, for guard placement. */
   spawnCells(avoid, minDist) {
     const out = [];
@@ -374,18 +434,56 @@ export class Facility {
   }
 }
 
-/* Six point lights are recycled between the nearest fixtures, so a corridor
-   full of lamps costs the same as a corridor with six. */
+/* Lights are recycled between the nearest fixtures, so a corridor full of
+   lamps costs the same as a corridor with six.
+
+   The two closest fixtures get shadow-casting spotlights rather than point
+   lights: a point light with shadows needs a cube map - six renders - while a
+   spot needs one, and a ceiling fixture points down anyway. The rest stay
+   cheap point lights, which is invisible at distance because the shadows they
+   are missing are behind whatever the player is looking at. */
 export class LightPool {
-  constructor(scene, count = 6) {
+  constructor(scene, { count = 6, shadowed = 2 } = {}) {
     this.lights = [];
-    for (let i = 0; i < count; i++) {
+    this.spots = [];
+
+    for (let i = 0; i < shadowed; i++) {
+      const l = new THREE.SpotLight(0xffeccc, 0, 14, Math.PI * 0.44, 0.45, 2);
+      l.castShadow = true;
+      l.shadow.mapSize.set(512, 512);
+      l.shadow.camera.near = 0.3;
+      l.shadow.camera.far = 15;
+      l.shadow.bias = -0.002;
+      l.shadow.normalBias = 0.03;
+      /* The target has to be in the scene graph for its world matrix to be
+         updated, or the cone points at the origin. */
+      l.target.position.set(0, 0, 0);
+      scene.add(l);
+      scene.add(l.target);
+      this.spots.push(l);
+      this.lights.push(l);
+    }
+
+    for (let i = shadowed; i < count; i++) {
       const l = new THREE.PointLight(0xffeccc, 0, 13, 2);
       l.castShadow = false;
       scene.add(l);
       this.lights.push(l);
     }
   }
+
+  /** Shadow maps are the cost here, so they go first on weaker hardware. */
+  setQuality(q) {
+    for (const l of this.spots) {
+      l.castShadow = q !== 'low';
+      l.shadow.mapSize.set(q === 'high' ? 512 : 256, q === 'high' ? 512 : 256);
+      if (l.shadow.map) {
+        l.shadow.map.dispose();
+        l.shadow.map = null;
+      }
+    }
+  }
+
   update(spots, target) {
     const near = spots
       .map(s => ({ s, d: s.pos.distanceToSquared(target) }))
@@ -394,7 +492,8 @@ export class LightPool {
     this.lights.forEach((l, i) => {
       if (i < near.length && near[i].d < 900) {
         l.position.copy(near[i].s.pos);
-        l.intensity = 11;
+        l.intensity = l.isSpotLight ? 26 : 11;
+        if (l.isSpotLight) l.target.position.set(l.position.x, 0, l.position.z);
       } else {
         l.intensity = 0;
       }
