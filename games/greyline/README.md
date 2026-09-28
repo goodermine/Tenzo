@@ -115,6 +115,9 @@ skylights are cut, A* still crosses the level, every quality preset survives
 being switched into, and the draw-call and triangle counts have not blown up.
 It also writes screenshots of the street and a corridor.
 
+Pointing `GREYLINE_DIR` at another directory checks a staging copy instead,
+which is how the hosted build gets tested before it is published.
+
 It deliberately says nothing about frame rate: the only browser available in
 this environment runs on a software rasteriser, which is a few frames a
 second whatever the scene does. Speed has to be measured on real hardware.
@@ -127,6 +130,16 @@ the pixel ratio to 1. Touch devices start at medium. The game also samples
 its own frame rate and steps the preset down (never up) if it cannot hold
 40fps, so a weak GPU degrades instead of crawling. Picking a preset by hand
 turns the auto-tuner off.
+
+## The hosted build
+
+`assets/` carries each material twice: KTX2, which stays compressed in GPU
+memory, and WebP, which does not and costs roughly four times as much of it.
+The WebP set exists because some hosts serve only a fixed list of file
+extensions, and `.ktx2` and `.hdr` are not on it. Whichever `materials.json`
+is served decides which the loader uses, so no flag is needed - the hosted
+build is published with `materials.web.json` in its place. It has no HDRI
+either, and falls back to the painted environment map.
 
 ## Honest limits
 
@@ -150,7 +163,7 @@ so that is the part this repo does not close.
 | `src/fx.js` | light shafts, dust motes, bullet decals, particles |
 | `src/rig.js` | guard skeleton, skinning and animation clips |
 | `src/assets.js` | asset URLs, load manager, KTX2 transcoder |
-| `tools/fetch-materials.mjs` | asset build step: download, ORM pack, KTX2 encode |
+| `tools/fetch-materials.mjs` | asset build step: download, ORM pack, KTX2 + WebP |
 | `tools/verify.cjs` | headless checks: assets, lighting, budgets, navigation |
 | `src/world.js` | level generation, merging, collision and raycasts |
 | `src/player.js` | first-person controller and movement feel |

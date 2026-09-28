@@ -161,20 +161,47 @@ async function build() {
     }
 
     const files = {};
+    const web = {};
     for (const [slot, pipeline, opts] of jobs) {
       const out = join(outDir, `${slot}.ktx2`);
       const bytes = await toKTX2(pipeline, out, opts);
       files[slot] = `materials/${name}/${slot}.ktx2`;
       total += bytes;
-      console.log(`    ${slot.padEnd(7)} ${(bytes / 1048576).toFixed(2)} MB`);
+
+      /* A WebP alongside each KTX2, for hosts that will not serve .ktx2 -
+         the published artifact among them. It costs about four times the GPU
+         memory because the driver expands it, which is exactly what KTX2
+         exists to avoid, so it is the fallback and not the default. */
+      const webOut = join(outDir, `${slot}.webp`);
+      await pipeline.clone()
+        .webp({ quality: opts.isPerceptual ? 88 : 94, effort: 4 })
+        .toFile(webOut);
+      web[slot] = `materials/${name}/${slot}.webp`;
+      const webBytes = statSync(webOut).size;
+      console.log(`    ${slot.padEnd(7)} ${(bytes / 1048576).toFixed(2)} MB ktx2` +
+        `  ${(webBytes / 1048576).toFixed(2)} MB webp`);
     }
-    manifest[name] = { source: id, credit: 'ambientCG (CC0)', res: RES, normalRes: NORMAL_RES, ormRes: ORM_RES, files };
+    manifest[name] = {
+      source: id, credit: 'ambientCG (CC0)',
+      res: RES, normalRes: NORMAL_RES, ormRes: ORM_RES, files, web
+    };
   }
 
   const manifestPath = join(GAME, 'assets', 'materials.json');
   const existing = existsSync(manifestPath)
     ? JSON.parse(sh('cat', [manifestPath])) : {};
-  writeFileSync(manifestPath, JSON.stringify({ ...existing, ...manifest }, null, 2));
+  const merged = { ...existing, ...manifest };
+  writeFileSync(manifestPath, JSON.stringify(merged, null, 2));
+
+  /* The same manifest with the WebP paths in the `files` slot, so the loader
+     needs no flag: whichever manifest is served decides the encoding. */
+  const webManifest = {};
+  for (const [name, entry] of Object.entries(merged)) {
+    if (!entry.web) continue;
+    webManifest[name] = { ...entry, files: entry.web };
+  }
+  writeFileSync(join(GAME, 'assets', 'materials.web.json'),
+    JSON.stringify(webManifest, null, 2));
   console.log(`\ntotal committed: ${(total / 1048576).toFixed(1)} MB`);
 }
 

@@ -162,7 +162,12 @@ export class Engine {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this._paintedEnv = pmrem.fromEquirectangular(this._envTexture()).texture;
     this.scene.environment = this._paintedEnv;
-    this.scene.environmentIntensity = 1.0;
+    /* Held back to roughly match the captured HDRI below, because this is
+       not only the pre-load placeholder: it is what runs wherever the HDRI
+       cannot be served. Left at full strength it lights interiors as
+       brightly as the street, which is the thing the sun/ambient balance
+       exists to avoid. */
+    this.scene.environmentIntensity = 0.5;
     pmrem.dispose();
   }
 

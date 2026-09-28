@@ -19,7 +19,9 @@ const { spawn } = require('node:child_process');
 const { existsSync, mkdirSync, openSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 
-const GAME = resolve(__dirname, '..');
+/* Overridable so a staging copy - the WebP build the artifact host gets, for
+   instance - can be checked with the same suite. */
+const GAME = process.env.GREYLINE_DIR || resolve(__dirname, '..');
 const OUT = process.argv[2] || join(GAME, '.verify');
 /* A fixed port silently hands the test to a stale server left over from an
    earlier run, which then serves whatever that run was testing. */
@@ -95,8 +97,13 @@ function check(name, ok, detail) {
       const w = window.__world, e = window.__engine;
       const scanned = {};
       for (const [name, mat] of Object.entries(w.materials)) {
-        if (mat && mat.map && mat.map.isCompressedTexture) {
-          scanned[name] = `${mat.map.image.width}px` +
+        /* Either encoding counts as a scanned material; which one is worth
+           reporting, because the WebP path costs about four times the GPU
+           memory. */
+        const t = mat && mat.map;
+        if (!t || !t.image || !t.image.width) continue;
+        if (t.isCompressedTexture || t.userData.scanned || w.materialLibrary.usedFallback.indexOf(name) < 0) {
+          scanned[name] = `${t.image.width}px ${t.isCompressedTexture ? 'ktx2' : 'webp'}` +
             (mat.aoMap ? '+orm' : '') + (mat.normalMap ? '+n' : '');
         }
       }
@@ -132,6 +139,30 @@ function check(name, ok, detail) {
     check('texture count sane', scene.textures < 90, scene.textures + ' textures');
 
     await page.evaluate(() => window.__start());
+    await page.waitForTimeout(2500);
+
+    /* The HUD is DOM over the canvas, so it can go missing without producing
+       a single console error - the screenshots just quietly come back
+       without it. */
+    const hud = await page.evaluate(() => {
+      const el = document.querySelector('.ammo');
+      if (!el) return { built: false };
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      /* Existing in the DOM is not the same as being on screen: it can be
+         display:none, transparent, or laid out past the edge of the view. */
+      return {
+        built: true,
+        display: cs.display, opacity: cs.opacity, visibility: cs.visibility,
+        rect: [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)],
+        onScreen: r.width > 0 && r.height > 0 && r.x < innerWidth && r.y < innerHeight && r.right > 0 && r.bottom > 0,
+        bodyClass: document.body.className,
+        loadingDone: document.getElementById('loading').classList.contains('done'),
+        overlayShown: document.getElementById('overlay').classList.contains('show')
+      };
+    });
+    check('HUD is on screen', hud.built && hud.onScreen && hud.opacity !== '0' &&
+      hud.display !== 'none' && hud.visibility !== 'hidden', JSON.stringify(hud));
 
     /* Record the spawn before anything moves the camera: the guard shots are
        staged relative to it, and by the time they run the player has been

@@ -3,7 +3,7 @@
    an albedo / normal / ORM triple and encoded to KTX2 so they stay compressed
    in GPU memory. */
 import * as THREE from 'three';
-import { assetUrl, ktx2Loader, loadJSON } from './assets.js';
+import { assetUrl, ktx2Loader, textureLoader, loadJSON } from './assets.js';
 import { makeSurface } from './textures.js';
 
 function configure(tex, { srgb = false } = {}) {
@@ -54,7 +54,10 @@ export class MaterialLibrary {
     let material = null;
 
     if (entry) {
-      const loader = ktx2Loader(this.renderer);
+      /* The manifest decides the encoding: .ktx2 stays compressed on the
+         GPU, .webp is the fallback for hosts that will not serve .ktx2. */
+      const isKTX2 = String(entry.files.albedo).endsWith('.ktx2');
+      const loader = isKTX2 ? ktx2Loader(this.renderer) : textureLoader();
       const [albedo, normal, orm] = await Promise.all([
         loadTexture(loader, entry.files.albedo, { srgb: true }),
         entry.files.normal ? loadTexture(loader, entry.files.normal) : null,

@@ -34,6 +34,15 @@ export function ktx2Loader(renderer) {
   return ktx2;
 }
 
+/* The WebP path, for hosts that will not serve .ktx2. It costs roughly four
+   times the GPU memory, because the driver decompresses it and keeps it
+   uncompressed, which is the whole reason the KTX2 path exists. */
+let plain = null;
+export function textureLoader() {
+  if (!plain) plain = new THREE.TextureLoader(manager);
+  return plain;
+}
+
 /** Report real transfer progress to a callback, for the loading bar. */
 export function onProgress(fn) {
   manager.onProgress = (url, loaded, total) => fn(total ? loaded / total : 0, url);
