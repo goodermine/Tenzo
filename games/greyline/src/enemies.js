@@ -5,32 +5,29 @@
    about. Shots resolve against head, torso and limbs separately. */
 import * as THREE from 'three';
 import { GUARD_WEAPONS, WEAPONS } from './weapons.js';
+import { GuardRig } from './rig.js';
 
-const HEAD_Y = 1.62;
-const HEAD_R = 0.18;
-const TORSO_TOP = 1.5;
-const TORSO_BOTTOM = 0.95;
-const LEG_BOTTOM = 0.2;
-const BODY_R = 0.32;
+/* Hit volumes stay analytic - a sphere for the head, a capped cylinder for
+   the body - rather than following the bones. They are cheap, they do not
+   jitter with the animation, and a shot that lands where the player aimed
+   matters more than one that tracks a swinging limb. The figures below are
+   re-fitted to the rig in src/rig.js: head bone at 1.58 with the head itself
+   centred at 1.68, chest 1.22 to 1.52, hip joint at 0.88, feet near 0.03. */
+const HEAD_Y = 1.70;
+const HEAD_R = 0.17;
+const TORSO_TOP = 1.52;
+const TORSO_BOTTOM = 0.88;
+const LEG_BOTTOM = 0.06;
+const BODY_R = 0.30;
 
 const ZONE_MULT = { head: 2.7, torso: 1.0, limb: 0.55 };
 
-let sharedGeo = null;
-function geos() {
-  if (!sharedGeo) {
-    sharedGeo = {
-      torso: new THREE.BoxGeometry(0.46, 0.62, 0.26),
-      vest: new THREE.BoxGeometry(0.5, 0.44, 0.32),
-      head: new THREE.BoxGeometry(0.21, 0.24, 0.23),
-      helmet: new THREE.BoxGeometry(0.26, 0.13, 0.28),
-      beret: new THREE.BoxGeometry(0.27, 0.08, 0.29),
-      arm: new THREE.BoxGeometry(0.12, 0.5, 0.13),
-      leg: new THREE.BoxGeometry(0.16, 0.74, 0.18),
-      gun: new THREE.BoxGeometry(0.07, 0.09, 0.55),
-      radio: new THREE.BoxGeometry(0.09, 0.16, 0.06)
-    };
-  }
-  return sharedGeo;
+/* The body is a skinned rig now (src/rig.js); the radio is the one prop that
+   has to appear and disappear, so it stays a separate mesh hung off a bone. */
+let sharedRadio = null;
+function radioGeo() {
+  if (!sharedRadio) sharedRadio = new THREE.BoxGeometry(0.09, 0.16, 0.06);
+  return sharedRadio;
 }
 
 export class Enemy {
@@ -76,36 +73,34 @@ export class Enemy {
   }
 
   build() {
-    const g = geos();
     const clothColor = this.commander ? 0x2f3a44 : 0x555a4a;
     const cloth = new THREE.MeshStandardMaterial({ color: clothColor, roughness: 0.92 });
+    const shirt = new THREE.MeshStandardMaterial({
+      color: this.commander ? 0x353f4a : 0x5c6150, roughness: 0.9
+    });
     const vest = new THREE.MeshStandardMaterial({
       color: this.commander ? 0x23282e : 0x3b3f38, roughness: 0.8
     });
     const skin = new THREE.MeshStandardMaterial({ color: 0x9a7654, roughness: 0.85 });
-    const gear = new THREE.MeshStandardMaterial({ color: 0x2a2d28, roughness: 0.7, metalness: 0.3 });
+    const gear = new THREE.MeshStandardMaterial({
+      color: this.commander ? 0x6d2b2b : 0x2a2d28, roughness: 0.75, metalness: 0.25
+    });
+    this.materials = [cloth, shirt, vest, skin, gear];
 
-    this.group = new THREE.Group();
-    const add = (geo, mat, x, y, z) => {
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(x, y, z);
-      m.castShadow = true;
-      m.receiveShadow = true;
-      this.group.add(m);
-      return m;
-    };
-    this.torso = add(g.torso, cloth, 0, 1.16, 0);
-    add(g.vest, vest, 0, 1.2, 0);
-    this.head = add(g.head, skin, 0, HEAD_Y, 0);
-    this.hat = add(this.commander ? g.beret : g.helmet, gear, 0, HEAD_Y + 0.15, -0.01);
-    if (this.commander) this.hat.material = new THREE.MeshStandardMaterial({ color: 0x6d2b2b, roughness: 0.9 });
-    this.armL = add(g.arm, cloth, -0.3, 1.12, -0.02);
-    this.armR = add(g.arm, cloth, 0.3, 1.12, -0.02);
-    this.legL = add(g.leg, cloth, -0.13, 0.42, 0);
-    this.legR = add(g.leg, cloth, 0.13, 0.42, 0);
-    this.gun = add(g.gun, gear, 0.22, 1.16, -0.3);
-    this.radio = add(g.radio, gear, -0.3, 1.3, 0.1);
+    /* Material slots are ordered to match the rig's draw groups. */
+    this.rig = new GuardRig(this.materials);
+    this.group = this.rig.group;
+
+    this.radio = new THREE.Mesh(radioGeo(), gear);
+    this.radio.position.set(-0.2, 0.05, 0.12);
+    this.radio.castShadow = true;
     this.radio.visible = false;
+    this.rig.bones.get('chest').add(this.radio);
+
+    this.aim = 0;
+    this.recoil = 0;
+    this.lookYaw = 0;
+    this.lookPitch = 0;
     this.scene.add(this.group);
   }
 
@@ -388,39 +383,64 @@ export class Enemy {
     this.pos.x = probe.x;
     this.pos.z = probe.z;
 
-    this.animate(dt);
+    this.animate(dt, ctx);
     this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
     this.group.rotation.y = this.yaw;
   }
 
-  animate(dt) {
+  /* Locomotion is chosen from ground speed and played as a clip; aiming, the
+     head turn, recoil and hit reactions are layered on top afterwards, so a
+     guard can track the player while it walks. */
+  animate(dt, ctx) {
     const speed = Math.hypot(this.vel.x, this.vel.z);
-    this.walkCycle += speed * dt * 2.6;
-    const swing = Math.sin(this.walkCycle) * Math.min(1, speed / 2.5);
-    this.legL.rotation.x = swing * 0.8;
-    this.legR.rotation.x = -swing * 0.8;
-    this.armL.rotation.x = -swing * 0.45;
-    this.torso.rotation.z = Math.sin(this.walkCycle * 2) * 0.02 * Math.min(1, speed / 2);
-    this.torso.rotation.x = 0;
-    this.head.rotation.z = 0;
 
-    /* hit reactions read differently per zone */
-    if (this.stagger) {
-      const k = this.stagger.t / 0.34;
-      if (this.stagger.zone === 'head') {
-        this.head.rotation.z = k * 0.5;
-        this.torso.rotation.x = -k * 0.2;
-      } else if (this.stagger.zone === 'torso') {
-        this.torso.rotation.x = -k * 0.35;
-        this.armL.rotation.x = -k * 0.6;
-      } else {
-        this.legL.rotation.x = swing * 0.8 - k * 0.5;
-        this.torso.rotation.z = k * 0.25;
-      }
+    if (!this.alive) {
+      this.rig.play('death', 0.12);
+    } else if (speed > 2.2) {
+      this.rig.play('run');
+      /* Match the cycle to the ground speed or the feet skate. */
+      this.rig.current.timeScale = Math.min(1.6, speed / 3.2);
+    } else if (speed > 0.25) {
+      this.rig.play('walk');
+      this.rig.current.timeScale = Math.min(1.7, Math.max(0.55, speed / 1.4));
+    } else {
+      this.rig.play('idle');
     }
+
+    const wantAim = this.alive && (this.state === 'engage' || this.state === 'alert') ? 1 : 0;
+    this.aim += (wantAim - this.aim) * Math.min(1, dt * 6);
+    this.recoil = Math.max(0, this.recoil - dt * 5.5);
+
+    /* Head tracking, limited so it turns the body's way rather than owl-necking. */
+    if (this.alive && ctx && ctx.player) {
+      const dx = ctx.player.pos.x - this.pos.x;
+      const dz = ctx.player.pos.z - this.pos.z;
+      let rel = Math.atan2(-dx, -dz) - this.yaw;
+      rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      const target = THREE.MathUtils.clamp(rel, -0.9, 0.9);
+      const dy = (ctx.player.pos.y + 1.5) - (this.pos.y + 1.68);
+      const flat = Math.hypot(dx, dz);
+      this.lookYaw += (target - this.lookYaw) * Math.min(1, dt * 5);
+      this.lookPitch += (THREE.MathUtils.clamp(Math.atan2(dy, Math.max(flat, 0.2)), -0.5, 0.5)
+        - this.lookPitch) * Math.min(1, dt * 5);
+    } else {
+      this.lookYaw += (0 - this.lookYaw) * Math.min(1, dt * 3);
+      this.lookPitch += (0 - this.lookPitch) * Math.min(1, dt * 3);
+    }
+
+    /* The mixer writes the pose, so the overlay has to run after it. */
+    this.rig.update(dt);
+    this.rig.overlay({
+      aim: this.alive ? this.aim : 0,
+      lookYaw: this.lookYaw,
+      lookPitch: this.lookPitch,
+      recoil: this.recoil,
+      stagger: this.stagger ? { zone: this.stagger.zone, k: this.stagger.t / 0.34 } : null
+    });
   }
 
   shoot(player, mission, sfx, dist) {
+    this.recoil = 1;
     const from = this.eyePos();
     const eye = new THREE.Vector3(player.pos.x, player.pos.y + player.eyeOffset, player.pos.z);
     const dir = eye.clone().sub(from).normalize();
@@ -446,6 +466,8 @@ export class Enemy {
 
   dispose() {
     this.scene.remove(this.group);
+    this.rig.dispose();
+    for (const m of this.materials) m.dispose();
   }
 }
 

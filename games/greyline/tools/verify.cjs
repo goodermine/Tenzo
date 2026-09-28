@@ -33,6 +33,17 @@ try {
   process.exit(2);
 }
 
+/* Teleporting the camera spikes the grade's motion smear, which at the few
+   frames a second a software rasteriser manages does not decay before the
+   screenshot is taken. Zero it so the shots are legible; it costs nothing on
+   real hardware, where it settles in a fraction of a second. */
+const SETTLE = `(() => {
+  const e = window.__engine;
+  e.camera.getWorldDirection(e._prevDir);
+  e._velocity.set(0, 0);
+  e.grade.uniforms.uVelocity.value.set(0, 0);
+})()`;
+
 const failures = [];
 function check(name, ok, detail) {
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}${detail ? '  ' + detail : ''}`);
@@ -122,6 +133,8 @@ function check(name, ok, detail) {
 
     await page.evaluate(() => window.__start());
     await page.waitForTimeout(8000);
+    await page.evaluate(SETTLE);
+    await page.waitForTimeout(1200);
     await page.screenshot({ path: join(OUT, 'street.png') });
 
     /* Render counters reset every render() call, so reading them after the
@@ -148,7 +161,53 @@ function check(name, ok, detail) {
       p.pos.set(c.x, 1.0, c.z); p.yaw = Math.PI / 2; p.pitch = 0.10;
     });
     await page.waitForTimeout(8000);
+    await page.evaluate(SETTLE);
+    await page.waitForTimeout(1200);
     await page.screenshot({ path: join(OUT, 'corridor.png') });
+
+    /* Stand in front of a guard so the rig is visible in a screenshot. */
+    const posed = await page.evaluate(() => {
+      const st = window.__state();
+      const g = st.enemies && st.enemies.find(e => e.alive);
+      if (!g) return false;
+      const p = st.player;
+      /* Move the guard into a skylight's pool of sun: a guard picked at
+         random is usually standing somewhere dim, which shows the silhouette
+         but none of the shading. */
+      const sky = window.__world.facility.skylights[0];
+      if (sky) {
+        g.pos.set(sky.x - 1.6, g.pos.y, sky.z - 1.1);
+        g.yaw = Math.PI * 0.75;
+      }
+      const fx = -Math.sin(g.yaw), fz = -Math.cos(g.yaw);
+      p.pos.set(g.pos.x + fx * 2.6, g.pos.y + 0.15, g.pos.z + fz * 2.6);
+      p.yaw = g.yaw + Math.PI;
+      p.pitch = -0.04;
+      return true;
+    });
+    check('a guard exists to look at', posed);
+    if (posed) {
+      await page.waitForTimeout(8000);
+      await page.evaluate(SETTLE);
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: join(OUT, 'guard.png') });
+    }
+
+    /* The same guard with the mixer stopped and every bone back at its bind
+       rotation. A limb that looks detached here is a geometry fault; one that
+       only looks wrong in the shot above is a pose fault. */
+    if (posed) {
+      await page.evaluate(() => {
+        const g = window.__state().enemies.find(e => e.alive);
+        g.rig.mixer.stopAllAction();
+        for (const b of g.rig.bones.values()) b.quaternion.identity();
+        g.animate = () => {};
+      });
+      await page.waitForTimeout(4000);
+      await page.evaluate(SETTLE);
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: join(OUT, 'guard-bind.png') });
+    }
 
     /* A* still has to cross the plan now that skylight cells are in it. */
     const nav = await page.evaluate(() => {
