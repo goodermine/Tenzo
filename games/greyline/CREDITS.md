@@ -7,6 +7,23 @@ If `assets/` is missing or fails to load, the game falls back to the
 procedural surfaces and painted sky it shipped with originally, so none of
 the below is required for it to run.
 
+## Character — Zow, CC-BY-4.0 (attribution **required**)
+
+`assets/characters/guard.glb` is the guards' body and animation. Unlike the
+CC0 assets below, this licence obliges us to credit the author, so the
+attribution the author asked for is reproduced verbatim:
+
+> This work is based on "Soldier Final Animations Fbx"
+> (https://sketchfab.com/3d-models/soldier-final-animations-fbx-ad2450c22d664317b36ccfd2e81016ea)
+> by Zow (https://sketchfab.com/ZowJr) licensed under CC-BY-4.0
+> (http://creativecommons.org/licenses/by/4.0/)
+
+Processed by `tools/pack-character.mjs`, which drops the assault rifle that
+ships inside the model — 10,142 of its 16,454 triangles, and the owner of
+both its textures — and resamples the animation. The body and head carry no
+texture of their own: the model gives both a single flat grey material, and
+the game supplies the uniform and skin.
+
 ## Surfaces — [ambientCG](https://ambientcg.com), CC0 1.0 (public domain)
 
 Downloaded as 2K PNG sets, then resized, channel-packed and encoded to KTX2

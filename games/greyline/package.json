@@ -12,6 +12,9 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "esbuild": "^0.28.2",
     "ktx2-encoder": "^0.6.0",
     "sharp": "^0.35.5"
