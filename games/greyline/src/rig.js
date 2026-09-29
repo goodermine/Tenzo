@@ -310,6 +310,17 @@ export class GuardRig {
     this.current = next;
   }
 
+  /** Hang a prop off a bone. Bones here are unrotated and unscaled, so the
+      prop is placed directly; the glTF rig needs a holder to get the same. */
+  attachProp(boneName, object) {
+    const bone = this.bones.get(boneName);
+    if (!bone) return false;
+    bone.add(object);
+    return true;
+  }
+
+  setAlert() {}
+
   /** Layered on top of the mixer's pose; see src/rig-pose.js. */
   overlay(params) {
     applyOverlay(this.bones, this.axes, params);

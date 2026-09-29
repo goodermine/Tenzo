@@ -6,13 +6,19 @@
 import * as THREE from 'three';
 import { GUARD_WEAPONS, WEAPONS } from './weapons.js';
 import { GuardRig } from './rig.js';
+import { GltfGuardRig, guardModelReady } from './rig-gltf.js';
 
 /* Hit volumes stay analytic - a sphere for the head, a capped cylinder for
    the body - rather than following the bones. They are cheap, they do not
    jitter with the animation, and a shot that lands where the player aimed
    matters more than one that tracks a swinging limb. The figures below are
    re-fitted to the rig in src/rig.js: head bone at 1.58 with the head itself
-   centred at 1.68, chest 1.22 to 1.52, hip joint at 0.88, feet near 0.03. */
+   centred at 1.68, chest 1.22 to 1.52, hip joint at 0.88, feet near 0.03.
+   The downloaded character is different: it stands leaning into its rifle
+   with the head well forward of its feet, and runs twenty centimetres lower
+   than it stands. So its head sphere follows the head joint (a single bone
+   lookup, and the head is rigid on it), and its torso centre is measured at
+   load (rig.hitFrame). */
 const HEAD_Y = 1.70;
 const HEAD_R = 0.17;
 const TORSO_TOP = 1.52;
@@ -21,6 +27,7 @@ const LEG_BOTTOM = 0.06;
 const BODY_R = 0.30;
 
 const ZONE_MULT = { head: 2.7, torso: 1.0, limb: 0.55 };
+const _head = new THREE.Vector3();
 
 /* The body is a skinned rig now (src/rig.js); the radio is the one prop that
    has to appear and disappear, so it stays a separate mesh hung off a bone. */
@@ -87,15 +94,16 @@ export class Enemy {
     });
     this.materials = [cloth, shirt, vest, skin, gear];
 
-    /* Material slots are ordered to match the rig's draw groups. */
-    this.rig = new GuardRig(this.materials);
+    /* Material slots are ordered to match the rig's draw groups. The
+       downloaded character when it loaded, the generated rig otherwise. */
+    this.rig = guardModelReady() ? new GltfGuardRig(this.materials) : new GuardRig(this.materials);
     this.group = this.rig.group;
 
     this.radio = new THREE.Mesh(radioGeo(), gear);
     this.radio.position.set(-0.2, 0.05, 0.12);
     this.radio.castShadow = true;
     this.radio.visible = false;
-    this.rig.bones.get('chest').add(this.radio);
+    this.rig.attachProp('chest', this.radio);
 
     this.aim = 0;
     this.recoil = 0;
@@ -108,15 +116,28 @@ export class Enemy {
 
   rayHit(origin, dir, maxT) {
     const c = this.pos;
-    const hx = origin.x - c.x, hy = origin.y - (c.y + HEAD_Y), hz = origin.z - c.z;
+    const f = this.rig.hitFrame;
+    /* The rig's frame is -Z forward; the body is turned by yaw + pi, which
+       carries a local (x, z) to (-x cos yaw - z sin yaw, x sin yaw - z cos yaw). */
+    const cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
+    const toWorldX = (x, z) => -x * cy - z * sy;
+    const toWorldZ = (x, z) => x * sy - z * cy;
+    const head = this.rig.headCenter ? this.rig.headCenter(_head) : null;
+    const headR = head ? this.rig.headRadius : HEAD_R;
+    if (!head) _head.set(c.x, c.y + HEAD_Y, c.z);
+    /* Nothing above the shoulders counts as torso, however low the clip. */
+    const torsoTop = head ? Math.min(TORSO_TOP, _head.y - c.y - headR) : TORSO_TOP;
+    const hx = origin.x - _head.x, hy = origin.y - _head.y, hz = origin.z - _head.z;
     const b = hx * dir.x + hy * dir.y + hz * dir.z;
-    const cc = hx * hx + hy * hy + hz * hz - HEAD_R * HEAD_R;
+    const cc = hx * hx + hy * hy + hz * hz - headR * headR;
     const disc = b * b - cc;
     if (disc > 0) {
       const t = -b - Math.sqrt(disc);
       if (t > 0 && t < maxT) return { t, zone: 'head' };
     }
-    const dx = origin.x - c.x, dz = origin.z - c.z;
+    const bodyX = f ? c.x + toWorldX(f.torsoX, f.torsoZ) : c.x;
+    const bodyZ = f ? c.z + toWorldZ(f.torsoX, f.torsoZ) : c.z;
+    const dx = origin.x - bodyX, dz = origin.z - bodyZ;
     const a2 = dir.x * dir.x + dir.z * dir.z;
     if (a2 > 1e-6) {
       const b2 = dx * dir.x + dz * dir.z;
@@ -126,7 +147,7 @@ export class Enemy {
         const t = (-b2 - Math.sqrt(d2)) / a2;
         if (t > 0 && t < maxT) {
           const y = origin.y + dir.y * t - c.y;
-          if (y >= TORSO_BOTTOM && y <= TORSO_TOP) return { t, zone: 'torso' };
+          if (y >= TORSO_BOTTOM && y <= torsoTop) return { t, zone: 'torso' };
           if (y >= LEG_BOTTOM && y < TORSO_BOTTOM) return { t, zone: 'limb' };
         }
       }
@@ -384,8 +405,16 @@ export class Enemy {
     this.pos.z = probe.z;
 
     this.animate(dt, ctx);
+    this.place();
+  }
+
+  /* The AI's forward is +Z at yaw 0 - the vision cone and path following
+     both use (sin yaw, cos yaw) - but both rigs are built facing -Z, so the
+     body is turned a half-turn further. Without it every guard walked, and
+     fired, with its back to where it was going. */
+  place() {
     this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
-    this.group.rotation.y = this.yaw;
+    this.group.rotation.y = this.yaw + Math.PI;
   }
 
   /* Locomotion is chosen from ground speed and played as a clip; aiming, the
@@ -393,16 +422,20 @@ export class Enemy {
      guard can track the player while it walks. */
   animate(dt, ctx) {
     const speed = Math.hypot(this.vel.x, this.vel.z);
+    /* The ground speed each clip covers at 1x, so the feet do not skate. */
+    /* Rifle raised once it is a fight, at low ready on patrol. */
+    this.rig.setAlert(this.alive && this.state !== 'patrol');
+    const natural = this.rig.naturalSpeed || { walk: 1.4, run: 3.2 };
 
     if (!this.alive) {
       this.rig.play('death', 0.12);
     } else if (speed > 2.2) {
       this.rig.play('run');
       /* Match the cycle to the ground speed or the feet skate. */
-      this.rig.current.timeScale = Math.min(1.6, speed / 3.2);
+      this.rig.current.timeScale = Math.min(1.6, speed / natural.run);
     } else if (speed > 0.25) {
       this.rig.play('walk');
-      this.rig.current.timeScale = Math.min(1.7, Math.max(0.55, speed / 1.4));
+      this.rig.current.timeScale = Math.min(1.7, Math.max(0.55, speed / natural.walk));
     } else {
       this.rig.play('idle');
     }
@@ -415,7 +448,7 @@ export class Enemy {
     if (this.alive && ctx && ctx.player) {
       const dx = ctx.player.pos.x - this.pos.x;
       const dz = ctx.player.pos.z - this.pos.z;
-      let rel = Math.atan2(-dx, -dz) - this.yaw;
+      let rel = Math.atan2(dx, dz) - this.yaw;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
       const target = THREE.MathUtils.clamp(rel, -0.9, 0.9);
       const dy = (ctx.player.pos.y + 1.5) - (this.pos.y + 1.68);

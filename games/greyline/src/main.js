@@ -11,6 +11,7 @@ import { Mission, DIFFICULTIES } from './mission.js';
 import { Loadout, WEAPONS } from './weapons.js';
 import { LightPool } from './facility.js';
 import { onProgress as onAssetProgress, assetErrors } from './assets.js';
+import { loadGuardModel } from './rig-gltf.js';
 
 const canvas = document.getElementById('view');
 const overlay = document.getElementById('overlay');
@@ -48,6 +49,10 @@ async function boot() {
   });
   loadMsg.textContent = 'capturing the sky';
   await engine.loadEnvironment();
+  /* Guards are built synchronously, so the character has to be in memory
+     first. A failure falls back to the generated rig rather than stopping. */
+  loadMsg.textContent = 'briefing the guards';
+  await loadGuardModel();
   loadMsg.textContent = 'building the compound';
   await frame();
   world.build();

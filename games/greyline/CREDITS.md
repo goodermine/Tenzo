@@ -20,9 +20,12 @@ attribution the author asked for is reproduced verbatim:
 
 Processed by `tools/pack-character.mjs`, which drops the assault rifle that
 ships inside the model — 10,142 of its 16,454 triangles, and the owner of
-both its textures — and resamples the animation. The body and head carry no
-texture of their own: the model gives both a single flat grey material, and
-the game supplies the uniform and skin.
+both its textures — resamples the animation, re-bases each clip to start at
+zero and eases its last fifth back into its first frame so it loops. The
+body and head carry no texture of their own: the model gives both a single
+flat grey material, and the game paints the uniform, vest, boots, gloves and
+skin by which bone each part of the body follows (`src/rig-gltf.js`). The
+helmet and the guards' rifle are the game's own geometry.
 
 ## Surfaces — [ambientCG](https://ambientcg.com), CC0 1.0 (public domain)
 

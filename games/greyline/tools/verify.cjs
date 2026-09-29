@@ -221,7 +221,7 @@ function check(name, ok, detail) {
       /* Five metres down the street from the spawn, turned to face back. */
       const fx = -Math.sin(sp.yaw), fz = -Math.cos(sp.yaw);
       g.pos.set(sp.x + fx * 5, sp.y, sp.z + fz * 5);
-      g.yaw = sp.yaw + Math.PI;
+      g.yaw = sp.yaw;   /* the AI's yaw: +Z forward, so this faces back */
       g.vel.set(0, 0, 0);
       /* Pinned: it would otherwise patrol out of shot between screenshots,
          and into whatever light it found on the way. The stub has to carry
@@ -230,13 +230,33 @@ function check(name, ok, detail) {
          while its position moves. */
       g.update = () => {
         g.animate(0.016, null);
-        g.group.position.set(g.pos.x, g.pos.y, g.pos.z);
-        g.group.rotation.y = g.yaw;
+        g.place();
       };
       window.__testGuard = g;
       return true;
     }, spawn);
     check('a guard exists to look at', posed);
+
+    /* Which body the guards got. The generated rig is a working fallback, so
+       a model that failed to load would otherwise pass every other check. */
+    const rig = await page.evaluate(() => {
+      const g = window.__testGuard;
+      if (!g) return null;
+      const r = g.rig;
+      return {
+        source: r.source || 'generated',
+        missingClips: r.missingClips || [],
+        unresolvedBones: r.unresolvedBones || [],
+        hitFrame: r.hitFrame || null,
+        speed: r.clipSpeed || null
+      };
+    });
+    if (rig) {
+      check('guards use the character model', rig.source === 'gltf', rig.source);
+      check('character clips all present', rig.missingClips.length === 0, rig.missingClips.join(', '));
+      check('character bones all resolved', rig.unresolvedBones.length === 0, rig.unresolvedBones.join(', '));
+      console.log('  rig: ' + JSON.stringify(rig));
+    }
 
     /* theta is a world-space bearing from the guard, 0 being back towards the
        spawn, so every shot stays out in the street. */
@@ -310,7 +330,10 @@ function check(name, ok, detail) {
         const g = window.__testGuard;
         g.rig.mixer.stopAllAction();
         g.animate = () => {};
-        for (const b of g.rig.bones.values()) b.quaternion.identity();
+        /* The generated rig binds at identity; a downloaded one binds at
+           whatever its skeleton was skinned in. */
+        if (g.rig.skinned) for (const m of g.rig.skinned) m.skeleton.pose();
+        else for (const b of g.rig.bones.values()) b.quaternion.identity();
       });
       await viewGuard('guard-bind.png', { dist: 3.2, theta: spawn.yaw - 0.5, height: 0.35, pitch: -0.06 });
     }
