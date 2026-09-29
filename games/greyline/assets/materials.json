@@ -1,0 +1,121 @@
+{
+  "concrete": {
+    "source": "Concrete034",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/concrete/albedo.ktx2",
+      "orm": "materials/concrete/orm.ktx2",
+      "normal": "materials/concrete/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/concrete/albedo.webp",
+      "orm": "materials/concrete/orm.webp",
+      "normal": "materials/concrete/normal.webp"
+    }
+  },
+  "asphalt": {
+    "source": "Asphalt033",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/asphalt/albedo.ktx2",
+      "orm": "materials/asphalt/orm.ktx2",
+      "normal": "materials/asphalt/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/asphalt/albedo.webp",
+      "orm": "materials/asphalt/orm.webp",
+      "normal": "materials/asphalt/normal.webp"
+    }
+  },
+  "brick": {
+    "source": "Bricks075A",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/brick/albedo.ktx2",
+      "orm": "materials/brick/orm.ktx2",
+      "normal": "materials/brick/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/brick/albedo.webp",
+      "orm": "materials/brick/orm.webp",
+      "normal": "materials/brick/normal.webp"
+    }
+  },
+  "plaster": {
+    "source": "PaintedPlaster017",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/plaster/albedo.ktx2",
+      "orm": "materials/plaster/orm.ktx2",
+      "normal": "materials/plaster/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/plaster/albedo.webp",
+      "orm": "materials/plaster/orm.webp",
+      "normal": "materials/plaster/normal.webp"
+    }
+  },
+  "metal": {
+    "source": "Metal032",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/metal/albedo.ktx2",
+      "orm": "materials/metal/orm.ktx2",
+      "normal": "materials/metal/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/metal/albedo.webp",
+      "orm": "materials/metal/orm.webp",
+      "normal": "materials/metal/normal.webp"
+    }
+  },
+  "sandbag": {
+    "source": "Fabric030",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/sandbag/albedo.ktx2",
+      "orm": "materials/sandbag/orm.ktx2",
+      "normal": "materials/sandbag/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/sandbag/albedo.webp",
+      "orm": "materials/sandbag/orm.webp",
+      "normal": "materials/sandbag/normal.webp"
+    }
+  },
+  "floor": {
+    "source": "Concrete036",
+    "credit": "ambientCG (CC0)",
+    "res": 2048,
+    "normalRes": 1024,
+    "ormRes": 1024,
+    "files": {
+      "albedo": "materials/floor/albedo.ktx2",
+      "orm": "materials/floor/orm.ktx2",
+      "normal": "materials/floor/normal.ktx2"
+    },
+    "web": {
+      "albedo": "materials/floor/albedo.webp",
+      "orm": "materials/floor/orm.webp",
+      "normal": "materials/floor/normal.webp"
+    }
+  }
+}
