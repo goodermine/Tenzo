@@ -27,6 +27,37 @@ flat grey material, and the game paints the uniform, vest, boots, gloves and
 skin by which bone each part of the body follows (`src/rig-gltf.js`). The
 helmet and the guards' rifle are the game's own geometry.
 
+## Weapons — Keam and r2detta, CC-BY-4.0 (attribution **required**)
+
+`assets/weapons/weapons.glb` holds the player's five weapons, taken from two
+packs. Both licences oblige us to credit the authors; their attributions,
+verbatim:
+
+> This work is based on "[Low Poly] Pack of 6 weapons"
+> (https://sketchfab.com/3d-models/low-poly-pack-of-6-weapons-f4ef9f0565ff4778b03cb57ddf4fbdc0)
+> by Keam (https://sketchfab.com/Keam) licensed under CC-BY-4.0
+> (http://creativecommons.org/licenses/by/4.0/)
+
+> This work is based on "Low-Poly Weapon Asset Pack"
+> (https://sketchfab.com/3d-models/low-poly-weapon-asset-pack-762c43cc1532421eb0452b64e2bdd483)
+> by r2detta (https://sketchfab.com/r2detta) licensed under CC-BY-4.0
+> (http://creativecommons.org/licenses/by/4.0/)
+
+| In-game weapon | Model | Pack |
+| --- | --- | --- |
+| PP-9 SILENCED | USP .45 with suppressor | r2detta |
+| KL-7 SMG | Kriss Vector | Keam |
+| MK-4 CARBINE | M4 carbine | Keam |
+| M20 BREACHER | Ithaca 37 pump | Keam |
+| DR-8 MARKSMAN | L115 / AWM | r2detta |
+
+Processed by `tools/pack-weapons.mjs`, which keeps those five and drops the
+rest of both packs; bakes Keam's palette textures into vertex colours (its
+spec-gloss materials no longer load in three.js); removes a loose cartridge
+posed in front of each Keam magazine and seats the magazines back in their
+magwells; drops a stray fragment of another weapon from the L115; and
+scales each to its real length, barrel along -Z.
+
 ## Surfaces — [ambientCG](https://ambientcg.com), CC0 1.0 (public domain)
 
 Downloaded as 2K PNG sets, then resized, channel-packed and encoded to KTX2

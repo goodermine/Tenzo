@@ -1,10 +1,40 @@
 /* Greyline - the viewmodel and the trigger.
-   One model rig serves the whole weapon table: parts are re-proportioned per
-   weapon rather than modelled five times. Firing reads the stats from the
-   loadout slot, so a silenced pistol and a breacher differ in data only. */
+   Each weapon is a downloaded model (src/weapon-models.js) when those loaded.
+   Otherwise one box-built rig serves the whole table, its parts
+   re-proportioned per weapon. Firing reads the stats from the loadout slot,
+   so a silenced pistol and a breacher differ in data only. */
 import * as THREE from 'three';
 import { DecalPool, Particles } from './fx.js';
 import { WEAPONS } from './weapons.js';
+import { weaponModelsReady, weaponModel } from './weapon-models.js';
+
+/* Rig units per metre. The box carbine is 1.33 rig units long and an M4
+   0.84m, so 1.6 would keep the old size; real models are slimmer than the
+   boxes were and read small at that, hence a little more. One scale for all
+   five, so a pistol stays smaller than a rifle in hand. */
+const MODEL_SCALE = 1.8;
+/* At the hip the weapon is turned in a little towards the crosshair, which
+   shows its side rather than a barrel seen end-on. Aiming takes it out. */
+const HIP_YAW = 0.13;
+
+/* Where each model is held, in its own metres (measured off the packed
+   models' side profiles; tools/pack-weapons.mjs centres each one on its
+   bounding box):
+     bore   height of the barrel axis at the muzzle
+     sight  height of the sight line - the iron sights' tops, or the scope's
+            axis - which ADS puts on the screen centre
+     grip   [y, z] of the rear hand on the pistol grip or wrist of the stock
+     front  [y, z] of the support hand - handguard, foregrip or pump */
+const MODEL_FIT = {
+  pistol_s: { bore: 0.052, sight: 0.079, grip: [0.0, 0.165], front: null },
+  smg: { bore: 0.139, sight: 0.226, grip: [0.06, 0.08], front: [0.10, -0.20] },
+  rifle: { bore: 0.092, sight: 0.152, grip: [0.02, 0.15], front: [0.0, -0.175] },
+  shotgun: { bore: 0.064, sight: 0.076, grip: [0.02, 0.28], front: [0.03, -0.06] },
+  sniper: { bore: 0.017, sight: 0.075, grip: [-0.04, 0.26], front: [-0.03, -0.15] }
+};
+/* The box rig's bore line; models are placed on it so the muzzle flash,
+   tracers and shell ejection all keep the heights they were tuned to. */
+const BORE_Y = 0.012;
 
 export class Weapon {
   constructor(camera, scene, world, sfx, loadout) {
@@ -69,7 +99,9 @@ export class Weapon {
     const dark = new THREE.MeshStandardMaterial({ color: 0x24262a, roughness: 0.55, metalness: 0.75 });
     const polymer = new THREE.MeshStandardMaterial({ color: 0x2f3236, roughness: 0.82, metalness: 0.05 });
     const grip = new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.95, metalness: 0 });
-    const hands = new THREE.MeshStandardMaterial({ color: 0x8a6a4c, roughness: 0.85 });
+    /* Gloves: two boxes read as hands next to box weapons, and as boxes
+       next to a detailed one. Dark, they read as gloved fists. */
+    const hands = new THREE.MeshStandardMaterial({ color: 0x25272a, roughness: 0.92 });
     const glassM = new THREE.MeshStandardMaterial({
       color: 0x3a5a4a, roughness: 0.1, metalness: 0.4, envMapIntensity: 2, transparent: true, opacity: 0.6
     });
@@ -99,17 +131,63 @@ export class Weapon {
     this.parts.handFront = add(box(0.075, 0.075, 0.14), hands, 0.005, -0.075, -0.46, 0.2);
     this.parts.handRear = add(box(0.07, 0.09, 0.1), hands, 0.005, -0.085, 0.0, -0.3);
 
+    /* The downloaded models, one holder each, placed per MODEL_FIT. */
+    this.models = null;
+    if (weaponModelsReady()) {
+      this.models = {};
+      for (const [id, fit] of Object.entries(MODEL_FIT)) {
+        const model = weaponModel(id);
+        const holder = new THREE.Group();
+        holder.add(model);
+        holder.scale.setScalar(MODEL_SCALE);
+        holder.position.set(0, BORE_Y - MODEL_SCALE * fit.bore, -MODEL_SCALE * fit.grip[1]);
+        holder.visible = false;
+        this.group.add(holder);
+        this.models[id] = { holder, fit, box: model.userData.box };
+      }
+    }
+
     const s = 0.40;
     this.group.scale.setScalar(s);
     this.baseScale = s;
     this.hipPos = new THREE.Vector3(0.17, -0.15, -0.42);
     this.adsPos = new THREE.Vector3(0, -0.115 * s, -0.33);
+    /* A little higher and further in than the box rig sat: its bulk
+       filled the corner, where a real receiver is slim and needs showing. */
+    if (this.models) this.hipPos.set(0.15, -0.13, -0.4);
     this.group.position.copy(this.hipPos);
+  }
+
+  /* Show the model for whatever is in hand, and put the hands on it. */
+  configureModel(id) {
+    const p = this.parts;
+    for (const m of Object.values(p)) m.visible = false;
+    for (const [key, m] of Object.entries(this.models)) m.holder.visible = key === id;
+    const m = this.models[id];
+    if (!m) return false;
+    const { holder, fit, box } = m;
+    const K = MODEL_SCALE;
+    const toRig = (y, z) => [holder.position.y + K * y, holder.position.z + K * z];
+
+    const [gy, gz] = toRig(fit.grip[0], fit.grip[1]);
+    p.handRear.visible = true;
+    p.handRear.position.set(0.005, gy - 0.02, gz);
+    if (fit.front) {
+      const [fy, fz] = toRig(fit.front[0], fit.front[1]);
+      p.handFront.visible = true;
+      p.handFront.position.set(0.005, fy - 0.03, fz);
+    }
+
+    this.adsHeight = BORE_Y + K * (fit.sight - fit.bore);
+    this.adsPos.set(0, -this.adsHeight * this.baseScale, -0.33);
+    this.flash.position.set(0, BORE_Y, toRig(0, box.min.z)[1] - 0.03);
+    return true;
   }
 
   /* Re-proportion the rig for whatever is in hand. */
   configure() {
     const id = this.def.id;
+    if (this.models && this.configureModel(id)) return;
     const p = this.parts;
     const set = (part, visible, scale, pos) => {
       part.visible = visible;
@@ -358,7 +436,7 @@ export class Weapon {
     );
     this.group.rotation.set(
       -this.sway.y * 2.2 + this.kick * 0.09 + this.sprintMix * 0.22 + swap * 0.5,
-      this.sway.x * 2.0 + this.sprintMix * 0.5,
+      this.sway.x * 2.0 + this.sprintMix * 0.5 + (this.models ? HIP_YAW * (1 - this.ads) : 0),
       this.sway.x * 1.1 + this.sprintMix * 0.18 +
         (this.reloading > 0 ? Math.sin(this.reloading * 6) * 0.25 : 0)
     );

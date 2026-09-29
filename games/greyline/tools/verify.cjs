@@ -338,6 +338,66 @@ function check(name, ok, detail) {
       await viewGuard('guard-bind.png', { dist: 3.2, theta: spawn.yaw - 0.5, height: 0.35, pitch: -0.06 });
     }
 
+    /* The player's weapons: every model loaded, and aiming puts each one's
+       sight line on the screen centre. That last is tedious by eye and
+       trivial to assert - the sight line is projected through the camera.
+       ADS is pinned at 1 rather than blended in, because a software
+       rasteriser manages a few frames a second and the blend is per frame. */
+    const vm = await page.evaluate(() => {
+      const st = window.__state(), w = st.weapon;
+      if (!w.models) return { models: false };
+      for (const id of ['pistol_s', 'smg', 'rifle', 'shotgun', 'sniper']) st.loadout.add(id);
+      const orig = w.update.bind(w);
+      /* Sway, kick, bob and the landing dip are pinned out too: the guard
+         shots leave the player dropping from where they were staged, and
+         what is being checked is where the sights sit, not the motion. */
+      w.update = (dt, p, input) => {
+        if (!window.__forceAds) return orig(dt, p, input);
+        w.ads = 1;
+        w.sway.set(0, 0); w.swayTarget.set(0, 0);
+        w.kick = w.kickVel = 0;
+        return orig(dt, { ...p, bobAmount: 0, landDip: 0, sprinting: false }, { ...input, ads: true });
+      };
+      return { models: true, slots: st.loadout.slots.map(s => s.id) };
+    });
+    check('weapon models loaded', vm.models);
+    if (vm.models) {
+      /* Back out to the street, clear of the walls. */
+      await page.evaluate(sp => {
+        const p = window.__state().player;
+        p.pos.set(sp.x, sp.y, sp.z); p.yaw = sp.yaw; p.pitch = 0.02;
+      }, spawn);
+      const worst = {};
+      for (let i = 0; i < vm.slots.length; i++) {
+        await page.evaluate(i => {
+          const w = window.__state().weapon;
+          w.switching = 0; w.switchTo(i); w.switching = 0;
+          window.__forceAds = true;
+        }, i);
+        await page.waitForTimeout(2500);
+        const off = await page.evaluate(() => {
+          const w = window.__state().weapon, e = window.__engine, T = window.__THREE;
+          const m = w.models[w.def.id], b = m.box, len = b.max.z - b.min.z;
+          const W = innerWidth / 2, H = innerHeight / 2;
+          let px = 0;
+          for (const z of [b.min.z + 0.1 * len, b.max.z - 0.35 * len]) {
+            const q = m.holder.localToWorld(new T.Vector3(0, m.fit.sight, z)).project(e.camera);
+            px = Math.max(px, Math.hypot(q.x * W, q.y * H));
+          }
+          return px;
+        });
+        worst[vm.slots[i]] = +off.toFixed(1);
+        if (vm.slots[i] === 'rifle') {
+          await page.evaluate(SETTLE);
+          await page.waitForTimeout(600);
+          await page.screenshot({ path: join(OUT, 'ads.png') });
+        }
+      }
+      await page.evaluate(() => { window.__forceAds = false; });
+      check('ADS puts every sight line on the crosshair',
+        Object.values(worst).every(px => px < 4), JSON.stringify(worst) + ' px');
+    }
+
     /* A* still has to cross the plan now that skylight cells are in it. */
     const nav = await page.evaluate(() => {
       const f = window.__world.facility;
