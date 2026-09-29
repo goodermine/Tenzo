@@ -1,0 +1,4 @@
+{
+  "guard": "characters/guard.json",
+  "weapons": "weapons/weapons.json"
+}

@@ -11,7 +11,7 @@
    viewmodel it always had. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { assetUrl, manager } from './assets.js';
+import { modelUrl, manager } from './assets.js';
 
 const IDS = ['pistol_s', 'smg', 'rifle', 'shotgun', 'sniper'];
 
@@ -28,9 +28,9 @@ export function weaponModel(id) {
 
 export function loadWeaponModels() {
   if (models) return Promise.resolve(true);
-  return new Promise(resolve => {
+  return modelUrl('weapons').then(url => new Promise(resolve => {
     new GLTFLoader(manager).load(
-      assetUrl('weapons/weapons.glb'),
+      url,
       gltf => {
         gltf.scene.updateMatrixWorld(true);
         const found = new Map();
@@ -74,5 +74,5 @@ export function loadWeaponModels() {
         resolve(false);
       }
     );
-  });
+  }));
 }

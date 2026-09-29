@@ -164,6 +164,10 @@ so that is the part this repo does not close.
 | `src/rig.js` | guard skeleton, skinning and animation clips |
 | `src/assets.js` | asset URLs, load manager, KTX2 transcoder |
 | `tools/fetch-materials.mjs` | asset build step: download, ORM pack, KTX2 + WebP |
+| `tools/pack-character.mjs` | asset build step: the guards' model - strip, resample, fix clip timing and loops |
+| `tools/pack-weapons.mjs` | asset build step: the five player weapons out of two packs, palettes baked to vertex colours |
+| `tools/embed-gltf.mjs` | hosted build only: a .glb as one embedded-glTF .json the artifact host will serve |
+| `tools/inspect-model.mjs` | reports a downloaded model's skeleton, clips, meshes and scale |
 | `tools/verify.cjs` | headless checks: assets, lighting, budgets, navigation |
 | `src/world.js` | level generation, merging, collision and raycasts |
 | `src/player.js` | first-person controller and movement feel |

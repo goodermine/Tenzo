@@ -54,6 +54,23 @@ export async function loadJSON(path) {
   return res.json();
 }
 
+/* Where each downloaded model lives. A manifest rather than a fixed path
+   for the same reason materials.json is one: the artifact host will not
+   serve .glb, so the hosted build publishes models.web.json in its place,
+   pointing at the same models as embedded glTF served under .json (which
+   GLTFLoader reads either way - it checks the binary magic, not the name). */
+let models = null;
+export async function modelUrl(name) {
+  if (!models) {
+    models = loadJSON('models.json').catch(e => {
+      console.warn('[greyline] no model manifest, using default paths:', e.message);
+      return {};
+    });
+  }
+  const m = await models;
+  return assetUrl(m[name] || `${name === 'guard' ? 'characters/guard' : 'weapons/weapons'}.glb`);
+}
+
 export function disposeLoaders() {
   if (ktx2) {
     ktx2.dispose();

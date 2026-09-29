@@ -31,7 +31,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { assetUrl, manager } from './assets.js';
+import { modelUrl, manager } from './assets.js';
 import { computeBoneAxes, applyOverlay } from './rig-pose.js';
 
 /* Height of the top of the neck above the soles, for a guard of about 1.8m.
@@ -253,9 +253,9 @@ export function guardModelInfo() {
  */
 export function loadGuardModel() {
   if (cached) return Promise.resolve(true);
-  return new Promise(resolve => {
+  return modelUrl('guard').then(url => new Promise(resolve => {
     new GLTFLoader(manager).load(
-      assetUrl('characters/guard.glb'),
+      url,
       gltf => {
         try {
           const body = findMesh(gltf.scene, BODY_MESH);
@@ -276,7 +276,7 @@ export function loadGuardModel() {
         resolve(false);
       }
     );
-  });
+  }));
 }
 
 /* Guard kit that is not in the model: helmet and a rifle. Kept to a few
