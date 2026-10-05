@@ -2,7 +2,7 @@
    all cached on install, so after the first visit it starts with no
    network at all. Requests are served from the cache first; a new version
    is picked up by bumping VERSION, which replaces the cache on activate. */
-const VERSION = 'holdout-v1';
+const VERSION = 'holdout-v3';
 const FILES = [
   './',
   './index.html',

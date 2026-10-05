@@ -14,7 +14,9 @@ const DEFAULTS = () => ({
   upgrades: {},
   unlocked: { characters: ['vanguard'], weapons: [] },
   totals: { runs: 0, kills: 0, seconds: 0, wins: 0 },
-  character: 'vanguard'
+  character: 'vanguard',
+  /* one-time help already shown: the guide, and the first-run tips */
+  seen: { guide: false, move: false, gems: false, pick: false }
 });
 
 export function load() {
@@ -34,6 +36,7 @@ export function load() {
         weapons: [...((data.unlocked || {}).weapons || [])]
       },
       totals: { ...base.totals, ...(data.totals || {}) },
+      seen: { ...base.seen, ...(data.seen || {}) },
       version: VERSION
     };
   } catch (e) {

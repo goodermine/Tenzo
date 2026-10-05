@@ -26,9 +26,16 @@ export const SHOT = { BOLT: 0, GLAIVE: 1, MISSILE: 2, MINE: 3, DISC: 4, FLAME: 5
    time instead (see sim.updateShots). */
 export const PIERCE_ALL = 100;
 
-function aimAt(sim, maxR = 700) {
+/* Half-width of "ahead of the ship": about 50 degrees either side. */
+const AHEAD = 0.87;
+
+/* Aim at the nearest enemy ahead of the ship, else the nearest anywhere.
+   Flying forward, the nearest enemy is usually one chasing you - aiming at
+   it fires behind you, and leaves your path blocked. */
+function aimAhead(sim, maxR = 700) {
   const p = sim.p;
-  const t = sim.nearestEnemy(p.x, p.y, maxR);
+  let t = sim.nearestEnemyInCone(p.x, p.y, maxR, p.face, AHEAD);
+  if (t < 0) t = sim.nearestEnemy(p.x, p.y, maxR);
   return t >= 0 ? Math.atan2(sim.ey[t] - p.y, sim.ex[t] - p.x) : p.face;
 }
 
@@ -38,15 +45,17 @@ const bolt = {
   id: 'bolt',
   name: 'Arc Bolt',
   icon: 'bolt',
-  blurb: 'Fires at the nearest enemy.',
+  blurb: 'Fires ahead of you and behind you.',
+  /* `count` is per direction: every volley goes both ways */
   levels: levels(
-    { dmg: 12, cd: 0.85, count: 1, pierce: 0, speed: 560, life: 1.1, r: 7 },
+    { dmg: 9, cd: 0.85, count: 1, pierce: 0, speed: 560, life: 1.1, r: 7 },
     { count: 2 },
-    { dmg: 17, pierce: 1 },
+    { dmg: 13, pierce: 1 },
     { count: 3, cd: 0.72 },
-    { dmg: 24, pierce: 2, count: 4 }
+    { dmg: 18, pierce: 2, count: 4 }
   ),
-  notes: ['', '+1 bolt', '+40% damage, pierces 1', '+1 bolt, fires faster', '+40% damage, +1 bolt, pierces 2'],
+  notes: ['', '+1 bolt each way', '+40% damage, pierces 1', '+1 bolt each way, fires faster',
+    '+40% damage, +1 bolt each way, pierces 2'],
   init(w) {
     w.t = 0.4;
     w.burst = 0;
@@ -57,15 +66,26 @@ const bolt = {
     if (w.burst > 0) {
       w.bt -= dt;
       if (w.bt <= 0) {
-        const base = aimAt(sim);
-        /* the evolved lance fires its whole volley at once, in a fan */
+        /* Two streams. Ahead: the nearest enemy in front, or straight on if
+           there is none, so flying always clears the way. Behind: the
+           nearest enemy anywhere else, if there is one. */
+        const front = sim.nearestEnemyInCone(p.x, p.y, 700, p.face, AHEAD);
+        const fa = front >= 0 ? Math.atan2(sim.ey[front] - p.y, sim.ex[front] - p.x) : p.face;
+        const back = sim.nearestEnemyInCone(p.x, p.y, 700, p.face + Math.PI, Math.PI - AHEAD);
+        const ba = back >= 0 ? Math.atan2(sim.ey[back] - p.y, sim.ex[back] - p.x) : 0;
+        const fire = (base, n) => {
+          for (let k = 0; k < n; k++) {
+            const a = base + (s.fan ? (k - (n - 1) / 2) * s.fan : (sim.rng.next() - 0.5) * 0.12);
+            sim.spawnShot(s.fan ? SHOT.LANCE : SHOT.BOLT, BEH.STRAIGHT, p.x, p.y,
+              Math.cos(a) * s.speed, Math.sin(a) * s.speed, s.life, s.dmg * st.damage,
+              s.r * st.area, s.pierce, w.slot, 140);
+          }
+        };
+        /* the evolved lance fires its whole volley at once, in a fan - the
+           full fan ahead, a narrower one behind */
         const n = s.fan ? w.burst : 1;
-        for (let k = 0; k < n; k++) {
-          const a = base + (s.fan ? (k - (n - 1) / 2) * s.fan : (sim.rng.next() - 0.5) * 0.12);
-          sim.spawnShot(s.fan ? SHOT.LANCE : SHOT.BOLT, BEH.STRAIGHT, p.x, p.y,
-            Math.cos(a) * s.speed, Math.sin(a) * s.speed, s.life, s.dmg * st.damage,
-            s.r * st.area, s.pierce, w.slot, 140);
-        }
+        fire(fa, n);
+        if (back >= 0) fire(ba, s.fan ? Math.ceil(n / 2) : 1);
         w.burst -= n;
         w.bt = 0.075;
       }
@@ -254,7 +274,7 @@ const glaive = {
     w.t -= dt;
     if (w.t > 0) return;
     w.t = s.cd * st.cooldown;
-    const n = s.count + st.amount, base = aimAt(sim, 600);
+    const n = s.count + st.amount, base = aimAhead(sim, 600);
     for (let k = 0; k < n; k++) {
       const a = base + (k - (n - 1) / 2) * 0.5;
       sim.spawnShot(SHOT.GLAIVE, BEH.GLAIVE, p.x, p.y, Math.cos(a) * s.speed, Math.sin(a) * s.speed,
@@ -336,7 +356,7 @@ const laser = {
       }
       w.t = s.cd * st.cooldown;
       w.on = s.time;
-      w.a0 = aimAt(sim) - s.arc / 2;
+      w.a0 = aimAhead(sim, s.len * st.area) - s.arc / 2;
       sim.events.push(EV.LASER, p.x, p.y, w.slot);
     }
     if (w.on <= 0) return;
@@ -445,7 +465,7 @@ const ricochet = {
       return;
     }
     w.t = s.cd * st.cooldown;
-    const n = s.count + st.amount, base = aimAt(sim);
+    const n = s.count + st.amount, base = aimAhead(sim);
     for (let k = 0; k < n; k++) {
       const a = base + (k - (n - 1) / 2) * 0.4;
       sim.spawnShot(SHOT.DISC, BEH.RICOCHET, p.x, p.y, Math.cos(a) * s.speed, Math.sin(a) * s.speed,
@@ -590,7 +610,7 @@ const scatter = {
       return;
     }
     w.t = s.cd * st.cooldown;
-    const n = s.count + st.amount * 2, base = aimAt(sim);
+    const n = s.count + st.amount * 2, base = aimAhead(sim, s.speed * s.life);
     for (let k = 0; k < n; k++) {
       const a = base + (k / (n - 1) - 0.5) * s.spread * 2 + (sim.rng.next() - 0.5) * 0.08;
       const v = s.speed * (0.85 + sim.rng.next() * 0.3);

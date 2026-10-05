@@ -489,6 +489,28 @@ export class Sim {
     return best;
   }
 
+  /**
+   * Nearest live enemy within maxR whose bearing is within `cone` radians
+   * of `dir`, or -1. Used to aim ahead of the ship (or behind it) rather
+   * than at whatever is closest - which, while flying, is usually the
+   * crowd chasing you.
+   */
+  nearestEnemyInCone(x, y, maxR, dir, cone) {
+    let best = -1, bd = maxR * maxR;
+    const ux = Math.cos(dir), uy = Math.sin(dir), c = Math.cos(cone);
+    const n = this.ePool.high, alive = this.eAlive, ex = this.ex, ey = this.ey;
+    for (let i = 0; i < n; i++) {
+      if (!alive[i]) continue;
+      const dx = ex[i] - x, dy = ey[i] - y, d = dx * dx + dy * dy;
+      if (d >= bd) continue;
+      const l = Math.sqrt(d) || 1;
+      if ((dx * ux + dy * uy) / l < c) continue;
+      bd = d;
+      best = i;
+    }
+    return best;
+  }
+
   /** Nearest within maxR that is not among the first n entries of `skip`. */
   nearestEnemyExcept(x, y, maxR, skip, n) {
     const out = this.scratch3, c = this.grid.query(x, y, maxR, out);

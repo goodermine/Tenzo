@@ -13,6 +13,7 @@ import { Audio } from './audio.js';
 import { Haptics } from './haptics.js';
 import { load, store } from './save.js';
 import { renderShips, renderShop } from './ui/menu.js';
+import { HowTo } from './ui/howto.js';
 import { settleRun, lockedWeapons } from './content/meta.js';
 import { CHARACTERS, CHARACTER_INDEX } from './content/characters.js';
 import { WEAPONS, WEAPON_INDEX } from './content/weapons.js';
@@ -64,12 +65,16 @@ async function boot() {
     game.audio.pick();
     game.haptics.buzz(12, true);
     game.sim.choose(i);
+    seen('pick');
+    $('#levelup').classList.remove('first');
     if (!game.sim.choices) {
       levelUp.hide();
       input.setEnabled(true);
     }
   });
-  Object.assign(game, { app, atlas, view, input, hud, levelUp });
+  const howto = new HowTo($('#howto'), atlas, () => seen('guide'));
+  Object.assign(game, { app, atlas, view, input, hud, levelUp, howto });
+  for (const b of document.querySelectorAll('.howto-open')) b.addEventListener('click', () => howto.show());
 
   addEventListener('resize', () => view.resize());
   applySettings();
@@ -126,6 +131,8 @@ async function boot() {
   game.sim = new Sim({ seed: 12345 });
   view.reset(game.sim);
   renderTitle();
+  /* the very first launch opens the guide */
+  if (!game.save.seen.guide) howto.show();
 
   /* Bloom starts on and is dropped by watchPerf() if the frame rate cannot
      take it. */
@@ -143,6 +150,45 @@ function applySettings() {
   if (game.view) game.view.showNumbers = st.numbers !== false;
   for (const b of document.querySelectorAll('.toggle')) b.classList.toggle('on', !!st[b.dataset.setting]);
   if (game.view) game.view.setBloom(st.bloom !== 'off' && game.tier < 1);
+}
+
+/** Record that a piece of one-time help has been shown. */
+function seen(key) {
+  if (game.save.seen[key]) return;
+  game.save.seen[key] = true;
+  store(game.save);
+}
+
+/* First-run tips, over the arena during your first game: how to move, then
+   what the gems are for. Each shows once. */
+const tip = { kind: '', t: 0 };
+function showTip(kind, text) {
+  const el = $('#tip');
+  tip.kind = kind;
+  tip.t = 0;
+  el.className = 'on ' + kind;
+  el.querySelector('.text').textContent = text;
+}
+function hideTip() {
+  if (!tip.kind) return;
+  seen(tip.kind);
+  tip.kind = '';
+  $('#tip').className = '';
+}
+function updateTips(sim, dt) {
+  const s = game.save.seen;
+  tip.t += dt;
+  if (tip.kind === 'move') {
+    /* held movement, not a stray touch */
+    tip.moved = Math.hypot(move.x, move.y) > 0.3 ? (tip.moved || 0) + dt : 0;
+    if (tip.moved > 0.35) hideTip();
+  } else if (tip.kind === 'gems') {
+    if (sim.p.xp > 0 || sim.p.level > 1 || tip.t > 6) hideTip();
+  } else if (!s.move) {
+    showTip('move', 'DRAG ANYWHERE TO MOVE');
+  } else if (!s.gems && sim.gPool.count > 0) {
+    showTip('gems', 'COLLECT THE GEMS');
+  }
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 'S'}`;
@@ -212,6 +258,8 @@ function start() {
   hud.show(true);
   input.setEnabled(true);
   game.state = 'run';
+  tip.kind = '';
+  $('#tip').className = '';
 }
 
 function setPaused(on) {
@@ -472,9 +520,11 @@ function frame(rawDt) {
   updateBossBar(sim);
   if (game.state !== 'run') return;
   hud.update(sim, rawDt);
+  if (!sim.over && !sim.userPaused) updateTips(sim, rawDt);
 
   if (sim.choices && !sim.over) {
     input.setEnabled(false);
+    $('#levelup').classList.toggle('first', !game.save.seen.pick);
     levelUp.show(sim.choices, sim.p.level, sim.choiceFromCache ? 'SUPPLY CACHE' : 'LEVEL UP');
     const rr = $('#levelup .reroll');
     rr.classList.toggle('on', sim.rerolls > 0);
@@ -482,6 +532,10 @@ function frame(rawDt) {
   }
   if (sim.over) {
     levelUp.hide();
+    if (tip.kind) {
+      tip.kind = '';
+      $('#tip').className = '';
+    }
     input.setEnabled(false);
     if (!game.overAt) game.overAt = performance.now();
     /* a beat to watch the ship go before the results come up */

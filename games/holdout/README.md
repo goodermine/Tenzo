@@ -16,6 +16,12 @@ offline.
 - **10 passives**, **10 enemy types** (dashers that telegraph, gunners that
   hold range, shielded wardens, bombers whose blasts chain, blinkers that
   show where they will land, elites that drop a supply cache) and **2 bosses**.
+- **A How to Play guide**: four swipeable pages, illustrated with the game's
+  own sprites, opened on first launch and from the title and pause screens,
+  plus one-time tips during your first run (move, gems, picking a card).
+- **Guns that cover your path**: the starting Arc Bolt fires ahead of the ship
+  and behind it on every volley, and the other aimed weapons prefer targets
+  ahead of you, so flying forward clears the way.
 - **EASY and NORMAL**: Easy is the same run with a gentler swarm (weaker,
   fewer enemies and softer bosses) for 60% of the credits.
 - **Three arenas** as the run goes on — THE GRID, EMBER at 5:00, THE VOID at
@@ -39,7 +45,7 @@ offline.
 | `src/sim/` | the simulation: no DOM or rendering, so it also runs in Node |
 | `src/content/` | weapons, enemies, passives, ships, upgrades, unlocks — data tables |
 | `src/render/` | the atlas (all art drawn in code) and the view |
-| `src/ui/`, `src/main.js` | HUD, cards, menus; boot and the frame loop |
+| `src/ui/`, `src/main.js` | HUD, cards, menus, the How to Play guide; boot and the frame loop |
 | `src/audio.js`, `src/haptics.js`, `src/save.js` | sound, vibration, saves |
 | `tools/bot.mjs` | plays seeded runs headless, for balance |
 | `tools/verify.cjs` | drives the game on an emulated phone |

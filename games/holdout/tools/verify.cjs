@@ -88,6 +88,43 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     check('boots', ready);
     if (!ready) throw new Error('boot did not complete');
     await wait(2500);
+
+    /* A first launch opens the How to Play guide. Swipe to page two, step
+       through the rest with NEXT, and close it with GOT IT. */
+    const guide = await sim(() => ({
+      on: document.getElementById('howto').classList.contains('on'),
+      pages: document.querySelectorAll('#howto .page').length,
+      pics: document.querySelectorAll('#howto .page canvas.pic').length
+    }));
+    check('first launch opens the How to Play guide', guide.on && guide.pages === 4 && guide.pics === 4,
+      JSON.stringify(guide));
+    await shot('howto-1.png');
+    await touch('touchStart', 300, 420);
+    for (let k = 1; k <= 10; k++) {
+      await touch('touchMove', 300 - k * 25, 420);
+      await wait(16);
+    }
+    await touch('touchEnd', 0, 0);
+    await wait(900);
+    const swiped = await sim(() => window.__game.howto.page);
+    check('swiping turns the guide page', swiped === 1, `page ${swiped + 1}`);
+    await shot('howto-2.png');
+    for (let k = 3; k <= 4; k++) {
+      await page.tap('#howto .next');
+      await wait(900);
+      await shot(`howto-${k}.png`);
+    }
+    const lastPage = await sim(() => ({ page: window.__game.howto.page,
+      label: document.querySelector('#howto .next').textContent }));
+    await page.tap('#howto .next');
+    await wait(500);
+    const closed = await sim(() => ({
+      off: !document.getElementById('howto').classList.contains('on'),
+      seen: JSON.parse(localStorage.getItem('holdout.save') || '{}').seen
+    }));
+    check('GOT IT on the last page closes the guide and remembers it',
+      lastPage.page === 3 && lastPage.label === 'GOT IT' && closed.off && closed.seen && closed.seen.guide,
+      JSON.stringify([lastPage, closed]));
     await shot('title.png');
 
     await page.tap('#title .start');
@@ -97,6 +134,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       hud: document.getElementById('hud').classList.contains('on')
     }));
     check('tap starts a run', started.state === 'run' && started.hud, JSON.stringify(started));
+    await wait(400);
+    const moveTip = await sim(() => ({ cls: document.getElementById('tip').className,
+      text: document.querySelector('#tip .text').textContent }));
+    check('the first run shows the move tip', /\bmove\b/.test(moveTip.cls) && /on/.test(moveTip.cls) &&
+      moveTip.text === 'DRAG ANYWHERE TO MOVE', JSON.stringify(moveTip));
+    await shot('tip-move.png');
 
     /* Steer right with a real touch drag. */
     const x0 = await sim(() => window.__game.sim.p.x);
@@ -113,6 +156,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await touch('touchEnd', 0, 0);
     check('touch drag moves the ship', mid.x - x0 > 40, `moved ${Math.round(mid.x - x0)} units`);
     check('thumb-stick appears under the thumb', mid.stick);
+    const tipGone = await sim(() => ({ cls: document.getElementById('tip').className,
+      seen: window.__game.save.seen.move }));
+    check('the move tip clears once you move', !/\bmove\b/.test(tipGone.cls) && tipGone.seen, JSON.stringify(tipGone));
     await shot('run.png');
 
     /* Level up and pick a card. */
@@ -124,6 +170,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       paused: !window.__game.sim.running
     }));
     check('level-up offers three cards and pauses', lv.shown && lv.cards === 3 && lv.paused, JSON.stringify(lv));
+    const pickTip = await sim(() => getComputedStyle(document.querySelector('#levelup .pick-tip')).display);
+    check('the first level-up says PICK ONE', pickTip === 'block', pickTip);
     await shot('levelup.png');
     const before = await sim(() => JSON.stringify([
       window.__game.sim.weapons.map(w => w.level), window.__game.sim.passives.map(p => p.level)
@@ -147,6 +195,77 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(400);
     const resumed = await sim(() => window.__game.sim.running);
     check('pause and resume', paused && resumed);
+
+    /* The guide opens from the pause menu, and the run stays paused. */
+    await page.tap('#hud .pause');
+    await wait(400);
+    await page.tap('#paused .howto-open');
+    await wait(500);
+    const fromPause = await sim(() => ({ guide: document.getElementById('howto').classList.contains('on'),
+      running: window.__game.sim.running }));
+    await page.tap('#howto .skip');
+    await wait(400);
+    const backToPause = await sim(() => ({ guide: document.getElementById('howto').classList.contains('on'),
+      paused: document.getElementById('paused').classList.contains('on'), running: window.__game.sim.running }));
+    check('HOW TO PLAY opens from the pause menu and keeps the run paused',
+      fromPause.guide && !fromPause.running && !backToPause.guide && backToPause.paused && !backToPause.running,
+      JSON.stringify([fromPause, backToPause]));
+    await page.tap('#paused .resume');
+    await wait(400);
+
+    /* Arc Bolt fires ahead of the ship as well as behind it. Run the
+       simulation directly with the ship facing right, recording the
+       direction of every bolt fired. */
+    const fire = await sim(() => {
+      const s = window.__game.sim, p = s.p, w = s.weapons.find(x => x.def.id === 'bolt');
+      const trial = offsets => {
+        for (let i = 0; i < s.ePool.high; i++) if (s.eAlive[i]) s.removeEnemy(i);
+        for (const dx of offsets) s.spawnEnemy(0, p.x + dx, p.y);
+        /* no new arrivals mid-trial: only the enemies placed here count */
+        const spawnEnemy = s.spawnEnemy;
+        s.spawnEnemy = () => -1;
+        const vx = [], spawn = s.spawnShot;
+        s.spawnShot = function (kind, beh, x, y, svx, ...rest) {
+          if (rest[5] === w.slot) vx.push(svx);
+          return spawn.call(this, kind, beh, x, y, svx, ...rest);
+        };
+        const saved = { inv: s.invulnerable, next: p.xpNext };
+        s.invulnerable = true;
+        p.xpNext = 1e9;
+        w.t = 0;
+        w.burst = 0;
+        for (let k = 0; k < 40; k++) {
+          s.move.x = s.move.y = 0;
+          p.face = 0;
+          s.step(1 / 60);
+        }
+        s.spawnShot = spawn;
+        s.spawnEnemy = spawnEnemy;
+        s.invulnerable = saved.inv;
+        p.xpNext = saved.next;
+        return { ahead: vx.filter(v => v > 0).length, behind: vx.filter(v => v < 0).length };
+      };
+      return { aheadOnly: trial([260]), behindOnly: trial([-260]), both: trial([260, -260]) };
+    });
+    check('Arc Bolt fires ahead when enemies are only in front', fire.aheadOnly.ahead > 0 && fire.aheadOnly.behind === 0,
+      JSON.stringify(fire.aheadOnly));
+    check('Arc Bolt fires both ways at enemies ahead and behind',
+      fire.both.ahead > 0 && fire.both.behind > 0 && fire.behindOnly.ahead > 0 && fire.behindOnly.behind > 0,
+      JSON.stringify([fire.both, fire.behindOnly]));
+    /* ...and in pictures: a pack ahead and a pack behind, ship facing right */
+    await sim(() => {
+      const s = window.__game.sim, p = s.p;
+      for (let i = 0; i < s.ePool.high; i++) if (s.eAlive[i]) s.removeEnemy(i);
+      s.invulnerable = true;
+      p.face = 0;
+      for (let k = 0; k < 6; k++) {
+        s.spawnEnemy(0, p.x + 230 + (k % 3) * 40, p.y - 50 + (k >> 1) * 30);
+        s.spawnEnemy(0, p.x - 200 - (k % 3) * 40, p.y - 50 + (k >> 1) * 30);
+      }
+    });
+    await wait(1100);
+    await shot('fire-both.png');
+    await sim(() => { window.__game.sim.invulnerable = false; });
 
     /* Fill the screen: the busy-wave shot, and a check the pools hold. */
     const crowd = await sim(() => {
@@ -298,6 +417,16 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       kept.hull === 1 && kept.credits < 5000 && kept.credits > 0 && kept.ship === 'specter' &&
       kept.diff === 'easy' && kept.segOn === 'EASY', JSON.stringify(kept));
     await shot('title-progress.png');
+
+    /* Once seen, the guide stays closed - and the title button reopens it. */
+    const guideAfterReload = await sim(() => document.getElementById('howto').classList.contains('on'));
+    await page.tap('#title .howto-open');
+    await wait(500);
+    const reopened = await sim(() => document.getElementById('howto').classList.contains('on'));
+    await page.tap('#howto .skip');
+    await wait(400);
+    check('the guide stays closed after a reload and opens from the title',
+      !guideAfterReload && reopened, JSON.stringify({ guideAfterReload, reopened }));
 
     /* The chosen ship is what deploys, with the upgrade applied. */
     await page.tap('#title .start');
