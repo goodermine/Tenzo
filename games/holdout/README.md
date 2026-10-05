@@ -16,10 +16,18 @@ offline.
 - **10 passives**, **10 enemy types** (dashers that telegraph, gunners that
   hold range, shielded wardens, bombers whose blasts chain, blinkers that
   show where they will land, elites that drop a supply cache) and **2 bosses**.
+- **EASY and NORMAL**: Easy is the same run with a gentler swarm (weaker,
+  fewer enemies and softer bosses) for 60% of the credits.
+- **Three arenas** as the run goes on — THE GRID, EMBER at 5:00, THE VOID at
+  9:30 — with parallax nebula and star-dust, ripples and scorch marks.
 - **3 ships**, credits from every run, a **shop of permanent upgrades**
   (including rerolls), and weapons and ships unlocked by playing well.
-- Feel: hit-pause, trauma-based screen shake, damage numbers, bloom, a
-  slow-motion beat on level-up, vibration where the phone supports it, and
+- Readable in a crowd: enemies have dark bodies under their neon outlines,
+  the ship sits in a halo ring that carries its health, enemy bullets and
+  tells draw above everything, and off-screen bosses, elites and caches get
+  edge markers.
+- Feel: hit-pause, trauma-based screen shake, merged damage numbers, bloom,
+  shattering kills, staged boss deaths, a slow-motion beat on level-up, vibration where the phone supports it, and
   synthesized sound with music that builds as the fight gets denser.
 - Quality steps down by itself on slow devices: bloom, then particles, then
   render resolution.
@@ -42,7 +50,7 @@ offline.
 ```bash
 npm install
 npm run build
-node tools/bot.mjs 10 100 17            # sensible picks; --random, --maxed, --ship=specter
+node tools/bot.mjs 10 100 17            # sensible picks; --random, --maxed, --easy, --ship=specter
 NODE_PATH=$(npm root -g) node tools/verify.cjs /tmp/holdout-shots
 ```
 
