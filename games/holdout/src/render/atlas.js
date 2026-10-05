@@ -119,6 +119,24 @@ const SPRITES = {
     ctx.lineTo(-R * 0.75, -R * 0.72);
     ctx.closePath();
   }, 0.22),
+  bastion: (ctx, c) => neon(ctx, c, 5, () => {
+    ctx.beginPath();
+    ctx.moveTo(R * 0.85, 0);
+    ctx.lineTo(R * 0.2, R * 0.75);
+    ctx.lineTo(-R * 0.7, R * 0.6);
+    ctx.lineTo(-R * 0.45, 0);
+    ctx.lineTo(-R * 0.7, -R * 0.6);
+    ctx.lineTo(R * 0.2, -R * 0.75);
+    ctx.closePath();
+  }, 0.24),
+  specter: (ctx, c) => neon(ctx, c, 4, () => {
+    ctx.beginPath();
+    ctx.moveTo(R, 0);
+    ctx.lineTo(-R * 0.8, R * 0.45);
+    ctx.lineTo(-R * 0.3, 0);
+    ctx.lineTo(-R * 0.8, -R * 0.45);
+    ctx.closePath();
+  }, 0.2),
   chaser: (ctx, c) => neon(ctx, c, 5, () => poly(ctx, 3, R * 0.95)),
   swarmer: (ctx, c) => neon(ctx, c, 7, () => poly(ctx, 4, R * 0.8, Math.PI / 4), 0.3, 24),
   dasher: (ctx, c) => neon(ctx, c, 5, () => poly(ctx, 4, R, 0, 1, 0.55)),
@@ -269,6 +287,10 @@ export const ENEMY_SPRITES = ['chaser', 'swarmer', 'dasher', 'tank', 'splitter',
 const LAYOUT = [
   ['player', 'player', COLORS.player],
   ['player_w', 'player', '#ffffff'],
+  ['bastion', 'bastion', '#7dffb8'],
+  ['bastion_w', 'bastion', '#ffffff'],
+  ['specter', 'specter', '#d27aff'],
+  ['specter_w', 'specter', '#ffffff'],
   ...ENEMY_SPRITES.flatMap(e => [[e, e, COLORS[e]], [e + '_w', e, '#ffffff']]),
   ...['bolt', 'laser', 'blade', 'glaive', 'missile', 'mine', 'disc', 'drone', 'pellet', 'ebullet',
     'heal', 'vacuum', 'cache', 'shield'].map(n => [n, n, COLORS[n]]),

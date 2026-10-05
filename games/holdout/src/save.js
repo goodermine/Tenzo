@@ -8,7 +8,12 @@ const VERSION = 1;
 const DEFAULTS = () => ({
   version: VERSION,
   settings: { sound: true, haptics: true, fps: false, bloom: 'auto' },
-  best: { seconds: 0, kills: 0, level: 0 }
+  best: { seconds: 0, kills: 0, level: 0 },
+  credits: 0,
+  upgrades: {},
+  unlocked: { characters: ['vanguard'], weapons: [] },
+  totals: { runs: 0, kills: 0, seconds: 0, wins: 0 },
+  character: 'vanguard'
 });
 
 export function load() {
@@ -22,6 +27,12 @@ export function load() {
       ...data,
       settings: { ...base.settings, ...(data.settings || {}) },
       best: { ...base.best, ...(data.best || {}) },
+      upgrades: { ...(data.upgrades || {}) },
+      unlocked: {
+        characters: [...new Set([...base.unlocked.characters, ...((data.unlocked || {}).characters || [])])],
+        weapons: [...((data.unlocked || {}).weapons || [])]
+      },
+      totals: { ...base.totals, ...(data.totals || {}) },
       version: VERSION
     };
   } catch (e) {

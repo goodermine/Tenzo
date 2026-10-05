@@ -15,6 +15,8 @@ import { Director } from './director.js';
 import { ENEMIES } from '../content/enemies.js';
 import { WEAPONS, WEAPON_INDEX, EVOLUTIONS, BEH, PIERCE_ALL } from '../content/weapons.js';
 import { PASSIVES, PASSIVE_INDEX } from '../content/passives.js';
+import { CHARACTERS, CHARACTER_INDEX } from '../content/characters.js';
+import { applyUpgrades } from '../content/meta.js';
 
 export const MAX_E = 1024;
 export const MAX_S = 1024;
@@ -70,9 +72,21 @@ class Pool {
 }
 
 export class Sim {
-  constructor({ seed = 1 } = {}) {
+  /**
+   * @param seed      the run's random seed
+   * @param character ship id (src/content/characters.js)
+   * @param upgrades  permanent upgrade levels bought in the shop
+   * @param locked    weapon ids not yet unlocked, never offered
+   */
+  constructor({ seed = 1, character = 'vanguard', upgrades = {}, locked = [] } = {}) {
     this.seed = seed;
     this.rng = makeRng(seed);
+    this.char = CHARACTERS[CHARACTER_INDEX[character] ?? 0];
+    this.upgrades = upgrades;
+    this.locked = new Set(locked);
+    this.rerolls = upgrades.reroll || 0;
+    this.bossesKilled = [];
+    this.evolvedCount = 0;
     this.events = new Events(4096);
     this.time = 0;
     this.userPaused = false;
@@ -194,7 +208,21 @@ export class Sim {
     /* The browser holds the cards back for a slow-motion beat after a
        level-up; while this is set the level is banked but not offered. */
     this.holdChoices = false;
-    this.addWeapon('bolt');
+    this.p.hp = this.p.maxHp;
+    this.addWeapon(this.char.weapon);
+  }
+
+  /** What the run achieved, for credits and unlocks. */
+  summary() {
+    return {
+      seconds: Math.floor(this.time),
+      kills: this.p.kills,
+      level: this.p.level,
+      won: this.won,
+      bosses: this.bossesKilled.slice(),
+      evolved: this.evolvedCount,
+      character: this.char.id
+    };
   }
 
   get eHigh() { return this.ePool.high; }
@@ -204,10 +232,12 @@ export class Sim {
   /* ------------------------------------------------------------ build */
 
   recomputeStats() {
+    const c = this.char;
     const s = {
-      damage: 1, cooldown: 1, area: 1, speed: 1, magnet: 1,
-      amount: 0, armor: 0, regen: 0, maxHp: 100, growth: 1
+      damage: c.damage, cooldown: c.cooldown, area: 1, speed: c.speed, magnet: 1,
+      amount: 0, armor: c.armor, regen: 0, maxHp: c.hp, growth: 1
     };
+    applyUpgrades(s, this.upgrades);
     for (const pa of this.passives) pa.def.apply(s, pa.level);
     s.armor = Math.min(0.6, s.armor);
     const p = this.p;
@@ -248,6 +278,7 @@ export class Sim {
     w.level = 1;
     w.stats = def.levels[0];
     def.init(w);
+    this.evolvedCount++;
     this.events.push(EV.EVOLVE, this.p.x, this.p.y, w.slot);
   }
 
@@ -277,7 +308,7 @@ export class Sim {
     }
     if (this.weapons.length < SLOTS) {
       for (const def of WEAPONS) {
-        if (def.evolved || this.weapons.some(w => w.def === def)) continue;
+        if (def.evolved || this.locked.has(def.id) || this.weapons.some(w => w.def === def)) continue;
         /* nor the base of a weapon already evolved */
         if (EVOLUTIONS.some(e => e.from === def.id && this.weapons.some(w => w.def.id === e.to))) continue;
         cands.push({ kind: 'weapon', id: def.id, level: 1, weight: 0.85 });
@@ -300,6 +331,14 @@ export class Sim {
     }
     if (!out.length) out.push({ kind: 'heal', level: 0 });
     return out;
+  }
+
+  /** Spend a reroll on a fresh set of cards. */
+  reroll() {
+    if (!this.choices || this.rerolls <= 0) return false;
+    this.rerolls--;
+    this.choices = this.rollChoices();
+    return true;
   }
 
   choose(index) {
@@ -542,6 +581,7 @@ export class Sim {
     if (roll < 0.005) this.dropItem(ITEM.HEAL, x, y);
     else if (roll < 0.0075 && !this.itemOut(ITEM.VACUUM)) this.dropItem(ITEM.VACUUM, x, y);
     this.p.kills++;
+    if (def.boss) this.bossesKilled.push(def.id);
     if (this.boss === i) this.boss = -1;
     /* Dead before onDeath runs, so a blast it sets off cannot hit it
        again; but its slot is not reusable until after, so enemies spawned

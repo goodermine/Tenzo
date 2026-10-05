@@ -11,6 +11,10 @@ import { LevelUp, describe } from './ui/levelup.js';
 import { Audio } from './audio.js';
 import { Haptics } from './haptics.js';
 import { load, store } from './save.js';
+import { renderShips, renderShop } from './ui/menu.js';
+import { settleRun, lockedWeapons } from './content/meta.js';
+import { CHARACTERS, CHARACTER_INDEX } from './content/characters.js';
+import { WEAPONS, WEAPON_INDEX } from './content/weapons.js';
 
 const $ = sel => document.querySelector(sel);
 /* The simulation never steps further than this at once; a slow frame is
@@ -74,6 +78,21 @@ async function boot() {
 
   $('#title .start').addEventListener('click', start);
   $('#over .again').addEventListener('click', start);
+  $('#over .menu').addEventListener('click', toTitle);
+  $('#title .shop-open').addEventListener('click', () => {
+    renderShop($('#shop'), game.save, buy);
+    $('#shop').classList.add('on');
+  });
+  $('#shop .shop-close').addEventListener('click', () => {
+    $('#shop').classList.remove('on');
+    renderTitle();
+  });
+  $('#levelup .reroll').addEventListener('click', () => {
+    if (game.sim.reroll()) {
+      game.audio.pick();
+      game.haptics.buzz(10, true);
+    }
+  });
   $('#hud .pause').addEventListener('click', () => setPaused(true));
   $('#paused .resume').addEventListener('click', () => setPaused(false));
   $('#paused .quit').addEventListener('click', () => {
@@ -88,6 +107,7 @@ async function boot() {
   /* Behind the title screen, a quiet demo field of drifting enemies. */
   game.sim = new Sim({ seed: 12345 });
   view.reset(game.sim);
+  renderTitle();
 
   /* Bloom starts on and is dropped by watchPerf() if the frame rate cannot
      take it. */
@@ -106,12 +126,55 @@ function applySettings() {
   if (game.view) game.view.setBloom(st.bloom !== 'off' && !game.bloomDowngraded);
 }
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 'S'}`;
+
+function renderTitle() {
+  const save = game.save;
+  renderShips($('#title .ships'), save, game.atlas, id => {
+    save.character = id;
+    store(save);
+    renderTitle();
+  });
+  $('#title .credits').textContent = save.credits;
+  const b = save.best.seconds;
+  $('#title .best').textContent = save.totals.runs
+    ? `BEST ${Math.floor(b / 60)}:${String(b % 60).padStart(2, '0')}  ·  ${plural(save.totals.runs, 'RUN')}  ·  ${plural(save.totals.wins, 'WIN')}`
+    : '';
+}
+
+function buy(u, cost) {
+  const save = game.save;
+  if (save.credits < cost) return;
+  save.credits -= cost;
+  save.upgrades[u.id] = (save.upgrades[u.id] || 0) + 1;
+  store(save);
+  game.audio.pick();
+  game.haptics.buzz(15, true);
+  renderShop($('#shop'), save, buy);
+}
+
+function toTitle() {
+  $('#over').classList.remove('on');
+  $('#title').classList.add('on');
+  game.state = 'title';
+  game.sim = new Sim({ seed: 12345 });
+  game.view.reset(game.sim);
+  renderTitle();
+}
+
 function start() {
   const { view, hud, input, levelUp } = game;
   game.audio.unlock();
   game.audio.startMusic();
   game.freeze = game.slow = 0;
-  game.sim = new Sim({ seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
+  const save = game.save;
+  if (!save.unlocked.characters.includes(save.character)) save.character = 'vanguard';
+  game.sim = new Sim({
+    seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0,
+    character: save.character,
+    upgrades: save.upgrades,
+    locked: lockedWeapons(save)
+  });
   game.sim.viewRadius = view.viewRadius;
   view.reset(game.sim);
   levelUp.hide();
@@ -146,8 +209,25 @@ function renderLoadout(el, sim) {
   for (const p of sim.passives) add(p.def.icon, `LV ${p.level}`);
 }
 
-function showResults(sim) {
+function showResults(sim, settled) {
   const t = Math.floor(sim.time);
+  const earned = $('#over .earned');
+  earned.textContent = `+${settled.credits} CREDITS`;
+  if (settled.newBest) {
+    const nb = document.createElement('span');
+    nb.className = 'nb';
+    nb.textContent = 'NEW BEST TIME';
+    earned.append(nb);
+  }
+  const un = $('#over .unlocks');
+  un.replaceChildren();
+  for (const u of settled.unlocked) {
+    const d = document.createElement('div');
+    d.textContent = u.kind === 'weapon'
+      ? `UNLOCKED WEAPON · ${WEAPONS[WEAPON_INDEX[u.id]].name}`
+      : `UNLOCKED SHIP · ${CHARACTERS[CHARACTER_INDEX[u.id]].name}`;
+    un.append(d);
+  }
   const stats = [
     [`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, 'SURVIVED'],
     [sim.p.kills, 'KILLS'],
@@ -325,6 +405,9 @@ function frame(rawDt) {
   if (sim.choices && !sim.over) {
     input.setEnabled(false);
     levelUp.show(sim.choices, sim.p.level, sim.choiceFromCache ? 'SUPPLY CACHE' : 'LEVEL UP');
+    const rr = $('#levelup .reroll');
+    rr.classList.toggle('on', sim.rerolls > 0);
+    if (sim.rerolls > 0) rr.textContent = `REROLL · ${sim.rerolls} LEFT`;
   }
   if (sim.over) {
     levelUp.hide();
@@ -336,7 +419,9 @@ function frame(rawDt) {
       game.state = 'over';
       game.overAt = 0;
       hud.show(false);
-      showResults(sim);
+      const settled = settleRun(game.save, sim.summary());
+      store(game.save);
+      showResults(sim, settled);
     }
   }
 }

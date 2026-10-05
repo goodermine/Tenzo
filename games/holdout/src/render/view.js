@@ -555,7 +555,9 @@ export class View {
 
   drawPlayer(sim, tex, R, T, p) {
     const hurt = p.hurt > 0 && Math.sin(T * 50) > 0;
-    this.player.texture = hurt ? tex.player_w : tex.player;
+    const ship = sim.char.sprite;
+    this.player.texture = hurt ? tex[ship + '_w'] : tex[ship];
+    this.engine.tint = hex(sim.char.color);
     this.player.position.set(p.x, p.y);
     this.player.rotation = p.face;
     this.player.scale.set((p.r / R) * 1.25);
@@ -565,7 +567,7 @@ export class View {
     this.engine.alpha = 0.5 + 0.4 * sp;
     if (sp > 0.3 && Math.random() < 0.6) {
       this.emit(FX.DOT, this.engine.x, this.engine.y, -p.vx * 0.3 + (Math.random() - 0.5) * 30,
-        -p.vy * 0.3 + (Math.random() - 0.5) * 30, 0.3, 0.12, hex(COLORS.player));
+        -p.vy * 0.3 + (Math.random() - 0.5) * 30, 0.3, 0.12, hex(sim.char.color));
     }
 
     /* health bar under the ship, only once hurt */

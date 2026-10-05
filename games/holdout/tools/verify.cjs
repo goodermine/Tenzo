@@ -244,6 +244,70 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     check('killing the Monolith wins the run', won.won && won.title === 'HOLDOUT COMPLETE', JSON.stringify(won));
     await shot('won.png');
 
+    /* Progression: the run paid out and was saved; evolving unlocked the
+       Specter. */
+    const paid = await sim(() => ({
+      earned: document.querySelector('#over .earned').textContent,
+      unlocks: [...document.querySelectorAll('#over .unlocks div')].map(d => d.textContent),
+      credits: JSON.parse(localStorage.getItem('holdout.save') || '{}').credits || 0
+    }));
+    check('a finished run pays credits and saves them', /^\+\d+ CREDITS/.test(paid.earned) && paid.credits > 0,
+      `${paid.earned}, saved ${paid.credits}`);
+    check('evolving a weapon unlocks the Specter', paid.unlocks.some(u => u.includes('SPECTER')), paid.unlocks.join(' | '));
+
+    await page.tap('#over .menu');
+    await wait(800);
+    const title = await sim(() => [...document.querySelectorAll('#title .ship')].map(b => ({
+      name: b.querySelector('.n').textContent, locked: b.classList.contains('locked')
+    })));
+    check('title offers three ships, unlocked ones selectable',
+      title.length === 3 && !title[2].locked && title[1].locked, JSON.stringify(title));
+
+    /* Buy an upgrade, then reload: it must still be there. */
+    await sim(() => { window.__game.save.credits = 5000; });
+    await page.tap('#title .shop-open');
+    await wait(500);
+    await page.tap('#shop .up button');
+    await wait(300);
+    await shot('shop.png');
+    await page.tap('#shop .shop-close');
+    await wait(300);
+    await page.tap('#title .ship:nth-child(3)');
+    await wait(300);
+    await page.reload();
+    for (let i = 0; i < 60; i++) {
+      if (await page.evaluate(() => window.__ready === true)) break;
+      await wait(1000);
+    }
+    await wait(1500);
+    const kept = await sim(() => {
+      const s = window.__game.save;
+      return { hull: s.upgrades.hull || 0, credits: s.credits, ship: s.character };
+    });
+    check('upgrades, credits and ship choice survive a reload',
+      kept.hull === 1 && kept.credits < 5000 && kept.credits > 0 && kept.ship === 'specter', JSON.stringify(kept));
+    await shot('title-progress.png');
+
+    /* The chosen ship is what deploys, with the upgrade applied. */
+    await page.tap('#title .start');
+    await wait(1000);
+    const ship = await sim(() => {
+      const s = window.__game.sim;
+      return { id: s.char.id, weapon: s.weapons[0].def.id, maxHp: s.p.maxHp };
+    });
+    check('the Specter deploys with its own weapon and the hull upgrade',
+      ship.id === 'specter' && ship.weapon === 'chain' && ship.maxHp === 85, JSON.stringify(ship));
+
+    /* Rerolls: bought rerolls show on the cards and replace them. */
+    await sim(() => { const s = window.__game.sim; s.rerolls = 1; s.p.xp = s.p.xpNext; });
+    await wait(1500);
+    const before2 = await sim(() => window.__game.sim.choices && window.__game.sim.choices.map(c => c.id).join());
+    const rr = await sim(() => document.querySelector('#levelup .reroll').classList.contains('on'));
+    if (rr) await page.tap('#levelup .reroll');
+    await wait(500);
+    const after2 = await sim(() => ({ left: window.__game.sim.rerolls, shown: document.querySelectorAll('#levelup .card').length }));
+    check('a reroll replaces the cards', rr && after2.left === 0 && after2.shown === 3, `${before2} (rerolls left ${after2.left})`);
+
     check('no runtime errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (e) {
     check('run completed', false, e.message);
