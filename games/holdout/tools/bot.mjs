@@ -1,0 +1,96 @@
+/* HOLDOUT - a headless player, for balance and soak testing.
+ *
+ *   node tools/bot.mjs [runs=5] [seed=1] [minutes=15]
+ *
+ * Plays complete runs against the real simulation (src/sim/world.js - the
+ * same code the browser runs) at a fixed 60Hz, with no rendering. The bot
+ * kites: it steers away from nearby enemies weighted by closeness, circles
+ * rather than backing straight off, and drifts towards XP. Level-up choices
+ * are random but seeded, so a run is reproducible.
+ *
+ * It is not a good player - which is the point. If it survives too long, the
+ * game is too easy; if it dies in the first minutes, the opening is unfair.
+ */
+import { Sim } from '../src/sim/world.js';
+import { makeRng } from '../src/sim/rng.js';
+
+const runs = +(process.argv[2] || 5);
+const seed0 = +(process.argv[3] || 1);
+const minutes = +(process.argv[4] || 15);
+const DT = 1 / 60;
+
+function steer(sim) {
+  const p = sim.p;
+  let ax = 0, ay = 0;
+  for (let i = 0; i < sim.eHigh; i++) {
+    if (!sim.eAlive[i]) continue;
+    const dx = p.x - sim.ex[i], dy = p.y - sim.ey[i], d2 = dx * dx + dy * dy;
+    if (d2 > 260 * 260) continue;
+    const d = Math.sqrt(d2) || 1, w = 1 / Math.max(d2, 400);
+    ax += (dx / d) * w;
+    ay += (dy / d) * w;
+  }
+  let mx = 0, my = 0;
+  const al = Math.hypot(ax, ay);
+  if (al > 0) {
+    /* away, plus a sideways component so it circles instead of retreating
+       into a wall of enemies */
+    mx = ax / al - (ay / al) * 0.6;
+    my = ay / al + (ax / al) * 0.6;
+  }
+  /* pull towards the nearest gem when nothing is close */
+  let best = -1, bd = 300 * 300;
+  for (let i = 0; i < sim.gPool.high; i++) {
+    if (!sim.gAlive[i]) continue;
+    const dx = sim.gx[i] - p.x, dy = sim.gy[i] - p.y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = i; }
+  }
+  if (best >= 0) {
+    const dx = sim.gx[best] - p.x, dy = sim.gy[best] - p.y, d = Math.hypot(dx, dy) || 1;
+    const k = al > 0.0005 ? 0.35 : 1;
+    mx += (dx / d) * k;
+    my += (dy / d) * k;
+  }
+  const l = Math.hypot(mx, my);
+  sim.move.x = l > 0 ? mx / l : 0;
+  sim.move.y = l > 0 ? my / l : 0;
+}
+
+const results = [];
+for (let r = 0; r < runs; r++) {
+  const seed = seed0 + r;
+  const sim = new Sim({ seed });
+  const pick = makeRng(seed * 7919);
+  let peak = 0, worstStep = 0, totalMs = 0, steps = 0;
+  const limit = minutes * 60;
+  while (!sim.over && sim.time < limit) {
+    if (sim.choices) {
+      sim.choose(pick.int(sim.choices.length));
+      continue;
+    }
+    if (steps % 3 === 0) steer(sim);
+    const t0 = performance.now();
+    sim.step(DT);
+    const ms = performance.now() - t0;
+    totalMs += ms;
+    worstStep = Math.max(worstStep, ms);
+    steps++;
+    sim.events.clear();
+    peak = Math.max(peak, sim.eCount);
+  }
+  const res = {
+    seed,
+    survived: `${Math.floor(sim.time / 60)}:${String(Math.floor(sim.time % 60)).padStart(2, '0')}`,
+    seconds: Math.round(sim.time),
+    level: sim.p.level,
+    kills: sim.p.kills,
+    peakEnemies: peak,
+    build: sim.weapons.map(w => `${w.def.id}${w.level}`).concat(sim.passives.map(p => `${p.def.id}${p.level}`)).join(' '),
+    avgStepMs: +(totalMs / steps).toFixed(3),
+    worstStepMs: +worstStep.toFixed(2)
+  };
+  results.push(res);
+  console.log(JSON.stringify(res));
+}
+const secs = results.map(r => r.seconds).sort((a, b) => a - b);
+console.log(`\nmedian survival ${Math.floor(secs[secs.length >> 1] / 60)}m${secs[secs.length >> 1] % 60}s over ${runs} runs`);
