@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=dist/holdout.js --log-level=warning",
-    "dev": "esbuild src/main.js --bundle --format=esm --outfile=dist/holdout.js --sourcemap --watch"
+    "dev": "esbuild src/main.js --bundle --format=esm --outfile=dist/holdout.js --sourcemap --watch",
+    "package:itch": "node tools/package-itch.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.22.0"

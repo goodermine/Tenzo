@@ -71,6 +71,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (/fonts\.(googleapis|gstatic)\.com/.test(url)) return;
     if (m.type() === 'error' && !m.text().includes('favicon')) errors.push('console: ' + m.text().slice(0, 300));
   });
+  /* everything the game loads must come from its own folder */
+  const foreign = new Set();
+  page.on('request', r => {
+    const u = new URL(r.url());
+    if (/^https?:$/.test(u.protocol) && u.host !== `127.0.0.1:${PORT}`) foreign.add(u.host);
+  });
   const cdp = await context.newCDPSession(page);
   const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', {
     type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }]
@@ -511,12 +517,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
     /* Installable: the manifest loads and the offline worker registers. */
     const pwa = await sim(async () => {
-      const m = await fetch('manifest.json').then(r => r.json()).catch(() => null);
+      const itch = !!document.querySelector('meta[name="holdout-build"][content="itch"]');
+      const m = itch ? null : await fetch('manifest.json').then(r => r.json()).catch(() => null);
       for (let i = 0; i < 20 && !window.__sw; i++) await new Promise(r => setTimeout(r, 250));
       const reg = await navigator.serviceWorker.getRegistration();
-      return { manifest: !!(m && m.icons && m.icons.length >= 3), sw: window.__sw || 'none', reg: !!reg };
+      return { itch, manifest: !!(m && m.icons && m.icons.length >= 3), sw: window.__sw || 'none', reg: !!reg };
     });
-    check('installable: manifest and offline worker', pwa.manifest && pwa.sw === 'registered' && pwa.reg, JSON.stringify(pwa));
+    if (pwa.itch) {
+      check('itch build: no offline worker', pwa.sw === 'skipped' && !pwa.reg, JSON.stringify(pwa));
+    } else {
+      check('installable: manifest and offline worker', pwa.manifest && pwa.sw === 'registered' && pwa.reg, JSON.stringify(pwa));
+    }
+    const fonts = await sim(() => document.fonts.check('800 20px Oxanium') && document.fonts.check('600 15px Barlow'));
+    check('the bundled fonts load, with no third-party requests', fonts && foreign.size === 0,
+      `fonts ${fonts ? 'loaded' : 'missing'}; foreign hosts: ${[...foreign].join(', ') || 'none'}`);
 
     /* Landscape: the level-up cards must fit a phone on its side. */
     await page.setViewportSize({ width: 844, height: 390 });

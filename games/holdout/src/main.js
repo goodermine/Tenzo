@@ -13,7 +13,7 @@ import { Audio } from './audio.js';
 import { Haptics } from './haptics.js';
 import { load, store } from './save.js';
 import { renderShips, renderShop } from './ui/menu.js';
-import { HowTo } from './ui/howto.js';
+import { HowTo, KEYS } from './ui/howto.js';
 import { settleRun, lockedWeapons } from './content/meta.js';
 import { CHARACTERS, CHARACTER_INDEX } from './content/characters.js';
 import { WEAPONS, WEAPON_INDEX } from './content/weapons.js';
@@ -122,6 +122,18 @@ async function boot() {
     setPaused(false);
     game.sim.over = true;
   });
+  /* Keyboard: Esc or P pauses and resumes (and closes the guide), 1-3
+     pick a level-up card. */
+  addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'escape' || k === 'p') {
+      if (howto.open) howto.close();
+      else if (game.state === 'run' && !game.sim.choices) setPaused(!game.sim.userPaused);
+    } else if (/^[1-3]$/.test(k) && $('#levelup').classList.contains('on')) {
+      const card = document.querySelectorAll('#levelup .card')[+k - 1];
+      if (card) card.click();
+    }
+  });
   /* Backgrounded - a call, the home button - pauses the run. */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && game.state === 'run' && game.sim.running) setPaused(true);
@@ -185,7 +197,7 @@ function updateTips(sim, dt) {
   } else if (tip.kind === 'gems') {
     if (sim.p.xp > 0 || sim.p.level > 1 || tip.t > 6) hideTip();
   } else if (!s.move) {
-    showTip('move', 'DRAG ANYWHERE TO MOVE');
+    showTip('move', KEYS ? 'WASD OR ARROWS TO MOVE' : 'DRAG ANYWHERE TO MOVE');
   } else if (!s.gems && sim.gPool.count > 0) {
     showTip('gems', 'COLLECT THE GEMS');
   }
@@ -559,7 +571,12 @@ window.__enemyIndex = Object.fromEntries(ENEMIES.map((e, i) => [e.id, i]));
 /* Offline support, where the page is served over http(s) and the browser
    allows it. Some hosts sandbox pages so a worker cannot register; the game
    runs the same either way, so a failure here is not worth reporting. */
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+const build = (document.querySelector('meta[name="holdout-build"]') || {}).content;
+if (build === 'itch') {
+  /* itch.io serves each upload from its own address and shows the game in
+     an iframe; a cache-first worker there could only serve stale copies. */
+  window.__sw = 'skipped';
+} else if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(() => { window.__sw = 'registered'; },
       () => { window.__sw = 'unavailable'; });

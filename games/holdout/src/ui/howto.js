@@ -4,12 +4,16 @@
    strip, so swiping feels like any other phone carousel. */
 import { iconCanvas } from '../render/atlas.js';
 
+/* A mouse and keyboard rather than a touch screen: say so on page one. */
+export const KEYS = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+
 const PAGES = [
   {
     title: 'FLY',
     scene: 'fly',
     lines: [
-      ['Drag anywhere', ' on the screen to steer. Let go to stop.'],
+      KEYS ? ['Steer with WASD or the arrow keys', ', or drag with the mouse. Esc pauses.']
+        : ['Drag anywhere', ' on the screen to steer. Let go to stop.'],
       ['Your guns fire by themselves', ', ahead of you and behind you. There is no fire button.'],
       ['Keep moving.', ' Fly towards gaps and steer around the swarm.']
     ]

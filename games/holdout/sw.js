@@ -2,13 +2,17 @@
    all cached on install, so after the first visit it starts with no
    network at all. Requests are served from the cache first; a new version
    is picked up by bumping VERSION, which replaces the cache on activate. */
-const VERSION = 'holdout-v3';
+const VERSION = 'holdout-v4';
 const FILES = [
   './',
   './index.html',
   './style.css',
   './dist/holdout.js',
   './manifest.json',
+  './fonts/oxanium.woff2',
+  './fonts/barlow-500.woff2',
+  './fonts/barlow-600.woff2',
+  './fonts/barlow-700.woff2',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',

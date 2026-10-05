@@ -9,8 +9,8 @@ by `src/audio.js` (WebAudio synthesis).
 
 [Oxanium](https://fonts.google.com/specimen/Oxanium) and
 [Barlow](https://fonts.google.com/specimen/Barlow), both SIL Open Font
-License, loaded from Google Fonts. The game falls back to system fonts when
-they cannot be fetched.
+License. The Latin subsets ship with the game in `fonts/`, with their
+licences (`fonts/OFL-*.txt`), so it loads nothing from elsewhere.
 
 ## Libraries
 

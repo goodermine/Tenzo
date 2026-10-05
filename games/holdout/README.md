@@ -50,6 +50,9 @@ offline.
 | `tools/bot.mjs` | plays seeded runs headless, for balance |
 | `tools/verify.cjs` | drives the game on an emulated phone |
 | `tools/make-icons.mjs` | home-screen icons |
+| `fonts/` | Oxanium and Barlow (SIL OFL), bundled so the game needs no network |
+| `tools/package-itch.mjs`, `tools/verify-itch.cjs` | the itch.io release zip, and its checks inside an iframe |
+| `tools/make-store-art.cjs`, `itch/` | store cover and screenshots shot from the real game; page text and upload steps |
 
 ## Build and test
 
@@ -66,3 +69,21 @@ about 6 runs in 10 beat the final boss.
 
 The verifier runs in a software renderer and says nothing about frame rate.
 Turn on **FPS** in the pause menu to check it on a real phone.
+
+## Release on itch.io
+
+```bash
+npm run package:itch                                     # -> release/holdout-itch.zip
+NODE_PATH=$(npm root -g) node tools/verify-itch.cjs      # phone + desktop, in a cross-origin iframe
+HOLDOUT_DIR=$PWD/release/holdout-itch NODE_PATH=$(npm root -g) node tools/verify.cjs
+NODE_PATH=$(npm root -g) node tools/make-store-art.cjs   # -> itch/cover.png, itch/screens/
+```
+
+The itch build is the same game without the offline worker (itch serves
+every upload from a new address, so it would only ever cache stale copies).
+`itch/UPLOAD.md` walks through creating the page; `itch/page.md` has its
+text. `.github/workflows/holdout-itch.yml` builds the zip on every push and,
+once given an itch API key, uploads it with butler.
+
+On a computer the game plays with WASD or the arrow keys, Esc or P to
+pause, and 1-3 to pick a card.
