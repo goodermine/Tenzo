@@ -27,7 +27,8 @@ const game = {
   sim: null,
   overAt: 0,
   freeze: 0,          /* hit-pause, real seconds left */
-  slow: 0,            /* level-up slow-motion beat, real seconds left */
+  slow: 0,            /* slow-motion beat, real seconds left */
+  slowRate: 0.2,      /* ...and how slow */
   save: load(),
   /* quality tier: 0 everything, 1 no bloom, 2 half the particles,
      3 render at 1x pixel density */
@@ -303,7 +304,13 @@ function react(sim) {
   for (let i = 0; i < ev.count; i++) {
     const t = ev.type[i];
     if (t === EV.KILL) {
-      if (ev.b[i] >= 20) {
+      if (ev.b[i] >= 40 && live) {
+        /* a boss going down plays out in slow motion */
+        view.addTrauma(0.8);
+        game.slow = 1.4;
+        game.slowRate = 0.3;
+        game.haptics.buzz([60, 40, 60, 40, 200], true);
+      } else if (ev.b[i] >= 20) {
         view.addTrauma(0.22);
         if (live) {
           game.freeze = Math.max(game.freeze, 0.045);
@@ -326,7 +333,8 @@ function react(sim) {
       view.addTrauma(0.2);
       game.haptics.buzz([18, 40, 18], true);
       /* a slow-motion beat before the cards come up */
-      game.slow = 0.5;
+      game.slow = Math.max(game.slow, 0.5);
+      game.slowRate = Math.min(game.slowRate, 0.2);
       sim.holdChoices = true;
     } else if (t === EV.SURGE) {
       view.addTrauma(0.3);
@@ -413,8 +421,11 @@ function frame(rawDt) {
     dt = 0;
   } else if (game.slow > 0) {
     game.slow -= rawDt;
-    dt = rawDt * 0.2;
-    if (game.slow <= 0) sim.holdChoices = false;
+    dt = rawDt * game.slowRate;
+    if (game.slow <= 0) {
+      sim.holdChoices = false;
+      game.slowRate = 0.2;
+    }
   }
 
   if (game.state === 'run') {

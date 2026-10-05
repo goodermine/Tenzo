@@ -263,6 +263,45 @@ const SPRITES = {
     neon(ctx, c, 4, () => line(ctx, 0, -R * 0.6, 0, R * 0.6), 0, 8);
   },
   shield: (ctx, c) => neon(ctx, c, 3, () => circle(ctx, R * 0.98), 0, 12),
+  /* Parts drawn on top of enemies, in white so the renderer can tint them. */
+  hexring: (ctx, c) => neon(ctx, c, 3, () => poly(ctx, 6, R * 0.95, Math.PI / 6), 0, 10),
+  segment: (ctx, c) => neon(ctx, c, 5, () => {
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 0.95, -0.5, 0.5);
+  }, 0, 12),
+  crown: (ctx, c) => neon(ctx, c, 3, () => {
+    ctx.beginPath();
+    for (let k = 0; k < 5; k++) {
+      const a = (Math.PI * 2 * k) / 5;
+      ctx.moveTo(Math.cos(a) * R * 0.78, Math.sin(a) * R * 0.78);
+      ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R);
+    }
+    ctx.moveTo(R * 0.78, 0);
+    ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2);
+  }, 0, 12),
+  /* a fragment of an outline, thrown when an enemy shatters */
+  shard: (ctx, c) => neon(ctx, c, 4, () => {
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.6, -R * 0.12);
+    ctx.lineTo(R * 0.6, 0);
+    ctx.lineTo(-R * 0.45, R * 0.18);
+  }, 0, 10),
+  dashring: (ctx, c) => neon(ctx, c, 4, () => {
+    ctx.beginPath();
+    for (let k = 0; k < 12; k++) {
+      const a = (Math.PI * 2 * k) / 12;
+      ctx.moveTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95);
+      ctx.arc(0, 0, R * 0.95, a, a + 0.32);
+    }
+  }, 0, 14),
+  plate: (ctx, c) => neon(ctx, c, 4, () => {
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.3, -R * 0.8);
+    ctx.lineTo(R * 0.3, -R * 0.55);
+    ctx.lineTo(R * 0.3, R * 0.55);
+    ctx.lineTo(-R * 0.3, R * 0.8);
+    ctx.closePath();
+  }, 0.25, 14),
   /* a scorch mark left on the floor by big kills and blasts */
   scorch: ctx => {
     let seed = 11;
@@ -363,6 +402,7 @@ const LAYOUT = [
   ['specter_fill', 'specter', 'fill'],
   ['disc_dark', 'disc_dark', '#000'],
   ['scorch', 'scorch', '#000'],
+  ...['hexring', 'segment', 'crown', 'shard', 'dashring', 'plate'].map(n => [n, n, '#ffffff']),
   ['arrow', 'arrow', '#ffffff'],
   ['ebullet2', 'ebullet2', COLORS.ebullet],
   ...['bolt', 'laser', 'blade', 'glaive', 'missile', 'mine', 'disc', 'drone', 'pellet', 'ebullet',

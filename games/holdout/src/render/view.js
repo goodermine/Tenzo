@@ -55,7 +55,7 @@ class Layer {
 
 /* Short-lived effect particles, owned by the view. */
 const FX_CAP = 1800;
-const FX = { SPARK: 0, DOT: 1, RING: 2, TELL: 3 };
+const FX = { SPARK: 0, DOT: 1, RING: 2, TELL: 3, SHARD: 4 };
 /* Damage numbers alive at once, and new ones allowed per frame. Hits on an
    enemy that already has a fresh number add to it rather than stacking a new
    one, so a nova through sixty enemies shows a few totals, not sixty digits. */
@@ -139,7 +139,14 @@ export class View {
     this.fxSize = new Float32Array(FX_CAP);
     this.fxTint = new Uint32Array(FX_CAP);
     this.fxKind = new Uint8Array(FX_CAP);
+    this.fxRot = new Float32Array(FX_CAP);
+    this.fxSpin = new Float32Array(FX_CAP);
     this.fxN = 0;
+    /* per enemy: spawn-in time left, and shield segments last drawn */
+    this.eBorn = new Float32Array(1024);
+    this.eSeg = new Uint8Array(1024);
+    /* staged explosions, for a boss going down */
+    this.seq = [];
 
     this.nX = new Float32Array(NUM_CAP);
     this.nY = new Float32Array(NUM_CAP);
@@ -203,6 +210,9 @@ export class View {
     this.fxN = 0;
     this.nN = 0;
     this.numOf.fill(-1);
+    this.eBorn.fill(0);
+    this.eSeg.fill(0);
+    this.seq.length = 0;
     this.aN = 0;
     this.trauma = 0;
     this.novaFade = 0;
@@ -229,6 +239,14 @@ export class View {
     this.fxSize[i] = size;
     this.fxTint[i] = tint;
     this.fxKind[i] = kind;
+    return i;
+  }
+
+  /* a spinning fragment of outline */
+  shard(x, y, vx, vy, life, size, tint) {
+    const i = this.emit(FX.SHARD, x, y, vx, vy, life, size, tint);
+    this.fxRot[i] = Math.random() * TAU;
+    this.fxSpin[i] = (Math.random() - 0.5) * 24;
   }
 
   burst(x, y, n, speed, size, tint, life = 0.45) {
@@ -291,6 +309,22 @@ export class View {
         case EV.KILL: {
           const type = events.a[i], r = events.b[i], tint = ENEMY_TINT[type];
           const big = r >= 40;
+          /* the outline shatters: a few spinning pieces, more for bigger */
+          const pieces = Math.ceil((r < 10 ? 2 : r < 20 ? 4 : big ? 10 : 6) * this.fxScale);
+          for (let k = 0; k < pieces; k++) {
+            const a = Math.random() * TAU, sp = 90 + Math.random() * (140 + r * 4);
+            this.shard(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4, Math.cos(a) * sp, Math.sin(a) * sp,
+              0.45 + Math.random() * 0.35, (r / this.R) * 0.55, tint);
+          }
+          if (r >= 14 && !big) this.emit(FX.RING, x, y, 0, 0, 0.3, r * 2.6, tint);
+          if (big) {
+            /* a boss goes down in stages */
+            for (let k = 0; k < 7; k++) {
+              const a = Math.random() * TAU, d = Math.random() * r;
+              this.seq.push({ t: 0.12 + k * 0.17, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, r: r * (0.6 + Math.random() * 0.6), tint });
+            }
+            this.seq.push({ t: 1.4, x, y, r: r * 2.5, tint: 0xffffff });
+          }
           this.burst(x, y, big ? 90 : 6 + Math.round(r * 0.35), big ? 700 : 260 + r * 6,
             big ? 0.5 : 0.22 + r * 0.006, tint, big ? 1.2 : 0.5);
           this.emit(FX.DOT, x, y, 0, 0, big ? 0.6 : 0.22, (r / this.R) * (big ? 3 : 1.4), tint);
@@ -304,6 +338,12 @@ export class View {
         case EV.HURT:
           this.burst(this.lastPx, this.lastPy, 8, 260, 0.25, 0xff4060, 0.35);
           break;
+        case EV.SPAWN: {
+          const e = events.a[i] | 0;
+          this.eBorn[e] = 0.35;
+          this.emit(FX.DOT, x, y, 0, 0, 0.3, 0.5, ENEMY_TINT[events.b[i] | 0]);
+          break;
+        }
         case EV.NOVA:
           this.background.ripple(x, y, events.a[i] * 1.6, hex(COLORS.nova), 0.7);
           break;
@@ -399,6 +439,17 @@ export class View {
     this.drawEnemies(sim, tex, R, T, p, ox, oy, z);
     this.drawWeapons(sim, tex, R, T, p, dt);
     this.drawPlayer(sim, tex, R, T, p);
+    for (let k = this.seq.length - 1; k >= 0; k--) {
+      const q = this.seq[k];
+      q.t -= realDt;
+      if (q.t > 0) continue;
+      this.seq.splice(k, 1);
+      this.burst(q.x, q.y, 24, 300 + q.r * 4, 0.35, q.tint, 0.7);
+      this.emit(FX.RING, q.x, q.y, 0, 0, 0.45, q.r * 2, q.tint);
+      this.emit(FX.DOT, q.x, q.y, 0, 0, 0.3, (q.r / this.R) * 1.2, q.tint);
+      this.background.scorch(q.x, q.y, q.r * 1.4);
+      this.addTrauma(0.25);
+    }
     this.updateFx(dt);
     this.updateNumbers(dt, ox, oy, z);
     this.markers.end();
@@ -502,7 +553,8 @@ export class View {
   }
 
   drawEnemies(sim, tex, R, T, p, ox, oy, z) {
-    const L = this.enemies, B = this.bodies, TH = this.threat;
+    const L = this.enemies, B = this.bodies, TH = this.threat, dt = this.realDt;
+    const rr = this.atlas.ringRadius;
     L.begin();
     B.begin();
     for (let i = 0; i < sim.eHigh; i++) {
@@ -514,46 +566,104 @@ export class View {
       let white = false;
       const hit = sim.eFlash[i] > 0;
       const mode = sim.eMode[i];
-      if (id === 'swarmer') rot = T * 5 + i;
-      else if (id === 'tank' || id === 'warden' || id === 'hive') rot = T * 0.6 + i;
+      const tint = ENEMY_TINT[sim.eType[i]];
+      /* spawn-in: anything that appears on screen grows out of a flash */
+      if (this.eBorn[i] > 0) {
+        this.eBorn[i] = Math.max(0, this.eBorn[i] - dt);
+        const f = 1 - this.eBorn[i] / 0.35;
+        s *= 0.2 + 0.8 * f * (2 - f);
+      }
+      if (id === 'swarmer') {
+        rot = T * 5 + i;
+        /* a short wake, now and then - there can be hundreds */
+        if (Math.random() < 0.04 * this.fxScale) this.emit(FX.DOT, x, y, 0, 0, 0.25, 0.1, tint);
+      } else if (id === 'tank' || id === 'warden' || id === 'hive') rot = T * 0.6 + i;
       else if (id === 'bomber') {
         rot = T * 2 + i;
         if (mode === 1) {
           s *= 1 + 0.25 * Math.sin(T * 50);
-          white = white || Math.sin(T * 50) > 0;
+          white = Math.sin(T * 50) > 0;
         }
       } else if (id === 'dasher' && mode !== 0) {
         rot = Math.atan2(sim.eDy[i], sim.eDx[i]);
         if (mode === 1) {
           s *= 1 + 0.18 * Math.sin(T * 40);
-          white = white || Math.sin(T * 40) > 0;
+          white = Math.sin(T * 40) > 0;
+        } else if (Math.random() < 0.8 * this.fxScale) {
+          /* a streak behind the lunge */
+          this.emit(FX.SPARK, x, y, -sim.eDx[i] * 60, -sim.eDy[i] * 60, 0.25, 0.3, tint);
         }
       } else if (id === 'blinker' && mode === 1) {
-        white = white || Math.sin(T * 45) > 0;
+        white = Math.sin(T * 45) > 0;
       } else if (id === 'monolith') {
         rot = T * 0.35;
-        if (mode === 2) white = white || Math.sin(T * 40) > 0;
+        if (mode === 2) white = Math.sin(T * 40) > 0;
       }
-      const tint = ENEMY_TINT[sim.eType[i]];
+
       if (def.boss || def.elite) {
         const g = s * (def.boss ? 3.2 : 2.6) * (1 + 0.06 * Math.sin(T * 3));
         L.add(tex.dot, x, y, g, g, 0, tint, def.boss ? 0.35 : 0.3);
       }
       B.add(tex[id + '_fill'], x, y, s, s, rot, 0xffffff, 0.94);
+
+      /* parts behind the outline */
+      if (id === 'hive') {
+        /* a counter-rotating outer ring, and brood cells that light up as
+           the next summons comes due */
+        const rs = s * 1.35;
+        L.add(tex.dashring, x, y, rs, rs, -T * 0.9, tint, 0.85);
+        const due = Math.max(0, 1 - sim.eDx[i] / 1.5);
+        if (due > 0) {
+          for (let k = 0; k < 6; k++) {
+            const a = rot + (Math.PI * 2 * k) / 6, d = sim.eR[i] * 0.52;
+            L.add(tex.dot, x + Math.cos(a) * d, y + Math.sin(a) * d, s * 0.28 * due, s * 0.28 * due, 0, 0xffe0f0, due * (0.6 + 0.4 * Math.sin(T * 30)));
+          }
+        }
+      } else if (id === 'monolith') {
+        /* armour plates that swing open before the spiral and glow before
+           the charge */
+        const open = mode === 0 ? 1.25 : mode === 2 ? 1.05 : 0.95;
+        const ptint = mode === 2 ? 0xffffff : tint;
+        for (let k = 0; k < 4; k++) {
+          const a = -T * 0.5 + (Math.PI * 2 * k) / 4, d = sim.eR[i] * open;
+          L.add(tex.plate, x + Math.cos(a) * d, y + Math.sin(a) * d, s * 0.55, s * 0.55, a, ptint, 0.9);
+        }
+      }
+
       L.add(tex[white ? id + '_w' : id], x, y, s, s, rot);
       if (hit && !white) L.add(tex[id + '_w'], x, y, s, s, rot, 0xffffff, 0.45);
+
+      /* parts in front of the outline */
+      if (id === 'chaser' || id === 'splitter') {
+        const c = s * (0.28 + 0.06 * Math.sin(T * 6 + i));
+        L.add(tex.dot, x, y, c, c, 0, tint, 0.7);
+      } else if (id === 'tank') {
+        L.add(tex.hexring, x, y, s * 0.45, s * 0.45, -T * 1.4 + i, tint, 0.8);
+      } else if (id === 'elite') {
+        const c = s * 1.3;
+        L.add(tex.crown, x, y, c, c, T * 0.8, 0xffd84f, 0.9);
+      }
       if (white) {
         /* tells go on the threat layer too, so no glow can hide them */
-        const ts = s * 1.6;
-        TH.add(tex.ring, x, y, ts * R / this.atlas.ringRadius, ts * R / this.atlas.ringRadius, 0, tint, 0.8);
+        const ts = (s * 1.6 * R) / rr;
+        TH.add(tex.ring, x, y, ts, ts, 0, tint, 0.8);
       }
       if (def.boss) this.marker(x, y, ox, oy, z, tint, T);
       else if (def.elite) this.marker(x, y, ox, oy, z, 0xffd84f, T);
       if (sim.eShield[i] > 0) {
+        /* five shield segments that break away as it takes damage */
         const f = sim.eShield[i] / (sim.eMaxHp[i] * def.shield);
-        const ss = s * 1.45;
-        L.add(tex.shield, x, y, ss, ss, -T, 0xffffff, 0.35 + 0.65 * f);
-      }
+        const n = Math.ceil(f * 5), ss = s * 1.45;
+        for (let k = 0; k < n; k++) {
+          L.add(tex.segment, x, y, ss, ss, -T + (Math.PI * 2 * k) / 5, 0xfff2a0, 0.9);
+        }
+        if (n < (this.eSeg[i] || 5)) {
+          const a = -T + (Math.PI * 2 * n) / 5;
+          this.shard(x + Math.cos(a) * sim.eR[i] * 1.4, y + Math.sin(a) * sim.eR[i] * 1.4,
+            Math.cos(a) * 160, Math.sin(a) * 160, 0.6, 0.45, 0xfff2a0);
+        }
+        this.eSeg[i] = n;
+      } else this.eSeg[i] = 0;
     }
     L.end();
     B.end();
@@ -702,6 +812,7 @@ export class View {
         this.fxVx[i] = this.fxVx[n]; this.fxVy[i] = this.fxVy[n];
         this.fxLife[i] = this.fxLife[n]; this.fxMax[i] = this.fxMax[n];
         this.fxSize[i] = this.fxSize[n]; this.fxTint[i] = this.fxTint[n]; this.fxKind[i] = this.fxKind[n];
+        this.fxRot[i] = this.fxRot[n]; this.fxSpin[i] = this.fxSpin[n];
         i--;
         continue;
       }
@@ -716,6 +827,9 @@ export class View {
           Math.atan2(this.fxVy[i], this.fxVx[i]), this.fxTint[i], f);
       } else if (kind === FX.DOT) {
         fx.add(tex.dot, this.fxX[i], this.fxY[i], s * (1.4 - f * 0.4), s * (1.4 - f * 0.4), 0, this.fxTint[i], f);
+      } else if (kind === FX.SHARD) {
+        this.fxRot[i] += this.fxSpin[i] * dt;
+        fx.add(tex.shard, this.fxX[i], this.fxY[i], s, s, this.fxRot[i], this.fxTint[i], Math.min(1, f * 1.6));
       } else if (kind === FX.RING) {
         /* expands fast, then fades */
         const e = 1 - f, sc = (s / rr) * (0.25 + 0.75 * (1 - (1 - e) * (1 - e)));

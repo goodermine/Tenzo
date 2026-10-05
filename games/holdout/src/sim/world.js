@@ -399,6 +399,10 @@ export class Sim {
       this.boss = i;
       this.events.push(EV.BOSS, x, y, type);
     }
+    /* only worth announcing where it can be seen: most spawns are off
+       screen, and there can be hundreds a minute */
+    const dx = x - this.p.x, dy = y - this.p.y, vr = this.viewRadius * 0.9;
+    if (dx * dx + dy * dy < vr * vr) this.events.push(EV.SPAWN, x, y, i, type);
     return i;
   }
 
