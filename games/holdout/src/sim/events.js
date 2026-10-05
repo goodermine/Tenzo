@@ -11,7 +11,16 @@ export const EV = {
   NOVA: 6,         // x, y, a = radius
   SHOT: 7,         // x, y, a = weapon slot
   PLAYER_DEATH: 8, // x, y
-  SURGE: 9         // x, y, a = count
+  SURGE: 9,        // x, y, a = count
+  BEAM: 10,        // x, y -> a, b (a lightning arc)
+  LASER: 11,       // x, y, a = weapon slot (a sweep starts)
+  TELL: 12,        // x, y, a = seconds, b = radius (where a blinker will land)
+  BLINK: 13,       // x, y -> a, b (a blinker jumped)
+  EXPLODE: 14,     // x, y, a = radius
+  ITEM: 15,        // x, y, a = item kind picked up
+  BOSS: 16,        // x, y, a = enemy type (a boss arrived)
+  EVOLVE: 17,      // a = weapon slot
+  BULLET: 18       // x, y (an enemy fired)
 };
 
 export class Events {

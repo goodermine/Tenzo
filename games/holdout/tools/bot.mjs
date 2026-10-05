@@ -30,6 +30,15 @@ function steer(sim) {
     ax += (dx / d) * w;
     ay += (dy / d) * w;
   }
+  /* bullets count as threats too, weighted more: they hurt */
+  for (let i = 0; i < sim.bPool.high; i++) {
+    if (!sim.bAlive[i]) continue;
+    const dx = p.x - sim.bx[i], dy = p.y - sim.by[i], d2 = dx * dx + dy * dy;
+    if (d2 > 160 * 160) continue;
+    const d = Math.sqrt(d2) || 1, w = 2.5 / Math.max(d2, 400);
+    ax += (dx / d) * w;
+    ay += (dy / d) * w;
+  }
   let mx = 0, my = 0;
   const al = Math.hypot(ax, ay);
   if (al > 0) {
@@ -85,6 +94,8 @@ for (let r = 0; r < runs; r++) {
     level: sim.p.level,
     kills: sim.p.kills,
     peakEnemies: peak,
+    won: sim.won,
+    evolved: sim.weapons.filter(w => w.def.evolved).map(w => w.def.id).join(' ') || '-',
     build: sim.weapons.map(w => `${w.def.id}${w.level}`).concat(sim.passives.map(p => `${p.def.id}${p.level}`)).join(' '),
     avgStepMs: +(totalMs / steps).toFixed(3),
     worstStepMs: +worstStep.toFixed(2)
@@ -92,5 +103,6 @@ for (let r = 0; r < runs; r++) {
   results.push(res);
   console.log(JSON.stringify(res));
 }
+console.log(`\nwins ${results.filter(r => r.won).length}/${runs}`);
 const secs = results.map(r => r.seconds).sort((a, b) => a - b);
 console.log(`\nmedian survival ${Math.floor(secs[secs.length >> 1] / 60)}m${secs[secs.length >> 1] % 60}s over ${runs} runs`);

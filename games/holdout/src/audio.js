@@ -187,6 +187,55 @@ export class Audio {
     this.noise({ dur: 1.2, vol: 0.3, filter: 'lowpass', freq: 2000, to: 100 });
   }
 
+  explode(r) {
+    if (!this.allow('boom', 0.06, 4)) return;
+    this.track('boom', 0.4);
+    const big = r > 80;
+    this.noise({ dur: big ? 0.45 : 0.28, vol: big ? 0.3 : 0.18, filter: 'lowpass', freq: 1400, to: 120 });
+    this.tone({ freq: big ? 110 : 160, to: 38, dur: big ? 0.35 : 0.22, type: 'sine', vol: big ? 0.3 : 0.18 });
+  }
+
+  zap() {
+    if (!this.allow('zap', 0.08, 2)) return;
+    this.track('zap', 0.15);
+    this.noise({ dur: 0.12, vol: 0.12, filter: 'bandpass', freq: 3200, to: 900, q: 4 });
+    this.tone({ freq: 1800, to: 300, dur: 0.1, type: 'square', vol: 0.03 });
+  }
+
+  laser() {
+    if (!this.allow('laser', 0.3, 1)) return;
+    this.tone({ freq: 620, to: 880, dur: 0.42, type: 'sawtooth', vol: 0.05, attack: 0.03 });
+    this.tone({ freq: 1240, to: 1760, dur: 0.42, type: 'sine', vol: 0.04, attack: 0.03 });
+  }
+
+  bullet() {
+    if (!this.allow('bullet', 0.07, 3)) return;
+    this.track('bullet', 0.1);
+    this.tone({ freq: 380, to: 220, dur: 0.08, type: 'square', vol: 0.035 });
+  }
+
+  item(kind) {
+    if (!this.ctx) return;
+    const notes = kind === 0 ? [67, 71, 74] : kind === 1 ? [60, 67, 72, 79, 84] : [72, 76, 79, 84, 88];
+    notes.forEach((n, i) => this.tone({ freq: midi(n), dur: 0.25, type: 'triangle', vol: 0.1, delay: i * 0.05 }));
+  }
+
+  boss() {
+    if (!this.ctx) return;
+    for (let k = 0; k < 3; k++) {
+      this.tone({ freq: 55, to: 50, dur: 0.9, type: 'sawtooth', vol: 0.18, delay: k * 0.45, attack: 0.05 });
+      this.tone({ freq: 82, to: 77, dur: 0.9, type: 'sawtooth', vol: 0.1, delay: k * 0.45, attack: 0.05 });
+    }
+  }
+
+  evolve() {
+    if (!this.ctx) return;
+    [60, 64, 67, 72, 76, 79, 84].forEach((n, i) => {
+      this.tone({ freq: midi(n), dur: 0.5, type: 'triangle', vol: 0.11, delay: i * 0.05 });
+    });
+    this.noise({ dur: 0.8, vol: 0.12, freq: 600, to: 5000, q: 1 });
+  }
+
   ui() {
     if (!this.allow('ui', 0.05, 2)) return;
     this.tone({ freq: 880, dur: 0.06, type: 'triangle', vol: 0.08 });
@@ -211,6 +260,13 @@ export class Audio {
         case EV.NOVA: this.nova(); break;
         case EV.SURGE: this.surge(); break;
         case EV.PLAYER_DEATH: this.death(); break;
+        case EV.EXPLODE: this.explode(events.a[i]); break;
+        case EV.BEAM: this.zap(); break;
+        case EV.LASER: this.laser(); break;
+        case EV.BULLET: this.bullet(); break;
+        case EV.ITEM: this.item(events.a[i]); break;
+        case EV.BOSS: this.boss(); break;
+        case EV.EVOLVE: this.evolve(); break;
       }
     }
   }

@@ -2,7 +2,8 @@
 import { Application } from 'pixi.js';
 import { Sim } from './sim/world.js';
 import { EV } from './sim/events.js';
-import { buildAtlas } from './render/atlas.js';
+import { buildAtlas, iconCanvas, iconFor } from './render/atlas.js';
+import { ENEMIES } from './content/enemies.js';
 import { View } from './render/view.js';
 import { Input } from './input.js';
 import { Hud } from './ui/hud.js';
@@ -138,14 +139,10 @@ function renderLoadout(el, sim) {
   const add = (icon, label) => {
     const item = document.createElement('div');
     item.className = 'item';
-    const c = document.createElement('canvas');
-    c.width = c.height = 56;
-    const cell = game.atlas.cells[icon];
-    c.getContext('2d').drawImage(game.atlas.canvas, cell.x, cell.y, cell.w, cell.h, 0, 0, 56, 56);
-    item.append(c, label);
+    item.append(iconCanvas(game.atlas.icons, icon, 56), label);
     el.append(item);
   };
-  for (const w of sim.weapons) add('i_' + w.def.icon, `LV ${w.level}`);
+  for (const w of sim.weapons) add(iconFor(w.def), w.def.evolved ? 'EVO' : `LV ${w.level}`);
   for (const p of sim.passives) add(p.def.icon, `LV ${p.level}`);
 }
 
@@ -157,6 +154,8 @@ function showResults(sim) {
     [sim.p.level, 'LEVEL'],
     [Math.round(sim.p.damageTaken), 'DAMAGE TAKEN']
   ];
+  $('#over').classList.toggle('won', sim.won);
+  $('#over .title').textContent = sim.won ? 'HOLDOUT COMPLETE' : 'SIGNAL LOST';
   const el = $('#over .stats');
   el.replaceChildren();
   for (const [v, label] of stats) {
@@ -169,6 +168,30 @@ function showResults(sim) {
   }
   renderLoadout($('#over .loadout'), sim);
   $('#over').classList.add('on');
+}
+
+function banner(text, gold = false) {
+  const b = $('#banner');
+  b.textContent = text;
+  b.classList.toggle('gold', gold);
+  b.classList.remove('on');
+  void b.offsetWidth;
+  b.classList.add('on');
+}
+
+/* The boss bar shows while a boss is alive. */
+function updateBossBar(sim) {
+  const on = game.state === 'run' && sim.boss >= 0 && sim.eAlive[sim.boss];
+  const bar = $('#bossbar');
+  bar.classList.toggle('on', !!on);
+  if (!on) return;
+  const def = ENEMIES[sim.eType[sim.boss]];
+  if (bar.dataset.name !== def.name) {
+    bar.dataset.name = def.name;
+    bar.querySelector('.name').textContent = def.name;
+  }
+  const f = Math.max(0, sim.eHp[sim.boss] / sim.eMaxHp[sim.boss]);
+  bar.querySelector('.fill').style.transform = `scaleX(${f.toFixed(3)})`;
 }
 
 /* Turn this frame's events into the things that are felt rather than seen:
@@ -207,11 +230,20 @@ function react(sim) {
     } else if (t === EV.SURGE) {
       view.addTrauma(0.3);
       game.haptics.buzz([30, 60, 30], true);
-      const b = $('#banner');
-      b.textContent = 'INCOMING';
-      b.classList.remove('on');
-      void b.offsetWidth;
-      b.classList.add('on');
+      banner('INCOMING');
+    } else if (t === EV.BOSS) {
+      view.addTrauma(0.6);
+      game.haptics.buzz([60, 80, 60, 80, 120], true);
+      banner(ENEMIES[ev.a[i]].name);
+    } else if (t === EV.EVOLVE) {
+      view.addTrauma(0.4);
+      game.haptics.buzz([20, 30, 20, 30, 60], true);
+      banner('EVOLVED', true);
+    } else if (t === EV.EXPLODE) {
+      view.addTrauma(Math.min(0.15, ev.a[i] / 800));
+    } else if (t === EV.ITEM) {
+      game.haptics.buzz(25, true);
+      if (ev.a[i] === 1) view.addTrauma(0.25);
     } else if (t === EV.PLAYER_DEATH) {
       view.addTrauma(1);
       game.freeze = 0.3;
@@ -286,12 +318,13 @@ function frame(rawDt) {
   view.sync(sim, dt, rawDt);
   if (game.state === 'run') game.audio.setIntensity(Math.min(1, sim.eCount / 220 + sim.time / 900));
 
+  updateBossBar(sim);
   if (game.state !== 'run') return;
   hud.update(sim);
 
   if (sim.choices && !sim.over) {
     input.setEnabled(false);
-    levelUp.show(sim.choices, sim.p.level);
+    levelUp.show(sim.choices, sim.p.level, sim.choiceFromCache ? 'SUPPLY CACHE' : 'LEVEL UP');
   }
   if (sim.over) {
     levelUp.hide();
@@ -311,6 +344,7 @@ function frame(rawDt) {
 /* For tools/verify.cjs. */
 window.__game = game;
 window.__describe = describe;
+window.__enemyIndex = Object.fromEntries(ENEMIES.map((e, i) => [e.id, i]));
 
 boot().catch(e => {
   console.error(e);

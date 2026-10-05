@@ -173,6 +173,77 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const again = await sim(() => window.__game.state === 'run' && window.__game.sim.time < 5 && window.__game.sim.p.hp > 0);
     check('deploy again starts a fresh run', again);
 
+    /* Evolution: Arc Bolt at level 5 plus Overclock must offer the evolved
+       card, and picking it must swap the weapon. */
+    await sim(() => {
+      const s = window.__game.sim;
+      s.invulnerable = true;
+      for (let k = 0; k < 4; k++) s.addWeapon('bolt');
+      s.addPassive('haste');
+      s.pendingLevels = 1;
+    });
+    await wait(1500);
+    const evo = await sim(() => ({
+      card: !!document.querySelector('#levelup .card.evo'),
+      text: (document.querySelector('#levelup .card.evo .name') || {}).textContent
+    }));
+    check('a maxed weapon and its passive offer an evolution', evo.card, evo.text || 'no evolution card');
+    if (evo.card) {
+      await page.tap('#levelup .card.evo');
+      await wait(600);
+    }
+    const evolved = await sim(() => window.__game.sim.weapons[0].def.id);
+    check('picking it evolves the weapon', evolved === 'lance', evolved);
+
+    /* Every weapon type at once against every enemy type. */
+    const arsenal = await sim(() => {
+      const s = window.__game.sim, p = s.p;
+      p.xpNext = 1e9;
+      /* an elite's cache would put a card over the photo */
+      s.holdChoices = true;
+      for (const w of ['chain', 'missiles', 'laser', 'gravity', 'flame']) {
+        for (let k = 0; k < 3; k++) s.addWeapon(w);
+      }
+      const types = ['chaser', 'swarmer', 'dasher', 'tank', 'splitter', 'shooter', 'warden', 'bomber', 'blinker', 'elite'];
+      const idx = window.__enemyIndex;
+      for (let i = 0; i < 260; i++) {
+        const a = Math.random() * Math.PI * 2, d = 140 + Math.random() * 320;
+        s.spawnEnemy(idx[types[i % types.length]], p.x + Math.cos(a) * d, p.y + Math.sin(a) * d);
+      }
+      return s.weapons.map(w => w.def.id).join(',');
+    });
+    await wait(3500);
+    await shot('arsenal.png');
+    const fired = await sim(() => ({ shots: window.__game.sim.sPool.count, kills: window.__game.sim.p.kills }));
+    check('six weapons firing at ten enemy types', arsenal.split(',').length === 6, `${arsenal}; ${fired.shots} shots live`);
+
+    /* A boss: arrives, gets a health bar. */
+    await sim(() => {
+      const s = window.__game.sim;
+      s.spawnEnemy(window.__enemyIndex.hive, s.p.x + 220, s.p.y - 120);
+    });
+    await wait(3000);
+    const boss = await sim(() => ({
+      bar: document.getElementById('bossbar').classList.contains('on'),
+      name: document.querySelector('#bossbar .name').textContent
+    }));
+    check('a boss shows its health bar', boss.bar && boss.name === 'THE HIVE', JSON.stringify(boss));
+    await shot('boss.png');
+
+    /* Beating the final boss ends the run as a win. */
+    await sim(() => {
+      const s = window.__game.sim;
+      const m = s.spawnEnemy(window.__enemyIndex.monolith, s.p.x + 300, s.p.y);
+      s.hitEnemy(m, 1e9, 0, 0);
+    });
+    await wait(2600);
+    const won = await sim(() => ({
+      won: window.__game.sim.won,
+      title: document.querySelector('#over .title').textContent
+    }));
+    check('killing the Monolith wins the run', won.won && won.title === 'HOLDOUT COMPLETE', JSON.stringify(won));
+    await shot('won.png');
+
     check('no runtime errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (e) {
     check('run completed', false, e.message);

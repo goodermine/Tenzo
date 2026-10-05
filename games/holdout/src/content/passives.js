@@ -12,7 +12,17 @@ export const PASSIVES = [
   { id: 'vigor', name: 'Plating', icon: 'p_vigor', max: 5, note: '+20 max health, heals 20',
     apply: (s, l) => { s.maxHp += 20 * l; } },
   { id: 'area', name: 'Amplifier', icon: 'p_area', max: 5, note: '+10% weapon area',
-    apply: (s, l) => { s.area *= 1 + 0.1 * l; } }
+    apply: (s, l) => { s.area *= 1 + 0.1 * l; } },
+  { id: 'armor', name: 'Hardened Hull', icon: 'p_armor', max: 5, note: '-6% damage taken',
+    apply: (s, l) => { s.armor += 0.06 * l; } },
+  { id: 'regen', name: 'Nanobots', icon: 'p_regen', max: 5, note: 'repair 0.4 health a second',
+    apply: (s, l) => { s.regen += 0.4 * l; } },
+  /* Rare and strong: every weapon that fires several of something fires
+     one more. Only two levels. */
+  { id: 'amount', name: 'Multiplexer', icon: 'p_amount', max: 2, note: '+1 projectile on every weapon',
+    apply: (s, l) => { s.amount += l; } },
+  { id: 'growth', name: 'Data Siphon', icon: 'p_growth', max: 5, note: '+12% experience',
+    apply: (s, l) => { s.growth *= 1 + 0.12 * l; } }
 ];
 
 export const PASSIVE_INDEX = Object.fromEntries(PASSIVES.map((p, i) => [p.id, i]));
