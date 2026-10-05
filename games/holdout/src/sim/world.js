@@ -535,7 +535,7 @@ export class Sim {
     this.eFlash[i] = 0.08;
     this.eKx[i] += kx / m;
     this.eKy[i] += ky / m;
-    this.events.push(EV.HIT, this.ex[i], this.ey[i], dmg, this.eType[i]);
+    this.events.push(EV.HIT, this.ex[i], this.ey[i], dmg, i);
     if (this.eHp[i] <= 0) this.killEnemy(i);
     return true;
   }

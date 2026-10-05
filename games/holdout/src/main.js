@@ -132,6 +132,7 @@ function applySettings() {
   game.audio.setMuted(!st.sound);
   game.haptics.enabled = st.haptics;
   $('#fps').classList.toggle('on', !!st.fps);
+  if (game.view) game.view.showNumbers = st.numbers !== false;
   for (const b of document.querySelectorAll('.toggle')) b.classList.toggle('on', !!st[b.dataset.setting]);
   if (game.view) game.view.setBloom(st.bloom !== 'off' && game.tier < 1);
 }
@@ -423,7 +424,7 @@ function frame(rawDt) {
   }
 
   react(sim);
-  view.consume(sim.events);
+  view.consume(sim.events, sim);
   if (game.state === 'run') game.audio.consume(sim.events);
   sim.events.clear();
   view.sync(sim, dt, rawDt);

@@ -3,7 +3,7 @@
    second can produce a thousand hits, and allocating an object for each is
    exactly the garbage that makes a phone stutter. */
 export const EV = {
-  HIT: 1,          // x, y, a = damage, b = enemy type
+  HIT: 1,          // x, y, a = damage, b = enemy index
   KILL: 2,         // x, y, a = enemy type, b = enemy radius
   HURT: 3,         // x, y, a = damage
   PICKUP: 4,       // x, y, a = xp value

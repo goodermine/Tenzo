@@ -55,10 +55,13 @@ class Layer {
 /* Short-lived effect particles, owned by the view. */
 const FX_CAP = 1800;
 const FX = { SPARK: 0, DOT: 1, RING: 2, TELL: 3 };
-/* Damage numbers alive at once, and new ones allowed per frame: a nova that
-   hits sixty enemies shows a dozen numbers, not sixty. */
-const NUM_CAP = 90;
-const NUM_PER_FRAME = 10;
+/* Damage numbers alive at once, and new ones allowed per frame. Hits on an
+   enemy that already has a fresh number add to it rather than stacking a new
+   one, so a nova through sixty enemies shows a few totals, not sixty digits. */
+const NUM_CAP = 60;
+const NUM_PER_FRAME = 4;
+const NUM_LIFE = 0.6;
+const NUM_MERGE = 0.3;
 /* Lightning arcs on screen at once. */
 const ARC_CAP = 96;
 
@@ -75,8 +78,17 @@ export class View {
     this.enemies = new Layer(atlas, 1300);
     this.weaponsFx = new Layer(atlas, 600);
     this.fx = new Layer(atlas, FX_CAP);
-    this.nums = new Layer(atlas, NUM_CAP * 4);
+    this.nums = new Layer(atlas, NUM_CAP * 5);
     this.nums.container.blendMode = 'normal';
+    /* Dark silhouettes under the enemies, normal blend: a crowd reads as
+       separate bodies instead of adding up to white. */
+    this.bodies = new Layer(atlas, 1300);
+    this.bodies.container.blendMode = 'normal';
+    /* What can hurt you, drawn above everything else in the world. */
+    this.threat = new Layer(atlas, 500);
+    /* Screen-space arrows to bosses, elites and caches off screen. */
+    this.markers = new Layer(atlas, 24);
+    this.showNumbers = true;
 
     this.player = new Sprite(atlas.tex.player);
     this.player.anchor.set(0.5);
@@ -86,14 +98,21 @@ export class View {
     this.engine.blendMode = 'add';
     this.engine.tint = hex(COLORS.player);
     this.hpBar = new Graphics();
+    /* The ship sits on a dark disc with its own dark body, drawn above
+       enemies and effects: it must never be lost in the glow. */
+    this.playerDisc = new Sprite(atlas.tex.disc_dark);
+    this.playerDisc.anchor.set(0.5);
+    this.playerFill = new Sprite(atlas.tex.player_fill);
+    this.playerFill.anchor.set(0.5);
 
     this.world.addChild(
-      this.pickups.container, this.weaponsFx.container, this.enemies.container, this.shots.container,
-      this.engine, this.player, this.fx.container, this.hpBar
+      this.pickups.container, this.weaponsFx.container, this.bodies.container, this.enemies.container,
+      this.shots.container, this.fx.container, this.playerDisc, this.engine, this.playerFill, this.player,
+      this.hpBar, this.threat.container
     );
-    /* Numbers sit outside the bloom so they stay crisp. */
+    /* Numbers and markers sit outside the bloom so they stay crisp. */
     this.numLayer = new Container();
-    this.numLayer.addChild(this.nums.container);
+    this.numLayer.addChild(this.nums.container, this.markers.container);
     app.stage.addChild(this.ground, this.world);
 
     /* Bloom without a post-processing chain: the world is drawn a second
@@ -123,10 +142,13 @@ export class View {
 
     this.nX = new Float32Array(NUM_CAP);
     this.nY = new Float32Array(NUM_CAP);
-    this.nVal = new Int32Array(NUM_CAP);
+    this.nVal = new Float32Array(NUM_CAP);
     this.nLife = new Float32Array(NUM_CAP);
-    this.nTint = new Uint32Array(NUM_CAP);
+    this.nPop = new Float32Array(NUM_CAP);
+    this.nEnemy = new Int32Array(NUM_CAP);
     this.nN = 0;
+    /* enemy index -> its live number slot, for merging */
+    this.numOf = new Int32Array(1024).fill(-1);
 
     this.aX0 = new Float32Array(ARC_CAP);
     this.aY0 = new Float32Array(ARC_CAP);
@@ -181,6 +203,7 @@ export class View {
     this.cam.y = sim.p.y;
     this.fxN = 0;
     this.nN = 0;
+    this.numOf.fill(-1);
     this.aN = 0;
     this.trauma = 0;
     this.novaFade = 0;
@@ -215,15 +238,26 @@ export class View {
     }
   }
 
-  number(x, y, value, tint) {
-    let i = this.nN;
-    if (i >= NUM_CAP) i = (Math.random() * NUM_CAP) | 0;
-    else this.nN++;
+  /** Returns false when it would need a new slot and `allowNew` is off. */
+  number(x, y, value, enemy, allowNew) {
+    const j = enemy >= 0 ? this.numOf[enemy] : -1;
+    if (j >= 0 && this.nEnemy[j] === enemy && NUM_LIFE - this.nLife[j] < NUM_MERGE) {
+      this.nVal[j] += value;
+      this.nX[j] = x;
+      this.nY[j] = y - 8;
+      this.nPop[j] = 0.08;
+      return true;
+    }
+    if (!allowNew || this.nN >= NUM_CAP) return false;
+    const i = this.nN++;
     this.nX[i] = x + (Math.random() - 0.5) * 10;
     this.nY[i] = y - 8;
-    this.nVal[i] = Math.max(1, Math.round(value));
-    this.nLife[i] = 0.62;
-    this.nTint[i] = tint;
+    this.nVal[i] = value;
+    this.nLife[i] = NUM_LIFE;
+    this.nPop[i] = 0.08;
+    this.nEnemy[i] = enemy;
+    if (enemy >= 0) this.numOf[enemy] = i;
+    return true;
   }
 
   arc(x0, y0, x1, y1) {
@@ -237,17 +271,19 @@ export class View {
     this.aLife[i] = 0.14;
   }
 
-  consume(events) {
-    let hits = 0;
+  consume(events, sim) {
+    let hits = 0, newNums = 0;
     for (let i = 0; i < events.count; i++) {
       const t = events.type[i], x = events.x[i], y = events.y[i];
       switch (t) {
         case EV.HIT: {
-          if (hits < 40) this.burst(x, y, 2, 220, 0.18, 0xffffff, 0.18);
-          if (hits < NUM_PER_FRAME) {
-            const d = events.a[i];
-            this.number(x, y, d, d >= 60 ? 0xffd84f : d >= 25 ? 0xfff2b0 : 0xffffff);
+          /* hit sparks in the enemy's own colour, and few: white sparks on
+             every hit were most of the white-out in a dense fight */
+          if (hits < 24) {
+            const e = events.b[i] | 0;
+            this.burst(x, y, 1, 220, 0.15, sim ? ENEMY_TINT[sim.eType[e]] : 0xffffff, 0.15);
           }
+          if (this.showNumbers && this.number(x, y, events.a[i], events.b[i] | 0, newNums < NUM_PER_FRAME)) newNums++;
           hits++;
           break;
         }
@@ -306,6 +342,7 @@ export class View {
           this.emit(FX.RING, x, y, 0, 0, 1.0, 300, hex(COLORS.player));
           this.player.visible = false;
           this.engine.visible = false;
+          this.playerFill.visible = this.playerDisc.visible = false;
           break;
       }
     }
@@ -338,28 +375,48 @@ export class View {
     this.ground.tileScale.set(z);
     this.ground.tilePosition.set(ox, oy);
 
-    this.drawPickups(sim, tex, T);
+    /* Glow helps a sparse field and blinds a dense one: ease it off as the
+       crowd grows. */
+    this.bloom.alpha = 0.6 * Math.max(0.3, 1 - Math.max(0, sim.eCount - 80) / 350);
+
+    this.markers.begin();
+    this.threat.begin();
+    this.drawPickups(sim, tex, T, ox, oy, z);
     this.drawShots(sim, tex, T);
-    this.drawEnemies(sim, tex, R, T, p);
+    this.drawEnemies(sim, tex, R, T, p, ox, oy, z);
     this.drawWeapons(sim, tex, R, T, p, dt);
     this.drawPlayer(sim, tex, R, T, p);
     this.updateFx(dt);
     this.updateNumbers(dt, ox, oy, z);
+    this.markers.end();
+    this.threat.end();
 
     if (this.bloomOn) {
       this.app.renderer.render({ container: this.world, target: this.bloomRt, clear: true });
     }
   }
 
-  drawPickups(sim, tex, T) {
+  /* An arrow at the screen edge pointing at something off screen. */
+  marker(x, y, ox, oy, z, tint, T) {
+    const W = this.app.screen.width, H = this.app.screen.height;
+    const sx = ox + x * z, sy = oy + y * z, m = 26;
+    if (sx > -10 && sx < W + 10 && sy > 40 && sy < H + 10) return;
+    const cx = W / 2, cy = H / 2, dx = sx - cx, dy = sy - cy;
+    const k = Math.min((cx - m) / Math.abs(dx || 1e-6), (cy - m - 40) / Math.abs(dy || 1e-6));
+    const s = 0.28 + 0.04 * Math.sin(T * 6);
+    this.markers.add(this.atlas.tex.arrow, cx + dx * k, cy + dy * k + (dy < 0 ? 20 : 0), s, s, Math.atan2(dy, dx), tint, 0.9);
+  }
+
+  drawPickups(sim, tex, T, ox, oy, z) {
     const L = this.pickups;
     L.begin();
     for (let i = 0; i < sim.gPool.high; i++) {
       if (!sim.gAlive[i]) continue;
-      const v = sim.gValue[i];
+      const v = sim.gValue[i], pulled = sim.gPull[i] > 0;
       const t = v >= 25 ? tex.gem25 : v >= 5 ? tex.gem5 : tex.gem1;
-      const s = (v >= 25 ? 0.36 : v >= 5 ? 0.28 : 0.22) * (1 + 0.08 * Math.sin(T * 6 + i));
-      L.add(t, sim.gx[i], sim.gy[i], s, s);
+      /* small and quiet on the floor; bright once the field has them */
+      const s = (v >= 25 ? 0.32 : v >= 5 ? 0.24 : 0.18) * (pulled ? 1.15 : 1 + 0.06 * Math.sin(T * 6 + i));
+      L.add(t, sim.gx[i], sim.gy[i], s, s, 0, 0xffffff, pulled ? 1 : 0.62);
     }
     const itemTex = [tex.heal, tex.vacuum, tex.cache];
     const itemTint = [hex(COLORS.heal), hex(COLORS.vacuum), hex(COLORS.cache)];
@@ -370,6 +427,7 @@ export class View {
       L.add(tex.dot, x, y, 0.9 * pulse, 0.9 * pulse, 0, itemTint[kind], 0.35);
       L.add(tex.ring, x, y, 0.2 * pulse, 0.2 * pulse, 0, itemTint[kind], 0.7);
       L.add(itemTex[kind], x, y, 0.5, 0.5, kind === 2 ? T * 1.5 : 0);
+      if (kind === 2) this.marker(x, y, ox, oy, z, itemTint[kind], T);
     }
     L.end();
   }
@@ -421,22 +479,27 @@ export class View {
           break;
       }
     }
+    const TH = this.threat;
     for (let i = 0; i < sim.bPool.high; i++) {
       if (!sim.bAlive[i]) continue;
-      const s = (sim.bR[i] / 22) * (1 + 0.15 * Math.sin(T * 20 + i));
-      L.add(tex.ebullet, sim.bx[i], sim.by[i], s, s);
+      const s = (sim.bR[i] / 20) * (1 + 0.12 * Math.sin(T * 20 + i));
+      TH.add(tex.ebullet2, sim.bx[i], sim.by[i], s, s, T * 4);
     }
     L.end();
   }
 
-  drawEnemies(sim, tex, R, T, p) {
-    const L = this.enemies;
+  drawEnemies(sim, tex, R, T, p, ox, oy, z) {
+    const L = this.enemies, B = this.bodies, TH = this.threat;
     L.begin();
+    B.begin();
     for (let i = 0; i < sim.eHigh; i++) {
       if (!sim.eAlive[i]) continue;
       const def = ENEMIES[sim.eType[i]], id = def.id, x = sim.ex[i], y = sim.ey[i];
       let s = sim.eR[i] / R, rot = Math.atan2(p.y - y, p.x - x);
-      let white = sim.eFlash[i] > 0;
+      /* `white` is a telegraph (a windup about to strike) and swaps the
+         whole sprite; a plain hit only brightens it, below */
+      let white = false;
+      const hit = sim.eFlash[i] > 0;
       const mode = sim.eMode[i];
       if (id === 'swarmer') rot = T * 5 + i;
       else if (id === 'tank' || id === 'warden' || id === 'hive') rot = T * 0.6 + i;
@@ -463,7 +526,16 @@ export class View {
         const g = s * (def.boss ? 3.2 : 2.6) * (1 + 0.06 * Math.sin(T * 3));
         L.add(tex.dot, x, y, g, g, 0, tint, def.boss ? 0.35 : 0.3);
       }
+      B.add(tex[id + '_fill'], x, y, s, s, rot, 0xffffff, 0.94);
       L.add(tex[white ? id + '_w' : id], x, y, s, s, rot);
+      if (hit && !white) L.add(tex[id + '_w'], x, y, s, s, rot, 0xffffff, 0.45);
+      if (white) {
+        /* tells go on the threat layer too, so no glow can hide them */
+        const ts = s * 1.6;
+        TH.add(tex.ring, x, y, ts * R / this.atlas.ringRadius, ts * R / this.atlas.ringRadius, 0, tint, 0.8);
+      }
+      if (def.boss) this.marker(x, y, ox, oy, z, tint, T);
+      else if (def.elite) this.marker(x, y, ox, oy, z, 0xffd84f, T);
       if (sim.eShield[i] > 0) {
         const f = sim.eShield[i] / (sim.eMaxHp[i] * def.shield);
         const ss = s * 1.45;
@@ -471,6 +543,7 @@ export class View {
       }
     }
     L.end();
+    B.end();
   }
 
   drawWeapons(sim, tex, R, T, p, dt) {
@@ -564,6 +637,14 @@ export class View {
     this.player.position.set(p.x, p.y);
     this.player.rotation = p.face;
     this.player.scale.set((p.r / R) * 1.25);
+    const alive = this.player.visible;
+    this.playerFill.visible = this.playerDisc.visible = alive;
+    this.playerFill.texture = tex[ship + '_fill'];
+    this.playerFill.position.set(p.x, p.y);
+    this.playerFill.rotation = p.face;
+    this.playerFill.scale.set((p.r / R) * 1.25);
+    this.playerDisc.position.set(p.x, p.y);
+    this.playerDisc.scale.set((p.r / R) * 1.5);
     const sp = Math.hypot(p.vx, p.vy) / 150;
     this.engine.position.set(p.x - Math.cos(p.face) * 12, p.y - Math.sin(p.face) * 12);
     this.engine.scale.set(0.22 + 0.18 * sp + 0.03 * Math.sin(T * 30));
@@ -573,12 +654,24 @@ export class View {
         -p.vy * 0.3 + (Math.random() - 0.5) * 30, 0.3, 0.12, hex(sim.char.color));
     }
 
-    /* health bar under the ship, only once hurt */
+    /* A thin ring round the ship with health as an arc on it: always
+       there, so the ship stays findable, and health is read at a glance
+       without looking away. It flashes when hit and pulses when low. */
     const g = this.hpBar.clear();
-    if (!sim.over && p.hp < p.maxHp) {
-      const w = 36, h = 4, x = p.x - w / 2, y = p.y + 24, f = p.hp / p.maxHp;
-      g.rect(x, y, w, h).fill({ color: 0x1a0a10, alpha: 0.8 });
-      g.rect(x, y, w * f, h).fill(f > 0.35 ? 0x5dff9a : 0xff3b6b);
+    if (alive && !sim.over) {
+      const f = Math.max(0, p.hp / p.maxHp), r = p.r + 9;
+      const low = f < 0.35;
+      const col = p.hurt > 0 ? 0xffffff : low ? 0xff3b6b : f < 0.65 ? 0xffd84f : 0x5dff9a;
+      g.circle(p.x, p.y, r).stroke({ width: 1.2, color: hex(sim.char.color), alpha: 0.28 });
+      if (f > 0) {
+        const a0 = -Math.PI / 2;
+        /* start the path at the arc, or it is joined to wherever the last
+           one ended by a straight line */
+        g.moveTo(p.x + Math.cos(a0) * r, p.y + Math.sin(a0) * r);
+        g.arc(p.x, p.y, r, a0, a0 + Math.PI * 2 * f).stroke({
+          width: 2.6, color: col, alpha: low ? 0.65 + 0.35 * Math.sin(T * 10) : 0.85, cap: 'round'
+        });
+      }
     }
   }
 
@@ -630,30 +723,39 @@ export class View {
     let n = this.nN;
     /* numbers are placed in screen space so they stay a readable size
        whatever the zoom */
-    const size = 0.17;
     for (let i = 0; i < n; i++) {
       this.nLife[i] -= dt;
+      this.nPop[i] = Math.max(0, this.nPop[i] - dt);
       if (this.nLife[i] <= 0) {
+        if (this.nEnemy[i] >= 0 && this.numOf[this.nEnemy[i]] === i) this.numOf[this.nEnemy[i]] = -1;
         n--;
-        this.nX[i] = this.nX[n]; this.nY[i] = this.nY[n]; this.nVal[i] = this.nVal[n];
-        this.nLife[i] = this.nLife[n]; this.nTint[i] = this.nTint[n];
+        if (i !== n) {
+          this.nX[i] = this.nX[n]; this.nY[i] = this.nY[n]; this.nVal[i] = this.nVal[n];
+          this.nLife[i] = this.nLife[n]; this.nPop[i] = this.nPop[n]; this.nEnemy[i] = this.nEnemy[n];
+          if (this.nEnemy[i] >= 0 && this.numOf[this.nEnemy[i]] === n) this.numOf[this.nEnemy[i]] = i;
+        }
         i--;
         continue;
       }
-      const life = this.nLife[i], age = 0.62 - life;
-      this.nY[i] -= 46 * dt * (life / 0.62);
-      const pop = age < 0.08 ? 1 + (0.08 - age) * 7 : 1;
-      const s = size * pop * (this.nTint[i] === 0xffd84f ? 1.35 : 1);
-      const alpha = Math.min(1, life / 0.22);
-      const str = String(this.nVal[i]);
+      const life = this.nLife[i], v = Math.round(this.nVal[i]);
+      if (v < 1) continue;
+      this.nY[i] -= 40 * dt * (life / NUM_LIFE);
+      /* small hits small and dim; big ones large and gold */
+      const big = v >= 60, mid = v >= 20;
+      const base = big ? 0.2 : mid ? 0.155 : 0.125;
+      const tint = big ? 0xffd84f : mid ? 0xfff2c8 : 0xd8e4f0;
+      const s = base * (1 + this.nPop[i] * 6);
+      const alpha = Math.min(1, life / 0.2) * (mid ? 1 : 0.75);
+      const str = String(v);
       const adv = DIGIT_ADVANCE * s;
       let x = ox + this.nX[i] * z - (adv * (str.length - 1)) / 2;
       const y = oy + this.nY[i] * z;
       for (let c = 0; c < str.length; c++, x += adv) {
-        L.add(tex['d' + str[c]], x, y, s, s, 0, this.nTint[i], alpha);
+        L.add(tex['d' + str[c]], x, y, s, s, 0, tint, alpha);
       }
     }
     this.nN = n;
     L.end();
   }
+
 }

@@ -1,7 +1,7 @@
 /* HOLDOUT - every sprite in the game, drawn in code at load.
    Neon vector shapes: a coloured glow, a faint fill and a white-hot core
    line, baked once with Canvas2D's shadow blur so the glow costs nothing per
-   frame. Game sprites share one 1024px atlas, which is what lets enemies,
+   frame. Game sprites share one 2048x1024 atlas, which is what lets enemies,
    shots, gems and particles each draw as a single ParticleContainer batch.
    Card and loadout icons are only ever shown in the DOM, so they go on a
    separate canvas that is never uploaded to the GPU.
@@ -49,7 +49,29 @@ export const COLORS = {
   shield: '#e8d24a'
 };
 
+/* Silhouette mode: when set, neon() fills each shape solid and strokes its
+   outline wide in the given dark colour instead of glowing. Every enemy is
+   drawn once more this way, as the dark body the renderer lays under its
+   additive outline - so a crowd reads as separate shapes instead of adding
+   up to white. */
+let silhouette = null;
+
 function neon(ctx, color, width, path, fillAlpha = 0.16, blur = 20) {
+  if (silhouette) {
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.fillStyle = ctx.strokeStyle = silhouette;
+    ctx.lineWidth = width + 7;
+    path();
+    ctx.stroke();
+    if (fillAlpha > 0 || blur > 0) {
+      path();
+      ctx.fill();
+    }
+    ctx.restore();
+    return;
+  }
   ctx.save();
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -241,6 +263,37 @@ const SPRITES = {
     neon(ctx, c, 4, () => line(ctx, 0, -R * 0.6, 0, R * 0.6), 0, 8);
   },
   shield: (ctx, c) => neon(ctx, c, 3, () => circle(ctx, R * 0.98), 0, 12),
+  /* the dark disc the ship sits on, soft-edged, so it stays visible in a
+     crowd (drawn with normal blending) */
+  disc_dark: ctx => {
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.5);
+    g.addColorStop(0, 'rgba(3,5,10,0.92)');
+    g.addColorStop(0.6, 'rgba(3,5,10,0.8)');
+    g.addColorStop(1, 'rgba(3,5,10,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2);
+  },
+  /* edge-of-screen marker pointing at something off screen */
+  arrow: (ctx, c) => neon(ctx, c, 5, () => {
+    ctx.beginPath();
+    ctx.moveTo(R * 0.8, 0);
+    ctx.lineTo(-R * 0.5, R * 0.6);
+    ctx.lineTo(-R * 0.2, 0);
+    ctx.lineTo(-R * 0.5, -R * 0.6);
+    ctx.closePath();
+  }, 0.5, 16),
+  /* enemy bullet: dark core, hot rim - reads as a hole you must not touch
+     against any amount of glow behind it */
+  ebullet2: (ctx, c) => {
+    neon(ctx, c, 7, () => circle(ctx, R * 0.6), 0, 26);
+    ctx.fillStyle = '#12020a';
+    circle(ctx, R * 0.42);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    circle(ctx, R * 0.5);
+    ctx.stroke();
+  },
   spark: ctx => {
     const g = ctx.createLinearGradient(-R, 0, R, 0);
     g.addColorStop(0, 'rgba(255,255,255,0)');
@@ -291,7 +344,13 @@ const LAYOUT = [
   ['bastion_w', 'bastion', '#ffffff'],
   ['specter', 'specter', '#d27aff'],
   ['specter_w', 'specter', '#ffffff'],
-  ...ENEMY_SPRITES.flatMap(e => [[e, e, COLORS[e]], [e + '_w', e, '#ffffff']]),
+  ...ENEMY_SPRITES.flatMap(e => [[e, e, COLORS[e]], [e + '_w', e, '#ffffff'], [e + '_fill', e, 'fill']]),
+  ['player_fill', 'player', 'fill'],
+  ['bastion_fill', 'bastion', 'fill'],
+  ['specter_fill', 'specter', 'fill'],
+  ['disc_dark', 'disc_dark', '#000'],
+  ['arrow', 'arrow', '#ffffff'],
+  ['ebullet2', 'ebullet2', COLORS.ebullet],
   ...['bolt', 'laser', 'blade', 'glaive', 'missile', 'mine', 'disc', 'drone', 'pellet', 'ebullet',
     'heal', 'vacuum', 'cache', 'shield'].map(n => [n, n, COLORS[n]]),
   ['gem1', 'gem', COLORS.gem1],
@@ -315,7 +374,10 @@ function paint(ctx, shapes, layout, cell, perRow, reserved = new Set()) {
     ctx.clip();
     ctx.translate(cx + cell / 2, cy + cell / 2);
     ctx.scale(cell / CELL, cell / CELL);
-    shapes[shape](ctx, color);
+    /* 'fill' asks for the shape's dark silhouette */
+    silhouette = color === 'fill' ? '#0b0e18' : null;
+    shapes[shape](ctx, silhouette ? '#000' : color);
+    silhouette = null;
     ctx.restore();
     cells[name] = { x: cx, y: cy, w: cell, h: cell };
   });
@@ -324,15 +386,16 @@ function paint(ctx, shapes, layout, cell, perRow, reserved = new Set()) {
 
 export function buildAtlas() {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 1024;
+  canvas.width = 2048;
+  canvas.height = 1024;
   const ctx = canvas.getContext('2d');
-  /* 64 cells, less the four the ring block below takes */
-  if (LAYOUT.length > 60) throw new Error('atlas full: ' + LAYOUT.length + ' cells');
-  const cells = paint(ctx, SPRITES, LAYOUT, CELL, 8, new Set([54, 55, 62, 63]));
+  /* 16 x 8 cells, less the four the ring block below takes */
+  if (LAYOUT.length > 124) throw new Error('atlas full: ' + LAYOUT.length + ' cells');
+  const cells = paint(ctx, SPRITES, LAYOUT, CELL, 16, new Set([110, 111, 126, 127]));
 
   /* The ring (nova, explosions, wells, telegraphs) takes a 256px block of
      its own at the bottom right. */
-  const ring = { x: 1024 - 256, y: 1024 - 256, w: 256, h: 256 };
+  const ring = { x: 2048 - 256, y: 1024 - 256, w: 256, h: 256 };
   ctx.save();
   ctx.translate(ring.x + 128, ring.y + 128);
   neon(ctx, '#ffffff', 6, () => circle(ctx, 108), 0, 18);
