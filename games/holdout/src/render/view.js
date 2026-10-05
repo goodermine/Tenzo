@@ -169,6 +169,8 @@ export class View {
     this.shakeT = 0;
     this.cam = { x: 0, y: 0 };
     this.zoom = 1;
+    /* deploy: the camera starts close on the ship and pulls out */
+    this.intro = 0;
     this.viewRadius = 700;
     this.novaFade = 0;
     this.time = 0;
@@ -185,6 +187,10 @@ export class View {
     this.zoom = Math.sqrt(W * H) / 900;
     this.viewRadius = Math.hypot(W, H) / 2 / this.zoom;
     if (this.bloomRt) this.bloomRt.resize(W, H);
+  }
+
+  playIntro() {
+    this.intro = 1;
   }
 
   setBloom(on) {
@@ -415,7 +421,10 @@ export class View {
     const k = Math.min(1, realDt * 9);
     this.cam.x += (p.x + p.vx * 0.18 - this.cam.x) * k;
     this.cam.y += (p.y + p.vy * 0.18 - this.cam.y) * k;
-    const W = this.app.screen.width, H = this.app.screen.height, z = this.zoom;
+    const W = this.app.screen.width, H = this.app.screen.height;
+    this.intro = Math.max(0, this.intro - realDt / 1.1);
+    const zi = this.intro * this.intro * (3 - 2 * this.intro);
+    const z = this.zoom * (1 + 1.1 * zi);
     /* Shake runs on its own clock, so it keeps going through a hit-pause -
        which is exactly when it should be felt. */
     this.trauma = Math.max(0, this.trauma - realDt * 1.5);

@@ -50,10 +50,16 @@ async function boot() {
   });
   $('#stage').appendChild(app.canvas);
 
+  /* The atlas bakes the damage-number digits, so give the display face a
+     moment to arrive first; offline it falls back to the system font. */
+  await Promise.race([
+    document.fonts ? document.fonts.load('800 92px Oxanium') : Promise.resolve(),
+    new Promise(r => setTimeout(r, 1500))
+  ]).catch(() => {});
   const atlas = buildAtlas();
   const view = new View(app, atlas);
   const input = new Input($('#touch'), $('#stick-base'), $('#stick-knob'));
-  const hud = new Hud($('#hud'));
+  const hud = new Hud($('#hud'), atlas);
   const levelUp = new LevelUp($('#levelup'), atlas, i => {
     game.audio.pick();
     game.haptics.buzz(12, true);
@@ -197,6 +203,7 @@ function start() {
   $('#hud .badge').textContent = game.sim.diff.id === 'easy' ? 'EASY' : '';
   game.sim.viewRadius = view.viewRadius;
   view.reset(game.sim);
+  view.playIntro();
   document.documentElement.style.setProperty('--vig', ZONES[0].vignette);
   levelUp.hide();
   $('#title').classList.remove('on');
@@ -259,14 +266,24 @@ function showResults(sim, settled) {
   $('#over .title').textContent = sim.won ? 'HOLDOUT COMPLETE' : 'SIGNAL LOST';
   const el = $('#over .stats');
   el.replaceChildren();
+  const counters = [];
   for (const [v, label] of stats) {
     const d = document.createElement('div');
     d.className = 'stat';
     d.innerHTML = '<b></b><span></span>';
     d.querySelector('b').textContent = v;
     d.querySelector('span').textContent = label;
+    if (typeof v === 'number') counters.push([d.querySelector('b'), v]);
     el.append(d);
   }
+  /* the numbers count up as the panel arrives */
+  const t0 = performance.now();
+  const tickUp = now => {
+    const f = Math.min(1, (now - t0) / 900), e = 1 - Math.pow(1 - f, 3);
+    for (const [b, v] of counters) b.textContent = Math.round(v * e);
+    if (f < 1) requestAnimationFrame(tickUp);
+  };
+  requestAnimationFrame(tickUp);
   renderLoadout($('#over .loadout'), sim);
   $('#over').classList.add('on');
 }
@@ -454,7 +471,7 @@ function frame(rawDt) {
 
   updateBossBar(sim);
   if (game.state !== 'run') return;
-  hud.update(sim);
+  hud.update(sim, rawDt);
 
   if (sim.choices && !sim.over) {
     input.setEnabled(false);

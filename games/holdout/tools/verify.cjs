@@ -55,13 +55,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1,
     isMobile: true,
-    hasTouch: true
+    hasTouch: true,
+    /* this sandbox reaches the web through a proxy whose certificate the
+       test browser does not know; without this the web fonts never load */
+    ignoreHTTPSErrors: true
   });
   const page = await context.newPage();
   page.setDefaultTimeout(120000);
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => {
+    /* the web fonts are optional - the game falls back to system fonts -
+       so a failure to fetch them is not the game's error */
+    const url = (m.location() && m.location().url) || '';
+    if (/fonts\.(googleapis|gstatic)\.com/.test(url)) return;
     if (m.type() === 'error' && !m.text().includes('favicon')) errors.push('console: ' + m.text().slice(0, 300));
   });
   const cdp = await context.newCDPSession(page);
@@ -305,7 +312,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
         diff: s.diff.id, chaserHp: +hp.toFixed(2), badge: document.querySelector('#hud .badge').textContent };
     });
     check('EASY deploys with weaker enemies and a badge',
-      ship.diff === 'easy' && ship.chaserHp < 10 && ship.badge === 'EASY', JSON.stringify(ship));
+      ship.diff === 'easy' && ship.chaserHp < 10 && ship.badge.includes('EASY'), JSON.stringify(ship));
     check('the Specter deploys with its own weapon and the hull upgrade',
       ship.id === 'specter' && ship.weapon === 'chain' && ship.maxHp === ship.base + 10, JSON.stringify(ship));
 

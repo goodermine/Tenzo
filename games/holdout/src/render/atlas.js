@@ -371,7 +371,7 @@ const SPRITES = {
    not a text object. */
 for (let d = 0; d < 10; d++) {
   SPRITES['d' + d] = ctx => {
-    ctx.font = '900 92px ui-rounded, system-ui, sans-serif';
+    ctx.font = '800 92px Oxanium, ui-rounded, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
