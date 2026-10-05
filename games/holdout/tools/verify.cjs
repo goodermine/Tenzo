@@ -319,6 +319,60 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const after2 = await sim(() => ({ left: window.__game.sim.rerolls, shown: document.querySelectorAll('#levelup .card').length }));
     check('a reroll replaces the cards', rr && after2.left === 0 && after2.shown === 3, `${before2} (rerolls left ${after2.left})`);
 
+    /* The arena changes at 5:00 and 10:00. */
+    await sim(() => {
+      const g = window.__game, s = g.sim;
+      /* clear any card left from the reroll step, so the arena is in shot */
+      s.choices = null;
+      s.pendingLevels = 0;
+      s.pendingCache = 0;
+      g.levelUp.hide();
+      g.input.setEnabled(true);
+      s.invulnerable = true;
+      s.p.xpNext = 1e9;
+      s.holdChoices = true;
+      s.time = 299.9;
+    });
+    await wait(6000);
+    const ember = await sim(() => ({ zone: window.__game.sim.zone, bg: window.__game.view.background.zone,
+      banner: document.getElementById('banner').textContent }));
+    await shot('arena-ember.png');
+    await sim(() => { window.__game.sim.time = 569.9; });
+    await wait(6000);
+    const voidZ = await sim(() => ({ zone: window.__game.sim.zone, bg: window.__game.view.background.zone,
+      banner: (window.__banners || []).includes('THE VOID') ? 'THE VOID' : '' }));
+    await shot('arena-void.png');
+    check('the arena changes at 5:00 and 9:30', ember.bg === 1 && ember.banner === 'EMBER' &&
+      voidZ.bg === 2 && voidZ.banner === 'THE VOID', JSON.stringify([ember, voidZ]));
+
+    /* An elite off screen gets an arrow at the edge. */
+    const marked = await sim(async () => {
+      const s = window.__game.sim;
+      s.spawnEnemy(window.__enemyIndex.elite, s.p.x + 1100, s.p.y);
+      await new Promise(r => setTimeout(r, 1500));
+      return window.__game.view.markers.n;
+    });
+    check('an off-screen elite gets an edge marker', marked > 0, `${marked} marker(s)`);
+
+    /* The NUMBERS toggle silences damage numbers. */
+    const quiet = await sim(async () => {
+      const g = window.__game;
+      g.save.settings.numbers = false;
+      g.view.showNumbers = false;
+      g.view.nN = 0;
+      const s = g.sim;
+      for (let i = 0; i < 20; i++) {
+        const e = s.spawnEnemy(0, s.p.x + 60, s.p.y);
+        s.hitEnemy(e, 3, 0, 0);
+      }
+      await new Promise(r => setTimeout(r, 800));
+      const n = g.view.nN;
+      g.view.showNumbers = true;
+      g.save.settings.numbers = true;
+      return n;
+    });
+    check('the NUMBERS toggle hides damage numbers', quiet === 0, `${quiet} on screen`);
+
     /* Installable: the manifest loads and the offline worker registers. */
     const pwa = await sim(async () => {
       const m = await fetch('manifest.json').then(r => r.json()).catch(() => null);

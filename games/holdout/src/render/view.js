@@ -5,8 +5,9 @@
    additive, so a dense swarm glows brighter where it bunches. Nothing here
    decides anything; the view could be swapped out and the game would play
    the same. */
-import { Container, ParticleContainer, Particle, TilingSprite, Sprite, Graphics, RenderTexture, BlurFilter } from 'pixi.js';
-import { buildGround, COLORS, DIGIT_ADVANCE } from './atlas.js';
+import { Container, ParticleContainer, Particle, Sprite, Graphics, RenderTexture, BlurFilter } from 'pixi.js';
+import { COLORS, DIGIT_ADVANCE } from './atlas.js';
+import { Background } from './background.js';
 import { EV } from '../sim/events.js';
 import { ENEMIES } from '../content/enemies.js';
 import { SHOT } from '../content/weapons.js';
@@ -71,7 +72,7 @@ export class View {
     this.atlas = atlas;
     this.R = atlas.R;
 
-    this.ground = new TilingSprite({ texture: buildGround(), width: 10, height: 10 });
+    this.background = new Background(app, atlas);
     this.world = new Container();
     this.pickups = new Layer(atlas, 1300);
     this.shots = new Layer(atlas, 1500);
@@ -106,14 +107,14 @@ export class View {
     this.playerFill.anchor.set(0.5);
 
     this.world.addChild(
-      this.pickups.container, this.weaponsFx.container, this.bodies.container, this.enemies.container,
+      this.background.floor, this.pickups.container, this.weaponsFx.container, this.bodies.container, this.enemies.container,
       this.shots.container, this.fx.container, this.playerDisc, this.engine, this.playerFill, this.player,
       this.hpBar, this.threat.container
     );
     /* Numbers and markers sit outside the bloom so they stay crisp. */
     this.numLayer = new Container();
     this.numLayer.addChild(this.nums.container, this.markers.container);
-    app.stage.addChild(this.ground, this.world);
+    app.stage.addChild(this.background.root, this.world);
 
     /* Bloom without a post-processing chain: the world is drawn a second
        time into a quarter-resolution texture, blurred there (cheap at that
@@ -176,8 +177,6 @@ export class View {
        landscape show the same amount of arena. */
     this.zoom = Math.sqrt(W * H) / 900;
     this.viewRadius = Math.hypot(W, H) / 2 / this.zoom;
-    this.ground.width = W;
-    this.ground.height = H;
     if (this.bloomRt) this.bloomRt.resize(W, H);
   }
 
@@ -207,6 +206,8 @@ export class View {
     this.aN = 0;
     this.trauma = 0;
     this.novaFade = 0;
+    this.background.clear();
+    this.background.setZone(sim.zone, true);
     this.player.visible = true;
     this.engine.visible = true;
   }
@@ -294,6 +295,7 @@ export class View {
             big ? 0.5 : 0.22 + r * 0.006, tint, big ? 1.2 : 0.5);
           this.emit(FX.DOT, x, y, 0, 0, big ? 0.6 : 0.22, (r / this.R) * (big ? 3 : 1.4), tint);
           if (big) this.emit(FX.RING, x, y, 0, 0, 0.8, r * 5, tint);
+          if (r >= 18) this.background.scorch(x, y, r * (big ? 3.5 : 1.8));
           break;
         }
         case EV.PICKUP:
@@ -302,7 +304,14 @@ export class View {
         case EV.HURT:
           this.burst(this.lastPx, this.lastPy, 8, 260, 0.25, 0xff4060, 0.35);
           break;
+        case EV.NOVA:
+          this.background.ripple(x, y, events.a[i] * 1.6, hex(COLORS.nova), 0.7);
+          break;
+        case EV.BOSS:
+          this.background.ripple(this.lastPx, this.lastPy, 900, 0xff3b6b, 1.6);
+          break;
         case EV.LEVELUP:
+          this.background.ripple(x, y, 420, hex(COLORS.player), 1.0);
           this.burst(x, y, 40, 520, 0.3, hex(COLORS.player), 0.7);
           this.emit(FX.RING, x, y, 0, 0, 0.5, 160, hex(COLORS.player));
           break;
@@ -316,6 +325,10 @@ export class View {
         case EV.EXPLODE: {
           const r = events.a[i];
           this.emit(FX.RING, x, y, 0, 0, 0.32, r, 0xffb08a);
+          if (r >= 70) {
+            this.background.scorch(x, y, r * 0.9);
+            this.background.ripple(x, y, r * 2.2, 0xffb08a, 0.6);
+          }
           this.emit(FX.DOT, x, y, 0, 0, 0.2, (r / this.R) * 0.9, 0xff8a5a);
           this.burst(x, y, 10, 300 + r * 3, 0.3, 0xffb060, 0.4);
           break;
@@ -337,6 +350,7 @@ export class View {
           this.emit(FX.DOT, x, y, 0, 0, 0.12, 0.25, hex(COLORS.ebullet));
           break;
         case EV.PLAYER_DEATH:
+          this.background.scorch(x, y, 70);
           this.burst(x, y, 90, 600, 0.35, hex(COLORS.player), 1.2);
           this.burst(x, y, 40, 300, 0.3, 0xffffff, 0.9);
           this.emit(FX.RING, x, y, 0, 0, 1.0, 300, hex(COLORS.player));
@@ -372,8 +386,7 @@ export class View {
     const ox = W / 2 - this.cam.x * z + sx, oy = H / 2 - this.cam.y * z + sy;
     this.world.scale.set(z);
     this.world.position.set(ox, oy);
-    this.ground.tileScale.set(z);
-    this.ground.tilePosition.set(ox, oy);
+    this.background.update(realDt, { x: (W / 2 - ox) / z, y: (H / 2 - oy) / z }, z, W, H);
 
     /* Glow helps a sparse field and blinds a dense one: ease it off as the
        crowd grows. */

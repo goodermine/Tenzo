@@ -4,6 +4,7 @@ import { Sim } from './sim/world.js';
 import { EV } from './sim/events.js';
 import { buildAtlas, iconCanvas, iconFor } from './render/atlas.js';
 import { ENEMIES } from './content/enemies.js';
+import { ZONES } from './render/background.js';
 import { View } from './render/view.js';
 import { Input } from './input.js';
 import { Hud } from './ui/hud.js';
@@ -195,6 +196,7 @@ function start() {
   $('#hud .badge').textContent = game.sim.diff.id === 'easy' ? 'EASY' : '';
   game.sim.viewRadius = view.viewRadius;
   view.reset(game.sim);
+  document.documentElement.style.setProperty('--vig', ZONES[0].vignette);
   levelUp.hide();
   $('#title').classList.remove('on');
   $('#over').classList.remove('on');
@@ -269,6 +271,7 @@ function showResults(sim, settled) {
 }
 
 function banner(text, gold = false) {
+  (window.__banners = window.__banners || []).push(text);
   const b = $('#banner');
   b.textContent = text;
   b.classList.toggle('gold', gold);
@@ -337,6 +340,13 @@ function react(sim) {
       view.addTrauma(0.4);
       game.haptics.buzz([20, 30, 20, 30, 60], true);
       banner('EVOLVED', true);
+    } else if (t === EV.ZONE) {
+      const z = ev.a[i];
+      game.view.background.setZone(z);
+      document.documentElement.style.setProperty('--vig', ZONES[z].vignette);
+      view.addTrauma(0.25);
+      game.haptics.buzz([20, 40, 20], true);
+      banner(ZONES[z].name);
     } else if (t === EV.EXPLODE) {
       view.addTrauma(Math.min(0.15, ev.a[i] / 800));
     } else if (t === EV.ITEM) {
@@ -362,6 +372,7 @@ function setTier(t) {
   const { view, app } = game;
   view.setBloom(t < 1 && game.save.settings.bloom !== 'off');
   view.fxScale = t >= 2 ? 0.5 : 1;
+  view.background.setDetail(t < 2);
   if (t >= 3 && app.renderer.resolution > 1) {
     app.renderer.resolution = 1;
     app.resize();

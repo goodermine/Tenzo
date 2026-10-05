@@ -263,6 +263,19 @@ const SPRITES = {
     neon(ctx, c, 4, () => line(ctx, 0, -R * 0.6, 0, R * 0.6), 0, 8);
   },
   shield: (ctx, c) => neon(ctx, c, 3, () => circle(ctx, R * 0.98), 0, 12),
+  /* a scorch mark left on the floor by big kills and blasts */
+  scorch: ctx => {
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let k = 0; k < 9; k++) {
+      const a = rnd() * Math.PI * 2, d = rnd() * R * 0.45, r = R * (0.45 + rnd() * 0.5);
+      const g = ctx.createRadialGradient(Math.cos(a) * d, Math.sin(a) * d, 0, Math.cos(a) * d, Math.sin(a) * d, r);
+      g.addColorStop(0, 'rgba(0,0,0,0.5)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-R * 1.5, -R * 1.5, R * 3, R * 3);
+    }
+  },
   /* the dark disc the ship sits on, soft-edged, so it stays visible in a
      crowd (drawn with normal blending) */
   disc_dark: ctx => {
@@ -349,6 +362,7 @@ const LAYOUT = [
   ['bastion_fill', 'bastion', 'fill'],
   ['specter_fill', 'specter', 'fill'],
   ['disc_dark', 'disc_dark', '#000'],
+  ['scorch', 'scorch', '#000'],
   ['arrow', 'arrow', '#ffffff'],
   ['ebullet2', 'ebullet2', COLORS.ebullet],
   ...['bolt', 'laser', 'blade', 'glaive', 'missile', 'mine', 'disc', 'drone', 'pellet', 'ebullet',
@@ -614,37 +628,4 @@ export function iconCanvas(icons, name, size = 96) {
 export function iconFor(def) {
   if (def.icon && def.icon.startsWith('p_')) return def.icon;
   return 'w_' + def.icon + (def.evolved ? '_evo' : '');
-}
-
-/** The dark floor: a faint grid with a little grain, tiled under the world. */
-export function buildGround() {
-  const S = 256;
-  const c = document.createElement('canvas');
-  c.width = c.height = S;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#070a12';
-  ctx.fillRect(0, 0, S, S);
-  /* grain */
-  const img = ctx.getImageData(0, 0, S, S);
-  let seed = 7;
-  for (let i = 0; i < img.data.length; i += 4) {
-    seed = (seed * 16807) % 2147483647;
-    const n = (seed / 2147483647 - 0.5) * 7;
-    img.data[i] += n;
-    img.data[i + 1] += n;
-    img.data[i + 2] += n * 1.3;
-  }
-  ctx.putImageData(img, 0, 0);
-  ctx.strokeStyle = 'rgba(70,120,190,0.10)';
-  ctx.lineWidth = 1;
-  for (let k = 0; k <= S; k += 64) {
-    ctx.beginPath(); ctx.moveTo(k + 0.5, 0); ctx.lineTo(k + 0.5, S); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, k + 0.5); ctx.lineTo(S, k + 0.5); ctx.stroke();
-  }
-  ctx.strokeStyle = 'rgba(90,150,230,0.18)';
-  ctx.beginPath(); ctx.moveTo(0.5, 0); ctx.lineTo(0.5, S); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0, 0.5); ctx.lineTo(S, 0.5); ctx.stroke();
-  ctx.fillStyle = 'rgba(120,180,255,0.35)';
-  for (let x = 0; x < S; x += 64) for (let y = 0; y < S; y += 64) ctx.fillRect(x - 1, y - 1, 3, 3);
-  return Texture.from(c);
 }

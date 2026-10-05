@@ -39,7 +39,8 @@ html, body {
 
 #vignette {
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(var(--vig, 0,0,0), 0.6) 100%);
+  transition: background 3s;
 }
 #vignette.hurt {
   animation: hurt 0.35s ease-out;

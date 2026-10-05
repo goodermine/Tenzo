@@ -230,6 +230,12 @@ export class Sim {
     };
   }
 
+  /** Which arena the run is in: 0 to 5:00, 1 to 9:30, 2 after - the void
+      falls half a minute before The Hive arrives in it. */
+  get zone() {
+    return this.time < 300 ? 0 : this.time < 570 ? 1 : 2;
+  }
+
   get eHigh() { return this.ePool.high; }
   get eCount() { return this.ePool.count; }
   eDef(i) { return ENEMIES[this.eType[i]]; }
@@ -650,6 +656,11 @@ export class Sim {
     this.updateItems();
     this.director.update(dt);
     this.checkLevel();
+    const z = this.zone;
+    if (z !== this.lastZone) {
+      if (this.lastZone !== undefined) this.events.push(EV.ZONE, this.p.x, this.p.y, z);
+      this.lastZone = z;
+    }
   }
 
   updatePlayer(dt) {

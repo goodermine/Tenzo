@@ -20,7 +20,8 @@ export const EV = {
   ITEM: 15,        // x, y, a = item kind picked up
   BOSS: 16,        // x, y, a = enemy type (a boss arrived)
   EVOLVE: 17,      // a = weapon slot
-  BULLET: 18       // x, y (an enemy fired)
+  BULLET: 18,      // x, y (an enemy fired)
+  ZONE: 19         // a = zone index (the arena changed)
 };
 
 export class Events {
