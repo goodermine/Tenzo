@@ -274,6 +274,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(300);
     await page.tap('#title .ship:nth-child(3)');
     await wait(300);
+    await page.tap('#title .seg[data-diff="easy"]');
+    await wait(300);
     await page.reload();
     for (let i = 0; i < 60; i++) {
       if (await page.evaluate(() => window.__ready === true)) break;
@@ -282,10 +284,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(1500);
     const kept = await sim(() => {
       const s = window.__game.save;
-      return { hull: s.upgrades.hull || 0, credits: s.credits, ship: s.character };
+      return { hull: s.upgrades.hull || 0, credits: s.credits, ship: s.character, diff: s.difficulty,
+        segOn: (document.querySelector('#title .seg.on') || {}).textContent };
     });
-    check('upgrades, credits and ship choice survive a reload',
-      kept.hull === 1 && kept.credits < 5000 && kept.credits > 0 && kept.ship === 'specter', JSON.stringify(kept));
+    check('upgrades, credits, ship and difficulty survive a reload',
+      kept.hull === 1 && kept.credits < 5000 && kept.credits > 0 && kept.ship === 'specter' &&
+      kept.diff === 'easy' && kept.segOn === 'EASY', JSON.stringify(kept));
     await shot('title-progress.png');
 
     /* The chosen ship is what deploys, with the upgrade applied. */
@@ -293,8 +297,15 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(1000);
     const ship = await sim(() => {
       const s = window.__game.sim;
-      return { id: s.char.id, weapon: s.weapons[0].def.id, maxHp: s.p.maxHp, base: s.char.hp };
+      /* a chaser spawned now should have easy's reduced health */
+      const e = s.spawnEnemy(0, s.p.x + 600, s.p.y);
+      const hp = s.eMaxHp[e];
+      s.removeEnemy(e);
+      return { id: s.char.id, weapon: s.weapons[0].def.id, maxHp: s.p.maxHp, base: s.char.hp,
+        diff: s.diff.id, chaserHp: +hp.toFixed(2), badge: document.querySelector('#hud .badge').textContent };
     });
+    check('EASY deploys with weaker enemies and a badge',
+      ship.diff === 'easy' && ship.chaserHp < 10 && ship.badge === 'EASY', JSON.stringify(ship));
     check('the Specter deploys with its own weapon and the hull upgrade',
       ship.id === 'specter' && ship.weapon === 'chain' && ship.maxHp === ship.base + 10, JSON.stringify(ship));
 

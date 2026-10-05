@@ -82,6 +82,13 @@ async function boot() {
   $('#title .start').addEventListener('click', start);
   $('#over .again').addEventListener('click', start);
   $('#over .menu').addEventListener('click', toTitle);
+  for (const b of document.querySelectorAll('#title .seg')) {
+    b.addEventListener('click', () => {
+      game.save.difficulty = b.dataset.diff;
+      store(game.save);
+      renderTitle();
+    });
+  }
   $('#title .shop-open').addEventListener('click', () => {
     renderShop($('#shop'), game.save, buy);
     $('#shop').classList.add('on');
@@ -139,9 +146,14 @@ function renderTitle() {
     renderTitle();
   });
   $('#title .credits').textContent = save.credits;
-  const b = save.best.seconds;
+  for (const b of document.querySelectorAll('#title .seg')) {
+    const on = b.dataset.diff === save.difficulty;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on);
+  }
+  const b = save.difficulty === 'easy' ? save.best.easySeconds || 0 : save.best.seconds;
   $('#title .best').textContent = save.totals.runs
-    ? `BEST ${Math.floor(b / 60)}:${String(b % 60).padStart(2, '0')}  ·  ${plural(save.totals.runs, 'RUN')}  ·  ${plural(save.totals.wins, 'WIN')}`
+    ? `BEST ${save.difficulty === 'easy' ? '(EASY) ' : ''}${Math.floor(b / 60)}:${String(b % 60).padStart(2, '0')}  ·  ${plural(save.totals.runs, 'RUN')}  ·  ${plural(save.totals.wins, 'WIN')}`
     : '';
 }
 
@@ -176,8 +188,10 @@ function start() {
     seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0,
     character: save.character,
     upgrades: save.upgrades,
-    locked: lockedWeapons(save)
+    locked: lockedWeapons(save),
+    difficulty: save.difficulty
   });
+  $('#hud .badge').textContent = game.sim.diff.id === 'easy' ? 'EASY' : '';
   game.sim.viewRadius = view.viewRadius;
   view.reset(game.sim);
   levelUp.hide();
@@ -215,7 +229,7 @@ function renderLoadout(el, sim) {
 function showResults(sim, settled) {
   const t = Math.floor(sim.time);
   const earned = $('#over .earned');
-  earned.textContent = `+${settled.credits} CREDITS`;
+  earned.textContent = `+${settled.credits} CREDITS${sim.diff.id === 'easy' ? ' · EASY' : ''}`;
   if (settled.newBest) {
     const nb = document.createElement('span');
     nb.className = 'nb';

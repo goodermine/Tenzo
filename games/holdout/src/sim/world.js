@@ -17,6 +17,7 @@ import { WEAPONS, WEAPON_INDEX, EVOLUTIONS, BEH, PIERCE_ALL } from '../content/w
 import { PASSIVES, PASSIVE_INDEX } from '../content/passives.js';
 import { CHARACTERS, CHARACTER_INDEX } from '../content/characters.js';
 import { applyUpgrades } from '../content/meta.js';
+import { difficulty } from '../content/difficulty.js';
 
 export const MAX_E = 1024;
 export const MAX_S = 1024;
@@ -77,8 +78,10 @@ export class Sim {
    * @param character ship id (src/content/characters.js)
    * @param upgrades  permanent upgrade levels bought in the shop
    * @param locked    weapon ids not yet unlocked, never offered
+   * @param difficulty 'easy' or 'normal' (src/content/difficulty.js)
    */
-  constructor({ seed = 1, character = 'vanguard', upgrades = {}, locked = [] } = {}) {
+  constructor({ seed = 1, character = 'vanguard', upgrades = {}, locked = [], difficulty: diff = 'normal' } = {}) {
+    this.diff = difficulty(diff);
     this.seed = seed;
     this.rng = makeRng(seed);
     this.char = CHARACTERS[CHARACTER_INDEX[character] ?? 0];
@@ -220,6 +223,7 @@ export class Sim {
       kills: this.p.kills,
       level: this.p.level,
       won: this.won,
+      difficulty: this.diff.id,
       bosses: this.bossesKilled.slice(),
       evolved: this.evolvedCount,
       character: this.char.id
@@ -363,7 +367,8 @@ export class Sim {
     const i = this.ePool.alloc();
     if (i < 0) return -1;
     const def = ENEMIES[type];
-    const hp = def.fixedHp ? def.hp : def.hp * Director.hpScale(this.time);
+    const D = this.diff;
+    const hp = def.fixedHp ? def.hp * D.bossHp : def.hp * Director.hpScale(this.time) * D.enemyHp;
     this.eType[i] = type;
     this.ex[i] = x;
     this.ey[i] = y;
@@ -372,7 +377,7 @@ export class Sim {
     this.eShield[i] = def.shield ? hp * def.shield : 0;
     this.eR[i] = def.r;
     this.eSpeed[i] = def.speed * (def.boss ? 1 : 0.92 + this.rng.next() * 0.16);
-    this.eDmg[i] = def.dmg;
+    this.eDmg[i] = def.dmg * D.enemyDmg;
     this.eMass[i] = def.mass;
     this.eXp[i] = def.xp;
     this.eFlash[i] = 0;
@@ -417,6 +422,10 @@ export class Sim {
   spawnBullet(x, y, vx, vy, dmg, r) {
     const i = this.bPool.alloc();
     if (i < 0) return -1;
+    const D = this.diff;
+    vx *= D.bulletSpeed;
+    vy *= D.bulletSpeed;
+    dmg *= D.enemyDmg;
     this.bx[i] = x;
     this.by[i] = y;
     this.bvx[i] = vx;
@@ -885,7 +894,7 @@ export class Sim {
       if (!this.gPull[i]) continue;
       const d = Math.sqrt(d2) || 1e-3;
       if (d < grab) {
-        p.xp += this.gValue[i] * this.stats.growth;
+        p.xp += this.gValue[i] * this.stats.growth * this.diff.xp;
         this.events.push(EV.PICKUP, this.gx[i], this.gy[i], this.gValue[i]);
         this.gPool.release(i);
         continue;

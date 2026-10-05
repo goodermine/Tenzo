@@ -25,6 +25,7 @@ const flags = process.argv.slice(5);
 const RANDOM = flags.includes('--random');
 const MAXED = flags.includes('--maxed');
 const SHIP = (flags.find(f => f.startsWith('--ship=')) || '--ship=vanguard').slice(7);
+const DIFF = flags.includes('--easy') ? 'easy' : 'normal';
 
 /* A sensible player's card choice: evolutions first, then levelling the
    weapons it has towards them, the passives those evolutions need, a few
@@ -97,7 +98,7 @@ const results = [];
 for (let r = 0; r < runs; r++) {
   const seed = seed0 + r;
   const upgrades = MAXED ? Object.fromEntries(UPGRADES.map(u => [u.id, u.max])) : {};
-  const sim = new Sim({ seed, character: SHIP, upgrades });
+  const sim = new Sim({ seed, character: SHIP, upgrades, difficulty: DIFF });
   const pick = makeRng(seed * 7919);
   let peak = 0, worstStep = 0, totalMs = 0, steps = 0;
   const limit = minutes * 60;

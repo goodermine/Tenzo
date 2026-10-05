@@ -95,16 +95,17 @@ export class Director {
   update(dt) {
     const sim = this.sim, t = sim.time;
     const ph = this.phase(t);
-    this.acc = Math.min(this.acc + ph.rate * dt, 6);
+    const D = sim.diff;
+    this.acc = Math.min(this.acc + ph.rate * D.spawnRate * dt, 6);
     while (this.acc >= 1) {
       this.acc -= 1;
-      if (sim.eCount >= ph.max) break;
+      if (sim.eCount >= ph.max * D.maxAlive) break;
       const [x, y] = this.edge();
       sim.spawnEnemy(this.pick(ph.mix), x, y);
     }
     while (this.nextSurge < SURGES.length && SURGES[this.nextSurge].t <= t) {
       const s = SURGES[this.nextSurge++];
-      this.ring(ENEMY_INDEX[s.kind], s.n, sim.viewRadius * 0.92);
+      this.ring(ENEMY_INDEX[s.kind], Math.round(s.n * D.maxAlive), sim.viewRadius * 0.92);
       sim.events.push(EV.SURGE, sim.p.x, sim.p.y, s.n);
     }
     while (this.nextElite < ELITES.length && ELITES[this.nextElite] <= t) {

@@ -2,6 +2,8 @@
    unlocks. Pure functions over the save data, so they are testable and the
    bot can apply the same upgrades the shop sells. */
 
+import { difficulty } from './difficulty.js';
+
 /* Permanent upgrades. cost(level) is the price of buying `level` + 1. */
 export const UPGRADES = [
   { id: 'hull', name: 'Hull', note: '+10 max health', max: 5, base: 60 },
@@ -43,10 +45,12 @@ export const CHARACTER_UNLOCKS = [
   { id: 'specter', text: 'Evolve a weapon', test: (r) => r.evolved > 0 }
 ];
 
-/** Credits for a run: time and kills, and a lot for the bosses. */
+/** Credits for a run: time and kills, and a lot for the bosses; scaled
+    down on easy. */
 export function creditsFor(r) {
-  return Math.round(r.seconds / 5 + r.kills * 0.05 + r.level +
-    (r.bosses.includes('hive') ? 60 : 0) + (r.won ? 250 : 0));
+  const base = r.seconds / 5 + r.kills * 0.05 + r.level +
+    (r.bosses.includes('hive') ? 60 : 0) + (r.won ? 250 : 0);
+  return Math.round(base * difficulty(r.difficulty).credits);
 }
 
 /**
@@ -61,8 +65,10 @@ export function settleRun(save, r) {
   t.kills += r.kills;
   t.seconds += r.seconds;
   if (r.won) t.wins++;
-  const newBest = r.seconds > save.best.seconds;
-  if (newBest) save.best.seconds = r.seconds;
+  /* best time is kept per difficulty */
+  const key = r.difficulty === 'easy' ? 'easySeconds' : 'seconds';
+  const newBest = r.seconds > (save.best[key] || 0);
+  if (newBest) save.best[key] = r.seconds;
   save.best.kills = Math.max(save.best.kills, r.kills);
   save.best.level = Math.max(save.best.level, r.level);
 

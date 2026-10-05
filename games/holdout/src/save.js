@@ -8,7 +8,8 @@ const VERSION = 1;
 const DEFAULTS = () => ({
   version: VERSION,
   settings: { sound: true, haptics: true, fps: false, bloom: 'auto' },
-  best: { seconds: 0, kills: 0, level: 0 },
+  best: { seconds: 0, easySeconds: 0, kills: 0, level: 0 },
+  difficulty: 'normal',
   credits: 0,
   upgrades: {},
   unlocked: { characters: ['vanguard'], weapons: [] },
