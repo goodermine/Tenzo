@@ -234,11 +234,11 @@ export const ENEMIES = [
     elite: true, onDeath: eliteDeath
   },
   {
-    id: 'hive', name: 'THE HIVE', hp: 22000, speed: 40, r: 64, dmg: 30, xp: 60, mass: 80,
+    id: 'hive', name: 'THE HIVE', hp: 11000, speed: 56, r: 64, dmg: 30, xp: 60, mass: 80,
     boss: true, fixedHp: true, ai: hiveAi, onDeath: hiveDeath
   },
   {
-    id: 'monolith', name: 'THE MONOLITH', hp: 70000, speed: 48, r: 80, dmg: 40, xp: 0, mass: 120,
+    id: 'monolith', name: 'THE MONOLITH', hp: 22000, speed: 62, r: 80, dmg: 40, xp: 0, mass: 120,
     boss: true, fixedHp: true, ai: monolithAi, onDeath: monolithDeath
   }
 ];

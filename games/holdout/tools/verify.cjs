@@ -293,10 +293,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(1000);
     const ship = await sim(() => {
       const s = window.__game.sim;
-      return { id: s.char.id, weapon: s.weapons[0].def.id, maxHp: s.p.maxHp };
+      return { id: s.char.id, weapon: s.weapons[0].def.id, maxHp: s.p.maxHp, base: s.char.hp };
     });
     check('the Specter deploys with its own weapon and the hull upgrade',
-      ship.id === 'specter' && ship.weapon === 'chain' && ship.maxHp === 85, JSON.stringify(ship));
+      ship.id === 'specter' && ship.weapon === 'chain' && ship.maxHp === ship.base + 10, JSON.stringify(ship));
 
     /* Rerolls: bought rerolls show on the cards and replace them. */
     await sim(() => { const s = window.__game.sim; s.rerolls = 1; s.p.xp = s.p.xpNext; });
@@ -307,6 +307,32 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(500);
     const after2 = await sim(() => ({ left: window.__game.sim.rerolls, shown: document.querySelectorAll('#levelup .card').length }));
     check('a reroll replaces the cards', rr && after2.left === 0 && after2.shown === 3, `${before2} (rerolls left ${after2.left})`);
+
+    /* Installable: the manifest loads and the offline worker registers. */
+    const pwa = await sim(async () => {
+      const m = await fetch('manifest.json').then(r => r.json()).catch(() => null);
+      for (let i = 0; i < 20 && !window.__sw; i++) await new Promise(r => setTimeout(r, 250));
+      const reg = await navigator.serviceWorker.getRegistration();
+      return { manifest: !!(m && m.icons && m.icons.length >= 3), sw: window.__sw || 'none', reg: !!reg };
+    });
+    check('installable: manifest and offline worker', pwa.manifest && pwa.sw === 'registered' && pwa.reg, JSON.stringify(pwa));
+
+    /* Landscape: the level-up cards must fit a phone on its side. */
+    await page.setViewportSize({ width: 844, height: 390 });
+    await wait(1500);
+    await sim(() => { const s = window.__game.sim; s.invulnerable = true; s.p.xp = s.p.xpNext; });
+    await wait(1800);
+    const land = await sim(() => {
+      const cards = [...document.querySelectorAll('#levelup .card')];
+      const panel = document.querySelector('#levelup .panel');
+      const last = cards[cards.length - 1];
+      return {
+        cards: cards.length,
+        fits: !!last && (last.getBoundingClientRect().bottom <= innerHeight || panel.scrollHeight > panel.clientHeight)
+      };
+    });
+    await shot('landscape.png');
+    check('level-up cards fit a landscape phone', land.cards === 3 && land.fits, JSON.stringify(land));
 
     check('no runtime errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (e) {

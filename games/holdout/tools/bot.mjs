@@ -13,10 +13,38 @@
  */
 import { Sim } from '../src/sim/world.js';
 import { makeRng } from '../src/sim/rng.js';
+import { EVOLUTIONS } from '../src/content/weapons.js';
+import { UPGRADES } from '../src/content/meta.js';
 
 const runs = +(process.argv[2] || 5);
 const seed0 = +(process.argv[3] || 1);
 const minutes = +(process.argv[4] || 15);
+/* --random picks cards blindly; the default plays a sensible build.
+   --maxed gives every shop upgrade; --ship=bastion picks a ship. */
+const flags = process.argv.slice(5);
+const RANDOM = flags.includes('--random');
+const MAXED = flags.includes('--maxed');
+const SHIP = (flags.find(f => f.startsWith('--ship=')) || '--ship=vanguard').slice(7);
+
+/* A sensible player's card choice: evolutions first, then levelling the
+   weapons it has towards them, the passives those evolutions need, a few
+   more weapons early on, and damage and cooldown over the rest. */
+function pickCard(sim, rng) {
+  if (RANDOM) return rng.int(sim.choices.length);
+  const owned = new Set(sim.weapons.map(w => w.def.id));
+  const needs = new Set(EVOLUTIONS.filter(e => owned.has(e.from)).map(e => e.with));
+  const score = c => {
+    if (c.kind === 'evolve') return 100;
+    if (c.kind === 'weapon' && c.level > 1) return 20 + c.level;
+    if (c.kind === 'weapon') return sim.weapons.length < 4 ? 18 : 4;
+    if (c.kind === 'passive' && needs.has(c.id)) return 16;
+    if (c.kind === 'passive') return { might: 12, haste: 12, area: 9, vigor: 8, armor: 8, amount: 14, regen: 6 }[c.id] || 4;
+    return 1;
+  };
+  let best = 0;
+  sim.choices.forEach((c, i) => { if (score(c) + rng.next() > score(sim.choices[best])) best = i; });
+  return best;
+}
 const DT = 1 / 60;
 
 function steer(sim) {
@@ -68,13 +96,14 @@ function steer(sim) {
 const results = [];
 for (let r = 0; r < runs; r++) {
   const seed = seed0 + r;
-  const sim = new Sim({ seed });
+  const upgrades = MAXED ? Object.fromEntries(UPGRADES.map(u => [u.id, u.max])) : {};
+  const sim = new Sim({ seed, character: SHIP, upgrades });
   const pick = makeRng(seed * 7919);
   let peak = 0, worstStep = 0, totalMs = 0, steps = 0;
   const limit = minutes * 60;
   while (!sim.over && sim.time < limit) {
     if (sim.choices) {
-      sim.choose(pick.int(sim.choices.length));
+      sim.choose(pickCard(sim, pick));
       continue;
     }
     if (steps % 3 === 0) steer(sim);
@@ -95,6 +124,8 @@ for (let r = 0; r < runs; r++) {
     kills: sim.p.kills,
     peakEnemies: peak,
     won: sim.won,
+    bosses: sim.bossesKilled.map((b, k) => `${b}@${sim.bossTimes[k]}`).join(' ') || '-',
+    bossHp: sim.boss >= 0 ? Math.round(sim.eHp[sim.boss] / sim.eMaxHp[sim.boss] * 100) + '%' : '-',
     evolved: sim.weapons.filter(w => w.def.evolved).map(w => w.def.id).join(' ') || '-',
     build: sim.weapons.map(w => `${w.def.id}${w.level}`).concat(sim.passives.map(p => `${p.def.id}${p.level}`)).join(' '),
     avgStepMs: +(totalMs / steps).toFixed(3),

@@ -86,6 +86,7 @@ export class Sim {
     this.locked = new Set(locked);
     this.rerolls = upgrades.reroll || 0;
     this.bossesKilled = [];
+    this.bossTimes = [];
     this.evolvedCount = 0;
     this.events = new Events(4096);
     this.time = 0;
@@ -581,7 +582,10 @@ export class Sim {
     if (roll < 0.005) this.dropItem(ITEM.HEAL, x, y);
     else if (roll < 0.0075 && !this.itemOut(ITEM.VACUUM)) this.dropItem(ITEM.VACUUM, x, y);
     this.p.kills++;
-    if (def.boss) this.bossesKilled.push(def.id);
+    if (def.boss) {
+      this.bossesKilled.push(def.id);
+      this.bossTimes.push(Math.round(this.time));
+    }
     if (this.boss === i) this.boss = -1;
     /* Dead before onDeath runs, so a blast it sets off cannot hit it
        again; but its slot is not reusable until after, so enemies spawned

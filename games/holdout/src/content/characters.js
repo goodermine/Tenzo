@@ -27,7 +27,7 @@ export const CHARACTERS = [
     weapon: 'chain',
     sprite: 'specter',
     color: '#d27aff',
-    hp: 75, speed: 1.15, armor: 0, damage: 1, cooldown: 0.88
+    hp: 85, speed: 1.15, armor: 0, damage: 1, cooldown: 0.86
   }
 ];
 

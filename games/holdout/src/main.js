@@ -28,6 +28,9 @@ const game = {
   freeze: 0,          /* hit-pause, real seconds left */
   slow: 0,            /* level-up slow-motion beat, real seconds left */
   save: load(),
+  /* quality tier: 0 everything, 1 no bloom, 2 half the particles,
+     3 render at 1x pixel density */
+  tier: 0,
   audio: new Audio(),
   haptics: new Haptics()
 };
@@ -123,7 +126,7 @@ function applySettings() {
   game.haptics.enabled = st.haptics;
   $('#fps').classList.toggle('on', !!st.fps);
   for (const b of document.querySelectorAll('.toggle')) b.classList.toggle('on', !!st[b.dataset.setting]);
-  if (game.view) game.view.setBloom(st.bloom !== 'off' && !game.bloomDowngraded);
+  if (game.view) game.view.setBloom(st.bloom !== 'off' && game.tier < 1);
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 'S'}`;
@@ -333,9 +336,23 @@ function react(sim) {
   if (small) view.addTrauma(Math.min(0.06, small * 0.012));
 }
 
-/* Frame-time watch: if the device cannot hold the frame rate, bloom is the
-   first thing to go. */
+/* Frame-time watch. If the device cannot hold the frame rate during a run,
+   quality steps down one tier at a time: bloom first, then half the
+   particles, then the render resolution. It never steps back up - going up
+   and down would be a visible flicker, and a phone that struggled once
+   will struggle again when the screen fills. */
 const perf = { acc: 0, frames: 0, slowFor: 0, shown: 0, fps: 60 };
+function setTier(t) {
+  game.tier = t;
+  const { view, app } = game;
+  view.setBloom(t < 1 && game.save.settings.bloom !== 'off');
+  view.fxScale = t >= 2 ? 0.5 : 1;
+  if (t >= 3 && app.renderer.resolution > 1) {
+    app.renderer.resolution = 1;
+    app.resize();
+    view.resize();
+  }
+}
 function watchPerf(rawDt) {
   perf.acc += rawDt;
   perf.frames++;
@@ -345,13 +362,13 @@ function watchPerf(rawDt) {
   perf.frames = 0;
   if (game.state === 'run' && perf.fps < 45) perf.slowFor += 0.5;
   else perf.slowFor = Math.max(0, perf.slowFor - 0.5);
-  if (perf.slowFor >= 3 && game.view.bloomOn && game.save.settings.bloom === 'auto') {
-    game.bloomDowngraded = true;
-    game.view.setBloom(false);
+  if (perf.slowFor >= 3 && game.tier < 3 && game.save.settings.bloom === 'auto') {
+    perf.slowFor = 0;
+    setTier(game.tier + 1);
   }
   if (game.save.settings.fps) {
     const s = game.sim;
-    $('#fps').textContent = `${perf.fps.toFixed(0)} fps\n${s.eCount} enemies  ${s.sPool.count} shots  ${s.gPool.count} gems\nbloom ${game.view.bloomOn ? 'on' : 'off'}`;
+    $('#fps').textContent = `${perf.fps.toFixed(0)} fps\n${s.eCount} enemies  ${s.sPool.count} shots  ${s.gPool.count} gems\nquality tier ${game.tier}  bloom ${game.view.bloomOn ? 'on' : 'off'}`;
   }
 }
 
@@ -430,6 +447,16 @@ function frame(rawDt) {
 window.__game = game;
 window.__describe = describe;
 window.__enemyIndex = Object.fromEntries(ENEMIES.map((e, i) => [e.id, i]));
+
+/* Offline support, where the page is served over http(s) and the browser
+   allows it. Some hosts sandbox pages so a worker cannot register; the game
+   runs the same either way, so a failure here is not worth reporting. */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(() => { window.__sw = 'registered'; },
+      () => { window.__sw = 'unavailable'; });
+  });
+}
 
 boot().catch(e => {
   console.error(e);

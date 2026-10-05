@@ -143,6 +143,8 @@ export class View {
     this.novaFade = 0;
     this.time = 0;
     this.realDt = 0;
+    /* particle budget; lowered on devices that cannot hold the frame rate */
+    this.fxScale = 1;
     this.resize();
   }
 
@@ -206,6 +208,7 @@ export class View {
   }
 
   burst(x, y, n, speed, size, tint, life = 0.45) {
+    n = Math.ceil(n * this.fxScale);
     for (let k = 0; k < n; k++) {
       const a = Math.random() * TAU, s = speed * (0.35 + Math.random() * 0.75);
       this.emit(FX.SPARK, x, y, Math.cos(a) * s, Math.sin(a) * s, life * (0.6 + Math.random() * 0.6), size, tint);

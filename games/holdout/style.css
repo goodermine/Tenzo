@@ -1,5 +1,6 @@
 /* HOLDOUT - overlays and HUD. The game itself is drawn on the canvas. */
 :root {
+  color-scheme: dark;
   --bg: #05070d;
   --ink: #e8f6ff;
   --dim: #7f93a8;
