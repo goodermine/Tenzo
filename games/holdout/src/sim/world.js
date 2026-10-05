@@ -140,6 +140,9 @@ export class Sim {
 
     this.choices = null;
     this.pendingLevels = 0;
+    /* The browser holds the cards back for a slow-motion beat after a
+       level-up; while this is set the level is banked but not offered. */
+    this.holdChoices = false;
     this.addWeapon('bolt');
   }
 
@@ -547,6 +550,6 @@ export class Sim {
       this.pendingLevels++;
       this.events.push(EV.LEVELUP, p.x, p.y, p.level);
     }
-    if (this.pendingLevels > 0 && !this.choices) this.choices = this.rollChoices();
+    if (this.pendingLevels > 0 && !this.choices && !this.holdChoices) this.choices = this.rollChoices();
   }
 }

@@ -194,7 +194,26 @@ const SHAPES = {
   }
 };
 
-/* name -> [shape, colour, cell column, cell row, cells wide] */
+/* Digits for damage numbers: white with a dark outline, so they read over
+   the glow. Drawn as atlas cells so a number is a few batched particles,
+   not a text object. */
+for (let d = 0; d < 10; d++) {
+  SHAPES['d' + d] = ctx => {
+    ctx.font = '900 92px ui-rounded, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 16;
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(String(d), 0, 6);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(String(d), 0, 6);
+  };
+}
+/* Horizontal advance of a digit, in atlas pixels. */
+export const DIGIT_ADVANCE = 56;
+
+/* name -> [shape, colour] in cell order */
 const LAYOUT = [
   ['player', 'player', COLORS.player],
   ['player_w', 'player', '#ffffff'],
@@ -222,7 +241,8 @@ const LAYOUT = [
   ['p_swift', 'p_swift', '#7affd8'],
   ['p_magnet', 'p_magnet', '#7ab8ff'],
   ['p_vigor', 'p_vigor', '#8aff7a'],
-  ['p_area', 'p_area', '#d27aff']
+  ['p_area', 'p_area', '#d27aff'],
+  ...Array.from({ length: 10 }, (_, d) => ['d' + d, 'd' + d, '#fff'])
 ];
 
 export function buildAtlas() {

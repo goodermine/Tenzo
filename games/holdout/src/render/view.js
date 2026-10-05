@@ -4,8 +4,8 @@
    effects, whatever the count - all from one atlas, all additive, so a dense
    swarm glows brighter where it bunches. Nothing here decides anything; the
    view could be swapped out and the game would play the same. */
-import { Container, ParticleContainer, Particle, TilingSprite, Sprite, Graphics } from 'pixi.js';
-import { buildGround, COLORS } from './atlas.js';
+import { Container, ParticleContainer, Particle, TilingSprite, Sprite, Graphics, RenderTexture, BlurFilter } from 'pixi.js';
+import { buildGround, COLORS, DIGIT_ADVANCE } from './atlas.js';
 import { EV } from '../sim/events.js';
 import { ENEMIES } from '../content/enemies.js';
 
@@ -52,6 +52,10 @@ class Layer {
 
 /* Short-lived effect particles: sparks and flashes, owned by the view. */
 const FX_CAP = 1600;
+/* Damage numbers alive at once, and new ones allowed per frame: a nova that
+   hits sixty enemies shows a dozen numbers, not sixty. */
+const NUM_CAP = 90;
+const NUM_PER_FRAME = 10;
 
 export class View {
   constructor(app, atlas) {
@@ -66,6 +70,8 @@ export class View {
     this.enemies = new Layer(atlas, 1100);
     this.weaponsFx = new Layer(atlas, 64);
     this.fx = new Layer(atlas, FX_CAP);
+    this.nums = new Layer(atlas, NUM_CAP * 4);
+    this.nums.container.blendMode = 'normal';
 
     this.player = new Sprite(atlas.tex.player);
     this.player.anchor.set(0.5);
@@ -80,7 +86,34 @@ export class View {
       this.gems.container, this.shots.container, this.enemies.container,
       this.weaponsFx.container, this.engine, this.player, this.fx.container, this.hpBar
     );
+    /* Numbers sit outside the bloom so they stay crisp. */
+    this.numLayer = new Container();
+    this.numLayer.addChild(this.nums.container);
     app.stage.addChild(this.ground, this.world);
+
+    /* Bloom without a post-processing chain: the world is drawn a second
+       time into a quarter-resolution texture, blurred there (cheap at that
+       size) and added back over the scene. Off on slow devices. */
+    this.bloomOn = false;
+    this.bloomRt = null;
+    this.bloom = new Sprite();
+    this.bloom.blendMode = 'add';
+    this.bloom.alpha = 0.6;
+    const blur = new BlurFilter({ strength: 3, quality: 2 });
+    blur.resolution = 0.25;
+    this.bloom.filters = [blur];
+    this.bloom.visible = false;
+    app.stage.addChild(this.bloom, this.numLayer);
+
+    this.nX = new Float32Array(NUM_CAP);
+    this.nY = new Float32Array(NUM_CAP);
+    this.nVal = new Int32Array(NUM_CAP);
+    this.nLife = new Float32Array(NUM_CAP);
+    this.nTint = new Uint32Array(NUM_CAP);
+    this.nN = 0;
+
+    this.trauma = 0;
+    this.shakeT = 0;
 
     this.fxX = new Float32Array(FX_CAP);
     this.fxY = new Float32Array(FX_CAP);
@@ -109,12 +142,43 @@ export class View {
     this.viewRadius = Math.hypot(W, H) / 2 / this.zoom;
     this.ground.width = W;
     this.ground.height = H;
+    if (this.bloomRt) this.bloomRt.resize(W, H);
+  }
+
+  setBloom(on) {
+    this.bloomOn = on;
+    this.bloom.visible = on;
+    if (on && !this.bloomRt) {
+      this.bloomRt = RenderTexture.create({
+        width: this.app.screen.width, height: this.app.screen.height, resolution: 0.25
+      });
+      this.bloom.texture = this.bloomRt;
+    }
+  }
+
+  /** Screen shake, as trauma: offsets go with its square, so small knocks
+      barely register and big ones land hard. */
+  addTrauma(x) {
+    this.trauma = Math.min(1, this.trauma + x);
+  }
+
+  number(x, y, value, tint) {
+    let i = this.nN;
+    if (i >= NUM_CAP) i = (Math.random() * NUM_CAP) | 0;
+    else this.nN++;
+    this.nX[i] = x + (Math.random() - 0.5) * 10;
+    this.nY[i] = y - 8;
+    this.nVal[i] = Math.max(1, Math.round(value));
+    this.nLife[i] = 0.62;
+    this.nTint[i] = tint;
   }
 
   reset(sim) {
     this.cam.x = sim.p.x;
     this.cam.y = sim.p.y;
     this.fxN = 0;
+    this.nN = 0;
+    this.trauma = 0;
     this.novaFade = 0;
     this.player.visible = true;
     this.engine.visible = true;
@@ -151,7 +215,12 @@ export class View {
     for (let i = 0; i < events.count; i++) {
       const t = events.type[i], x = events.x[i], y = events.y[i];
       if (t === EV.HIT) {
-        if (hits++ < 40) this.burst(x, y, 2, 220, 0.18, 0xffffff, 0.18);
+        if (hits < 40) this.burst(x, y, 2, 220, 0.18, 0xffffff, 0.18);
+        if (hits < NUM_PER_FRAME) {
+          const d = events.a[i];
+          this.number(x, y, d, d >= 40 ? 0xffd84f : d >= 18 ? 0xfff2b0 : 0xffffff);
+        }
+        hits++;
       } else if (t === EV.KILL) {
         const type = events.a[i], r = events.b[i], tint = ENEMY_TINT[type];
         this.burst(x, y, 6 + Math.round(r * 0.35), 260 + r * 6, 0.22 + r * 0.006, tint, 0.5);
@@ -173,7 +242,8 @@ export class View {
 
   /* ------------------------------------------------------------ frame */
 
-  sync(sim, dt) {
+  sync(sim, dt, realDt = dt) {
+    this.realDt = realDt;
     this.time += dt;
     const p = sim.p, tex = this.atlas.tex, R = this.R;
     this.lastPx = p.x;
@@ -184,7 +254,14 @@ export class View {
     this.cam.x += (p.x + p.vx * 0.18 - this.cam.x) * k;
     this.cam.y += (p.y + p.vy * 0.18 - this.cam.y) * k;
     const W = this.app.screen.width, H = this.app.screen.height, z = this.zoom;
-    const ox = W / 2 - this.cam.x * z, oy = H / 2 - this.cam.y * z;
+    /* Shake runs on its own clock, so it keeps going through a hit-pause -
+       which is exactly when it should be felt. */
+    this.trauma = Math.max(0, this.trauma - this.realDt * 1.5);
+    this.shakeT += this.realDt;
+    const sh = this.trauma * this.trauma * 16, t = this.shakeT;
+    const sx = sh * (Math.sin(t * 61) * 0.6 + Math.sin(t * 37 + 1.3) * 0.4);
+    const sy = sh * (Math.sin(t * 53 + 0.7) * 0.6 + Math.sin(t * 29 + 2.1) * 0.4);
+    const ox = W / 2 - this.cam.x * z + sx, oy = H / 2 - this.cam.y * z + sy;
     this.world.scale.set(z);
     this.world.position.set(ox, oy);
     this.ground.tileScale.set(z);
@@ -274,6 +351,44 @@ export class View {
     }
 
     this.updateFx(dt);
+    this.updateNumbers(dt, ox, oy, z);
+
+    if (this.bloomOn) {
+      this.app.renderer.render({ container: this.world, target: this.bloomRt, clear: true });
+    }
+  }
+
+  updateNumbers(dt, ox, oy, z) {
+    const tex = this.atlas.tex, L = this.nums;
+    L.begin();
+    let n = this.nN;
+    /* numbers are placed in screen space so they stay a readable size
+       whatever the zoom */
+    const size = 0.17;
+    for (let i = 0; i < n; i++) {
+      this.nLife[i] -= dt;
+      if (this.nLife[i] <= 0) {
+        n--;
+        this.nX[i] = this.nX[n]; this.nY[i] = this.nY[n]; this.nVal[i] = this.nVal[n];
+        this.nLife[i] = this.nLife[n]; this.nTint[i] = this.nTint[n];
+        i--;
+        continue;
+      }
+      const life = this.nLife[i], age = 0.62 - life;
+      this.nY[i] -= 46 * dt * (life / 0.62);
+      const pop = age < 0.08 ? 1 + (0.08 - age) * 7 : 1;
+      const s = size * pop * (this.nTint[i] === 0xffd84f ? 1.35 : 1);
+      const alpha = Math.min(1, life / 0.22);
+      const str = String(this.nVal[i]);
+      const adv = DIGIT_ADVANCE * s;
+      let x = ox + this.nX[i] * z - (adv * (str.length - 1)) / 2;
+      const y = oy + this.nY[i] * z;
+      for (let c = 0; c < str.length; c++, x += adv) {
+        L.add(tex['d' + str[c]], x, y, s, s, 0, this.nTint[i], alpha);
+      }
+    }
+    this.nN = n;
+    L.end();
   }
 
   updateFx(dt) {
