@@ -45,8 +45,14 @@
 <div id="levels" class="overlay">
   <div class="panel">
     <h2>LEVELS</h2>
-    <div class="world-name"></div>
+    <div class="world-bar">
+      <button class="round wprev" aria-label="Previous world"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="world-name"></div>
+      <button class="round wnext" aria-label="Next world"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="world-dots"></div>
     <div class="grid"></div>
+    <div class="world-lock"></div>
     <button class="soft back">BACK</button>
   </div>
 </div>
@@ -72,6 +78,16 @@
     <div class="lname"></div>
     <button class="big next">NEXT</button>
     <button class="soft replay">REPLAY</button>
+  </div>
+</div>
+
+<div id="worldintro" class="overlay">
+  <div class="card">
+    <div class="wnum"></div>
+    <h2 class="wtitle"></h2>
+    <canvas class="wballs" width="360" height="120"></canvas>
+    <p class="wtext"></p>
+    <button class="big go">LET'S GO</button>
   </div>
 </div>
 

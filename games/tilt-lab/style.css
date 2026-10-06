@@ -411,3 +411,29 @@ body.touch #pads.on { display: flex; }
 #pads svg { width: 34px; height: 34px; fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 #pads button.down svg { stroke: #fff; }
 body.touch #hint { bottom: calc(var(--safe-b) + 108px); }
+
+/* ------------------------------------------------- worlds in level select */
+.world-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px 0 6px; }
+.world-bar .world-name { margin: 0; flex: 1; font-size: 15px; color: var(--ink); }
+.world-bar .round { width: 42px; height: 42px; }
+.world-bar .round svg { width: 22px; height: 22px; fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.world-bar .round:disabled { opacity: 0.3; }
+.world-dots { display: flex; justify-content: center; gap: 7px; margin: 2px 0 14px; }
+.world-dots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(120, 40, 180, 0.2); transition: width 0.2s; }
+.world-dots i.on { width: 22px; background: var(--magenta); }
+.world-lock { margin-top: 10px; font-weight: 600; font-size: 14px; color: var(--ink-soft); min-height: 0; }
+.world-lock:empty { display: none; }
+
+/* ------------------------------------------------- world intro card */
+#worldintro { background: rgba(255, 240, 200, 0.35); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+#worldintro .card {
+  padding: 24px 24px 20px;
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 0 rgba(120, 40, 180, 0.15), 0 24px 60px rgba(120, 40, 180, 0.3);
+  transform: translateY(40px) scale(0.92);
+}
+#worldintro .wnum { font-weight: 700; font-size: 13px; letter-spacing: 0.3em; color: var(--ink-soft); }
+#worldintro h2 { margin: 2px 0 6px; font-size: 40px; color: var(--magenta); text-shadow: 0 4px 18px rgba(220, 0, 120, 0.3); }
+#worldintro canvas { display: block; width: 180px; height: 60px; margin: 4px auto 6px; }
+#worldintro p { margin: 0 0 6px; font-weight: 600; font-size: 17px; line-height: 1.35; color: var(--ink); }

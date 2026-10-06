@@ -15,21 +15,55 @@ export interface TargetDef { colour: Colour; x: number; y: number }
 /**
  * A solid rail: a thick line through `pts`, `r` units either side, with
  * round ends. `smooth` rounds the polyline into a curve through its points.
+ *  - `bouncy`: springy jelly - everything rebounds off it.
+ *  - `magnetic`: purple balls near it are pulled onto it, even upside down.
+ *  - `oneWay`: balls may pass through it travelling this way, and not back.
  */
-export interface RailDef { pts: Pt[]; r?: number; smooth?: boolean }
+export interface RailDef { pts: Pt[]; r?: number; smooth?: boolean; bouncy?: boolean; magnetic?: boolean; oneWay?: Pt }
 
 /**
  * A switch set into a surface: a pad from `a` to `b` (its top face).
- * A plate is pressed only while weighed down; a button latches.
+ *  - a plate (the default) is on only while weighed down;
+ *  - `latch`: a button - stays on once pressed;
+ *  - `toggle`: each press flips it on or off;
+ *  - `hold`: stays on this many seconds after the weight leaves (a timer).
  * `minMass` 3 means only a heavy (red) ball is enough.
  */
-export interface SwitchDef { id: string; a: Pt; b: Pt; latch?: boolean; minMass?: number }
+export interface SwitchDef {
+  id: string; a: Pt; b: Pt; latch?: boolean; toggle?: boolean; hold?: number; minMass?: number;
+}
 
 /**
- * A gate: a bar from `a` to `b` when closed. It slides by `slide` (a
- * vector) to open. It opens while any of `by` (switch ids) is active.
+ * A bar from `a` to `b` that slides by `slide` (a vector).
+ *  - A gate opens while any of `by` (switch ids) is on; `invert` closes it
+ *    instead.
+ *  - With `period` it shuttles back and forth on its own: a moving
+ *    platform.
+ *  - `platform` draws it as a solid rail rather than a striped gate;
+ *    `tray` gives it raised ends, so a ball rides along instead of
+ *    rolling off.
  */
-export interface GateDef { a: Pt; b: Pt; r?: number; slide: Pt; by: string[] }
+export interface GateDef {
+  a: Pt; b: Pt; r?: number; slide: Pt; by?: string[]; invert?: boolean;
+  period?: number; phase?: number; speed?: number; platform?: boolean; tray?: boolean;
+}
+
+/** A plank on a pivot: tips under weight, within `limit` degrees. */
+export interface SeesawDef { pivot: Pt; half: number; limit?: number; angle?: number }
+
+/** A fan: pushes every ball inside the box along `dir`. Light balls fly,
+    heavy ones barely notice. `by` switches it (on while any is on). */
+export interface FanDef { x: number; y: number; w: number; h: number; dir: Pt; strength: number; by?: string[] }
+
+/** A spring pad from `a` to `b`: launches a ball that lands on it at
+    `power` units/s, square off its face. */
+export interface SpringDef { a: Pt; b: Pt; power: number }
+
+/** A magnet: pulls (or with `repel`, pushes) purple balls within `r`,
+    with an acceleration of `strength` m/s^2 at its edge rising to twice
+    that close in (gravity is 26). Its core is solid. `by` switches it on;
+    `invert` switches it off instead. */
+export interface MagnetDef { x: number; y: number; r: number; strength: number; repel?: boolean; by?: string[]; invert?: boolean }
 
 /** A pit: any ball touching this rectangle is lost. */
 export interface HazardDef { x: number; y: number; w: number; h: number }
@@ -47,6 +81,10 @@ export interface LevelDef {
   switches?: SwitchDef[];
   gates?: GateDef[];
   hazards?: HazardDef[];
+  seesaws?: SeesawDef[];
+  fans?: FanDef[];
+  springs?: SpringDef[];
+  magnets?: MagnetDef[];
   /** proves the level can be solved; checked by tools/solve.ts */
   solution: Solution;
   /** the obvious wrong moves, which must not win - the puzzle's point */

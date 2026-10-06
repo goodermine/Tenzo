@@ -96,9 +96,16 @@ async function playSolution(page, limit = 25000) {
 
     await d.click('#title .play');
     await wait(500);
+    const intro = await G(d, () => ({ mode: window.__game.game.mode,
+      title: document.querySelector('#worldintro .wtitle').textContent }));
+    await d.screenshot({ path: join(OUT, 'world-intro.png') });
+    await d.click('#worldintro .go');
+    await wait(500);
     const started = await G(d, () => ({ mode: window.__game.game.mode, id: window.__game.game.lab.level.id,
-      hud: document.getElementById('hud').classList.contains('on') }));
-    check('PLAY starts level 1', started.mode === 'play' && started.id === 'w1-roll' && started.hud, JSON.stringify(started));
+      hud: document.getElementById('hud').classList.contains('on'), seen: window.__game.save.worlds }));
+    check('PLAY meets World 1 with its intro card, then starts level 1-1',
+      intro.mode === 'intro' && intro.title === 'TILT' && started.mode === 'play' && started.id === 'w1-roll' && started.hud &&
+      started.seen.includes(0), JSON.stringify([intro, started]));
 
     await d.keyboard.down('d');
     await wait(700);
@@ -189,8 +196,23 @@ async function playSolution(page, limit = 25000) {
     await wait(400);
     const tiles = await G(d, () => [...document.querySelectorAll('#levels .tile')].map(t => t.className));
     await d.screenshot({ path: join(OUT, 'levels.png') });
-    check('progress survives a reload: cleared levels ticked, all six open',
+    check('progress survives a reload: cleared levels ticked, all open',
       tiles.length === 6 && tiles.every(c => c.includes('done')) && !tiles.some(c => c.includes('locked')), tiles.join(' | '));
+    /* paging between worlds */
+    const pages = await G(d, async () => {
+      const name = () => document.querySelector('#levels .world-name').textContent;
+      const out = [name()];
+      const first = document.querySelector('#levels .wprev').disabled ? '.wnext' : '.wprev';
+      const back = first === '.wnext' ? '.wprev' : '.wnext';
+      document.querySelector('#levels ' + first).click();
+      await new Promise(r => setTimeout(r, 200));
+      out.push(name());
+      document.querySelector('#levels ' + back).click();
+      await new Promise(r => setTimeout(r, 200));
+      out.push(name());
+      return { out, worlds: window.__game.WORLDS.length };
+    });
+    check('level select pages between worlds', pages.out[0] !== pages.out[1] && pages.out[2] === pages.out[0], JSON.stringify(pages));
     await desk.close();
 
     /* ================================================== phone */
@@ -202,6 +224,7 @@ async function playSolution(page, limit = 25000) {
     await p.screenshot({ path: join(OUT, 'title-phone.png') });
     await p.tap('#title .play');
     await wait(600);
+    if (await G(p, () => window.__game.game.mode === 'intro')) { await p.tap('#worldintro .go'); await wait(400); }
     const cdp = await phone.newCDPSession(p);
     const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', {
       type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }]

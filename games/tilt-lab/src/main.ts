@@ -2,19 +2,19 @@
 import { Lab, S } from './core/physics.ts';
 import type { LabEvent } from './core/physics.ts';
 import { Input } from './core/input.ts';
-import { Renderer } from './render/renderer.ts';
+import { Renderer, drawBall } from './render/renderer.ts';
 import { Particles } from './effects/particles.ts';
-import { CONFETTI } from './render/palette.ts';
+import { CONFETTI, LOOKS } from './render/palette.ts';
 import { AudioManager } from './audio/audioManager.ts';
 import { KINDS } from './entities/types.ts';
 import type { Pt } from './entities/types.ts';
-import { LEVELS, WORLDS, DEMO, levelIndex } from './levels/levelLoader.ts';
+import { LEVELS, WORLDS, DEMO, levelIndex, place, firstOf } from './levels/levelLoader.ts';
 import { load, store } from './save.ts';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
 
-type Mode = 'title' | 'play' | 'paused' | 'levels' | 'clear';
+type Mode = 'title' | 'play' | 'paused' | 'levels' | 'clear' | 'intro';
 
 const save = load();
 const canvas = $<HTMLCanvasElement>('#stage');
@@ -31,6 +31,8 @@ const game = {
   shake: 0,
   clearAt: 0,
   levelsFrom: 'title' as Mode,
+  /* the world shown in level select */
+  page: 0,
   t: 0
 };
 
@@ -58,18 +60,24 @@ function safe(side: 't' | 'b'): number {
 
 function startLevel(i: number, intro = true) {
   game.index = Math.max(0, Math.min(LEVELS.length - 1, i));
-  const def = LEVELS[game.index];
+  const def = LEVELS[game.index], { w, n } = place(game.index);
   game.lab = new Lab(def);
   game.demo = false;
+  renderer.setLook(LOOKS[w % LOOKS.length]);
   renderer.setLab(game.lab);
   particles.list.length = 0;
   save.last = def.id;
   store(save);
-  $('#hud .num').textContent = String(game.index + 1);
+  $('#hud .num').textContent = `${w + 1}-${n + 1}`;
   $('#hud .name').textContent = def.name;
+  /* entering a world for the first time: meet its new idea */
+  if (intro && n === 0 && !save.worlds.includes(w)) {
+    showWorldIntro(w);
+    return;
+  }
   if (intro) {
     const el = $('#intro');
-    el.querySelector('.n')!.textContent = `LEVEL ${game.index + 1}`;
+    el.querySelector('.n')!.textContent = `LEVEL ${w + 1}-${n + 1}`;
     el.querySelector('.t')!.textContent = def.name;
     el.querySelector('.h')!.textContent = def.hint || '';
     el.classList.remove('go');
@@ -97,6 +105,7 @@ function setMode(m: Mode) {
   $('#levels').classList.toggle('on', m === 'levels');
   $('#paused').classList.toggle('on', m === 'paused');
   $('#clear').classList.toggle('on', m === 'clear');
+  $('#worldintro').classList.toggle('on', m === 'intro');
   $('#hud').classList.toggle('on', m === 'play' || m === 'paused' || m === 'clear');
   $('#pads').classList.toggle('on', m === 'play');
   input.enabled = m === 'play';
@@ -105,6 +114,7 @@ function setMode(m: Mode) {
   if (m === 'title') {
     game.demo = true;
     game.lab = new Lab(DEMO);
+    renderer.setLook(LOOKS[0]);
     renderer.setLab(game.lab);
   }
   if (m === 'levels') renderLevels();
@@ -113,23 +123,48 @@ function setMode(m: Mode) {
 
 /* --------------------------------------------------------------- screens */
 
+/** The first-time card for a world: its name, its balls, its idea. */
+function showWorldIntro(w: number) {
+  const W = WORLDS[w], el = $('#worldintro');
+  el.querySelector('.wnum')!.textContent = `WORLD ${w + 1}`;
+  el.querySelector('.wtitle')!.textContent = W.intro.title;
+  el.querySelector('.wtext')!.textContent = W.intro.text;
+  const c = el.querySelector('canvas') as HTMLCanvasElement, ctx = c.getContext('2d')!;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, c.width, c.height);
+  const n = W.intro.balls.length, gap = 120;
+  W.intro.balls.forEach((colour, k) => {
+    ctx.setTransform(1.15, 0, 0, 1.15, c.width / 2 + (k - (n - 1) / 2) * gap, c.height / 2);
+    drawBall(ctx, { colour, x: 0, y: 0, angle: 0.4 + k }, [-0.5, -0.86]);
+  });
+  setMode('intro');
+}
+
 function renderLevels() {
-  const grid = $('#levels .grid');
+  const grid = $('#levels .grid'), w = game.page, W = WORLDS[w];
   grid.replaceChildren();
-  $('#levels .world-name').textContent = WORLDS[0].name;
+  $('#levels .world-name').textContent = `WORLD ${w + 1} · ${W.name}`;
+  ($('#levels .wprev') as HTMLButtonElement).disabled = w === 0;
+  ($('#levels .wnext') as HTMLButtonElement).disabled = w === WORLDS.length - 1;
+  const dots = $('#levels .world-dots');
+  dots.replaceChildren(...WORLDS.map((_, k) => { const i = document.createElement('i'); if (k === w) i.className = 'on'; return i; }));
+  const base = firstOf(w);
+  const worldOpen = base === 0 || save.done.includes(LEVELS[base - 1].id) || W.levels.some(l => save.done.includes(l.id));
+  $('#levels .world-lock').textContent = worldOpen ? '' : `Clear World ${w} to open ${W.name}`;
   const tints = [
     ['#ffe45c', '#ffb31f', '#d98200'], ['#ff7aa8', '#ff2d55', '#b8002e'], ['#7ae0ff', '#1fb6ff', '#0062d6'],
     ['#a8ff7a', '#5dea2a', '#1f9d1a'], ['#d6a8ff', '#a347ff', '#5d14c9'], ['#ffc27a', '#ff8a1f', '#d14d00']
   ];
-  LEVELS.forEach((l, i) => {
+  W.levels.forEach((l, n) => {
+    const i = base + n;
     const open = i === 0 || save.done.includes(LEVELS[i - 1].id) || save.done.includes(l.id);
     const b = document.createElement('button');
-    const [a, bb, d] = tints[i % tints.length];
+    const [a, bb, d] = tints[(n + w) % tints.length];
     b.className = 'tile' + (open ? '' : ' locked') + (save.done.includes(l.id) ? ' done' : '');
     b.style.setProperty('--a', a);
     b.style.setProperty('--b', bb);
     b.style.setProperty('--d', d);
-    b.innerHTML = `${i + 1}<small></small>`;
+    b.innerHTML = `${w + 1}-${n + 1}<small></small>`;
     b.querySelector('small')!.textContent = l.name;
     if (open) b.addEventListener('click', () => { audio.unlock(); audio.ui(); startLevel(i); });
     grid.append(b);
@@ -300,17 +335,18 @@ function drawGauge() {
 
 function showClear() {
   $('#hint').classList.remove('on');
-  const last = game.index >= LEVELS.length - 1;
-  $('#clear .lname').textContent = last
-    ? `${WORLDS[0].name} COMPLETE · MORE LABS SOON` : `LEVEL ${game.index + 1} · ${game.lab.level.name}`;
-  $('#clear h2').textContent = last ? 'WORLD CLEAR!' : 'LAB CLEAR!';
-  $('#clear .next').textContent = last ? 'LEVELS' : 'NEXT';
+  const { w, n } = place(game.index);
+  const final = game.index >= LEVELS.length - 1, worldEnd = n === WORLDS[w].levels.length - 1;
+  $('#clear .lname').textContent = final ? 'EVERY LAB CLEARED'
+    : worldEnd ? `WORLD ${w + 1} · ${WORLDS[w].name} COMPLETE` : `LEVEL ${w + 1}-${n + 1} · ${game.lab.level.name}`;
+  $('#clear h2').textContent = final ? 'LAB COMPLETE!' : worldEnd ? 'WORLD CLEAR!' : 'LAB CLEAR!';
+  $('#clear .next').textContent = final ? 'LEVELS' : worldEnd ? 'NEXT WORLD' : 'NEXT';
   setMode('clear');
 }
 
 function next() {
   audio.ui();
-  if (game.index >= LEVELS.length - 1) { game.levelsFrom = 'title'; setMode('levels'); }
+  if (game.index >= LEVELS.length - 1) { game.levelsFrom = 'title'; game.page = place(game.index).w; setMode('levels'); }
   else startLevel(game.index + 1);
 }
 
@@ -338,13 +374,43 @@ async function boot() {
   const first = () => { audio.unlock(); audio.setMuted(!save.sound); if (save.music) audio.startMusic(); };
   $('#title .play').addEventListener('click', () => {
     first();
-    const i = levelIndex(save.last);
-    startLevel(save.done.includes(LEVELS[i].id) && i < LEVELS.length - 1 ? i + 1 : i);
+    /* continue from the first lab not yet cleared */
+    const open = LEVELS.findIndex(l => !save.done.includes(l.id));
+    startLevel(open < 0 ? levelIndex(save.last) : open);
     if (game.index === 0 && !save.done.length) hint(TOUCH ? 'Hold an arrow, or drag, to tilt the lab' : 'Hold A / D or ← → to tilt the lab');
   });
   for (const b of document.querySelectorAll('.levels-open')) {
-    b.addEventListener('click', () => { first(); audio.ui(); game.levelsFrom = game.mode; setMode('levels'); });
+    b.addEventListener('click', () => {
+      first();
+      audio.ui();
+      game.levelsFrom = game.mode;
+      game.page = game.mode === 'title' ? place(levelIndex(save.last)).w : place(game.index).w;
+      setMode('levels');
+    });
   }
+  const page = (d: number) => {
+    const p = Math.max(0, Math.min(WORLDS.length - 1, game.page + d));
+    if (p === game.page) return;
+    game.page = p;
+    audio.ui();
+    renderLevels();
+  };
+  $('#levels .wprev').addEventListener('click', () => page(-1));
+  $('#levels .wnext').addEventListener('click', () => page(1));
+  /* swipe between worlds */
+  let sx = -1;
+  $('#levels .grid').addEventListener('pointerdown', e => { sx = e.clientX; });
+  $('#levels .grid').addEventListener('pointerup', e => {
+    if (sx >= 0 && Math.abs(e.clientX - sx) > 50) page(e.clientX < sx ? 1 : -1);
+    sx = -1;
+  });
+  $('#worldintro .go').addEventListener('click', () => {
+    audio.ui();
+    const w = place(game.index).w;
+    if (!save.worlds.includes(w)) save.worlds.push(w);
+    store(save);
+    startLevel(game.index);
+  });
   $('#levels .back').addEventListener('click', () => { audio.ui(); setMode(game.levelsFrom === 'paused' ? 'paused' : 'title'); });
   $('#hud .reset').addEventListener('click', reset);
   $('#hud .pause').addEventListener('click', () => pause(true));
@@ -373,6 +439,7 @@ async function boot() {
   input.onFirstTilt = () => $('#hint').classList.remove('on');
   addEventListener('keydown', e => {
     if (game.mode === 'clear' && (e.key === 'Enter' || e.key === ' ')) next();
+    if (game.mode === 'intro' && (e.key === 'Enter' || e.key === ' ')) $<HTMLButtonElement>('#worldintro .go').click();
     if (game.mode === 'title' && (e.key === 'Enter' || e.key === ' ')) $('#title .play').click();
   });
   canvas.addEventListener('pointerdown', () => audio.unlock());
@@ -385,7 +452,7 @@ async function boot() {
 }
 
 /* for tools/verify.cjs */
-(window as any).__game = { game, input, renderer, save, startLevel, LEVELS, Lab };
+(window as any).__game = { game, input, renderer, save, startLevel, LEVELS, WORLDS, Lab, place };
 
 boot().catch(e => {
   console.error(e);

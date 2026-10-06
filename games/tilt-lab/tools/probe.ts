@@ -2,10 +2,13 @@
  *   node --experimental-strip-types tools/probe.ts <level 1-6> ['[[0,1],[2,-1]]']
  */
 import { Lab } from '../src/core/physics.ts';
-import { LEVELS } from '../src/levels/levelLoader.ts';
-const level = LEVELS[+(process.argv[2] || 1) - 1];
-const sol = process.argv[3] ? JSON.parse(process.argv[3]) : level.solution;
-const lab = new Lab(level);
+import { LEVELS, WORLDS } from '../src/levels/levelLoader.ts';
+/* a level by campaign number (7) or world-level (2-1) */
+const arg = process.argv[2] || '1';
+const [wa, la] = arg.split('-').map(Number);
+const def = LEVELS[la ? WORLDS.slice(0, wa - 1).reduce((k, w) => k + w.levels.length, 0) + la - 1 : wa - 1];
+const sol = process.argv[3] ? JSON.parse(process.argv[3]) : def.solution;
+const lab = new Lab(def);
 let next = 0;
 while (lab.time < +(process.argv[4] || 12) && lab.state === 'play') {
   lab.input = Lab.inputAt(sol, lab.time);

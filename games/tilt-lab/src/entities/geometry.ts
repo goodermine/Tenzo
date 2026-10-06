@@ -112,22 +112,39 @@ export function railOutline(rail: RailDef): Pt[] {
 
 /* A target is a cup: a curved pocket with flared lips, open at the top.
    (x, y) is the middle of its mouth, level with its lips' inner tops. */
-export const CUP_R = BALL_R + 13;      /* radius of the cup's centre line */
-export const CUP_WALL = 11;
-export const CUP_FLARE = 34;          /* how far the lips spread out and up */
+/* Cup walls are as thick as rails, so where a floor meets a cup's lip the
+   two tops are exactly level: no step for a ball to catch on. */
+export const CUP_WALL = RAIL_R;
+export const CUP_R = BALL_R + 2 + CUP_WALL;   /* radius of the cup's centre line */
+/* The lips are a wide, gentle funnel - out 70, up 15 (about 12 degrees):
+   wide enough to catch a ball arriving at a fair speed, gentle enough that
+   a ball resting on top of a filled cup can still roll away. The tips are
+   flush with a floor at y - 15, x +/- (CUP_R + CUP_FLARE) = x +/- 134. */
+export const CUP_FLARE = 70;
+export const CUP_LIP = 15;
+/* straight sides above the round bottom: deep enough that a ball at home
+   sits just below the floor, so other balls roll straight over it */
+export const CUP_DEPTH = 16;
 export function cupPath(t: TargetDef): Pt[] {
-  const c: Pt = [t.x, t.y];
-  const pts: Pt[] = [[t.x - CUP_R - CUP_FLARE, t.y - CUP_FLARE]];
+  const c: Pt = [t.x, t.y + CUP_DEPTH];
+  /* beside a wall, the wall side is a steep backstop straight into the
+     cup instead of a lip: an overshooting ball drops in, and nothing can
+     come to rest between the cup and the wall */
+  const leftWall = t.x - CUP_R - CUP_FLARE < 60, rightWall = t.x + CUP_R + CUP_FLARE > CHAMBER - 60;
+  const pts: Pt[] = leftWall
+    ? [[-24, t.y - 90], [t.x - CUP_R, t.y]]
+    : [[t.x - CUP_R - CUP_FLARE, t.y - CUP_LIP], [t.x - CUP_R, t.y]];
   arc(c, CUP_R, Math.PI, 0, pts, 0.18);
-  pts.push([t.x + CUP_R + CUP_FLARE, t.y - CUP_FLARE]);
-  return smoothPath(pts, 8);
+  if (rightWall) pts.push([t.x + CUP_R, t.y], [CHAMBER + 24, t.y - 90]);
+  else pts.push([t.x + CUP_R, t.y], [t.x + CUP_R + CUP_FLARE, t.y - CUP_LIP]);
+  return pts;
 }
 export function cupOutline(t: TargetDef): Pt[] {
   return strokeOutline(cupPath(t), CUP_WALL);
 }
 /** Where a ball sits when it is home. */
 export function cupRest(t: TargetDef): Pt {
-  return [t.x, t.y + CUP_R - CUP_WALL - BALL_R];
+  return [t.x, t.y + CUP_DEPTH + CUP_R - CUP_WALL - BALL_R];
 }
 
 /** The chamber's inner wall, a rounded square, as a closed loop. */
@@ -145,4 +162,26 @@ export function segDist(p: Pt, a: Pt, b: Pt): number {
   const abx = b[0] - a[0], aby = b[1] - a[1];
   const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby) / (abx * abx + aby * aby || 1)));
   return Math.hypot(p[0] - (a[0] + abx * t), p[1] - (a[1] + aby * t));
+}
+
+/** A gate's or platform's shape: a bar, or a tray with raised ends. */
+export function gatePath(g: { a: Pt; b: Pt; tray?: boolean }): Pt[] {
+  if (!g.tray) return [g.a, g.b];
+  const dx = g.b[0] - g.a[0], dy = g.b[1] - g.a[1], l = Math.hypot(dx, dy) || 1;
+  const ux = dy / l * 46, uy = -dx / l * 46;   /* "up" off the bar */
+  return [[g.a[0] + ux, g.a[1] + uy], g.a, g.b, [g.b[0] + ux, g.b[1] + uy]];
+}
+
+/** The nearest point to p on a polyline, and its distance. */
+export function nearestOnPath(p: Pt, path: Pt[]): { q: Pt; d: number } {
+  let best: Pt = path[0], bd = Infinity;
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i], b = path[i + 1];
+    const abx = b[0] - a[0], aby = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby) / (abx * abx + aby * aby || 1)));
+    const q: Pt = [a[0] + abx * t, a[1] + aby * t];
+    const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+    if (d < bd) { bd = d; best = q; }
+  }
+  return { q: best, d: bd };
 }

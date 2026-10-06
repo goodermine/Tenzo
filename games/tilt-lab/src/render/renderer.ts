@@ -33,7 +33,18 @@ function roundRect(p: Path2D | CanvasRenderingContext2D, x: number, y: number, w
   p.closePath();
 }
 
-interface RailArt { outline: Path2D; center: Path2D; top: number; bottom: number; r: number }
+interface RailArt {
+  outline: Path2D; center: Path2D; top: number; bottom: number; r: number;
+  kind: 'plain' | 'bouncy' | 'magnetic' | 'oneway'; path: Pt[]; dir?: Pt;
+}
+
+/* special rails wear their behaviour: jelly lime bounces, purple grabs
+   purple balls, teal lets balls through one way */
+const RAIL_KINDS = {
+  bouncy: { grad: ['#e4ff8a', '#8ff03a', '#36b81f'], edge: 'rgba(30, 120, 20, 0.6)' },
+  magnetic: { grad: ['#e8c4ff', '#a347ff', '#5d14c9'], edge: 'rgba(70, 10, 150, 0.6)' },
+  oneway: { grad: ['#b4fff2', '#1fd8bb', '#0a948c'], edge: 'rgba(0, 110, 100, 0.6)' }
+};
 
 export class Renderer {
   readonly canvas: HTMLCanvasElement;
@@ -52,6 +63,8 @@ export class Renderer {
   private frame = new Path2D();
   private grid = new Path2D();
   private stripes: CanvasPattern | null = null;
+  private stripesTeal: CanvasPattern | null = null;
+  private springPaths: Path2D[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -76,6 +89,26 @@ export class Renderer {
       c.fill();
     }
     this.stripes = this.ctx.createPattern(s, 'repeat');
+    /* inverted gates (open until pressed) get teal stripes */
+    const s2 = document.createElement('canvas');
+    s2.width = s2.height = 32;
+    const c2 = s2.getContext('2d')!;
+    c2.drawImage(s, 0, 0);
+    c2.globalCompositeOperation = 'source-atop';
+    c2.fillStyle = '#1fd8bb';
+    c2.globalAlpha = 1;
+    c2.fillRect(0, 0, 32, 32);
+    c2.globalCompositeOperation = 'destination-over';
+    c2.fillStyle = '#ffffff';
+    c2.fillRect(0, 0, 32, 32);
+    this.stripesTeal = this.ctx.createPattern(s2, 'repeat');
+  }
+
+  /** Switch to a world's colours. */
+  setLook(look: WorldLook) {
+    if (this.look === look) return;
+    this.look = look;
+    this.bg = null;
   }
 
   /** Fit the chamber - at full tilt - inside the area between the HUD bars. */
@@ -101,11 +134,14 @@ export class Renderer {
       const ys = lab.rails[i].map(p => p[1]);
       return {
         outline: pathOf(lab.rails[i]), center: pathOf(railPath(r), false),
-        top: Math.min(...ys), bottom: Math.max(...ys), r: r.r ?? 18
-      };
+        top: Math.min(...ys), bottom: Math.max(...ys), r: r.r ?? 18,
+        kind: r.bouncy ? 'bouncy' : r.magnetic ? 'magnetic' : r.oneWay ? 'oneway' : 'plain',
+        path: railPath(r), dir: r.oneWay
+      } as RailArt;
     });
     this.cups = lab.targets.map(t => ({ outline: pathOf(t.outline), center: pathOf(cupPath(t.def), false) }));
     this.gates = lab.gates.map(g => pathOf(g.outline));
+    this.springPaths = lab.springs.map(sp => pathOf(sp.outline));
     this.pads = lab.switches.map(s => {
       const c = new Path2D();
       c.moveTo(s.def.a[0], s.def.a[1]);
@@ -222,14 +258,29 @@ export class Renderer {
       ctx.fill(this.gates[i]);
       ctx.restore();
     });
+    for (const p of this.springPaths) ctx.fill(p);
+    for (const sw of lab.seesaws) {
+      ctx.save();
+      ctx.translate(sw.x, sw.y);
+      ctx.rotate(sw.angle);
+      ctx.beginPath();
+      roundRect(ctx, -sw.def.half, -14, sw.def.half * 2, 28, 14);
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.restore();
 
+    this.drawFans(ctx, t);
+    this.drawMagnetFields(ctx, t);
     this.drawLinks(ctx, t);
     this.drawCupGlow(ctx, t);
-    this.drawRails(ctx);
+    this.drawRails(ctx, t);
     this.drawCups(ctx);
     this.drawPads(ctx, t);
+    this.drawSprings(ctx);
+    this.drawSeesaws(ctx);
     this.drawGates(ctx);
+    this.drawMagnets(ctx, t);
 
     /* -- balls, shadows first */
     for (const b of lab.balls) {
@@ -297,10 +348,15 @@ export class Renderer {
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     ctx.setLineDash([2, 14]);
-    for (const g of lab.gates) {
-      const gx = (g.def.a[0] + g.def.b[0]) / 2, gy = (g.def.a[1] + g.def.b[1]) / 2;
+    const driven: { by?: string[]; x: number; y: number }[] = [
+      ...lab.gates.map(g => ({ by: g.def.by, x: (g.def.a[0] + g.def.b[0]) / 2, y: (g.def.a[1] + g.def.b[1]) / 2 })),
+      ...lab.fans.map(f => ({ by: f.def.by, x: f.def.x + f.def.w / 2, y: f.def.y + f.def.h / 2 })),
+      ...lab.magnets.map(m => ({ by: m.def.by, x: m.def.x, y: m.def.y }))
+    ];
+    for (const g of driven) {
+      const gx = g.x, gy = g.y;
       for (const s of lab.switches) {
-        if (!g.def.by.includes(s.def.id)) continue;
+        if (!g.by || !g.by.includes(s.def.id)) continue;
         const sx = (s.def.a[0] + s.def.b[0]) / 2, sy = (s.def.a[1] + s.def.b[1]) / 2;
         ctx.lineDashOffset = s.active ? -t * 40 : 0;
         ctx.strokeStyle = s.active ? 'rgba(255, 61, 154, 0.85)' : 'rgba(255, 61, 154, 0.3)';
@@ -313,18 +369,31 @@ export class Renderer {
     ctx.restore();
   }
 
-  private drawRails(ctx: CanvasRenderingContext2D) {
+  private drawRails(ctx: CanvasRenderingContext2D, t: number) {
     const L = this.look;
     for (const r of this.rails) {
-      const g = ctx.createLinearGradient(0, r.top, 0, r.bottom + 1);
-      g.addColorStop(0, L.rail[0]);
-      g.addColorStop(0.45, L.rail[1]);
-      g.addColorStop(1, L.rail[2]);
+      const k = r.kind === 'plain' ? { grad: L.rail, edge: L.railEdge } : RAIL_KINDS[r.kind];
+      const g = ctx.createLinearGradient(0, r.top - r.r, 0, r.bottom + r.r);
+      g.addColorStop(0, k.grad[0]);
+      g.addColorStop(0.45, k.grad[1]);
+      g.addColorStop(1, k.grad[2]);
       ctx.fillStyle = g;
       ctx.fill(r.outline);
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = L.railEdge;
+      ctx.strokeStyle = k.edge;
       ctx.stroke(r.outline);
+      if (r.kind === 'magnetic') {
+        /* a field shimmer along a magnetic rail */
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.setLineDash([4, 22]);
+        ctx.lineDashOffset = -t * 30;
+        ctx.lineWidth = r.r * 2 + 34;
+        ctx.strokeStyle = 'rgba(163, 71, 255, 0.16)';
+        ctx.stroke(r.center);
+        ctx.restore();
+      }
+      if (r.kind === 'oneway' && r.dir) this.chevrons(ctx, r, t);
       /* the glossy streak along the top of the tube */
       ctx.save();
       ctx.clip(r.outline);
@@ -416,15 +485,27 @@ export class Renderer {
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = hexA(col.dark, 0.8);
       ctx.stroke(p.path);
-      /* its mark: a weight for a heavy plate, a dot for a button */
+      /* its mark: dots for a heavy plate, a ring for a toggle, a draining
+         arc for a timer, a dot for a button or plain plate */
       ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 3;
       ctx.beginPath();
       if (heavy) {
         for (const k of [-1, 0, 1]) ctx.arc(mx + dx / l * k * 11, my + dy / l * k * 11, 3.4, 0, TAU);
+        ctx.fill();
+      } else if (sw.def.toggle) {
+        ctx.arc(mx, my, 5.5, 0, TAU);
+        ctx.stroke();
+        if (sw.active) { ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, TAU); ctx.fill(); }
+      } else if (sw.def.hold) {
+        const f = sw.active ? Math.min(1, (sw.load ? sw.def.hold : sw.timer) / sw.def.hold) : 0;
+        ctx.arc(mx, my, 6, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0.06, f));
+        ctx.stroke();
       } else {
         ctx.arc(mx, my, 4.5, 0, TAU);
+        ctx.fill();
       }
-      ctx.fill();
       if (sw.active) {
         ctx.lineWidth = 14;
         ctx.strokeStyle = hexA(col.fill, 0.3);
@@ -435,16 +516,252 @@ export class Renderer {
   }
 
   private drawGates(ctx: CanvasRenderingContext2D) {
+    const L = this.look;
     this.lab!.gates.forEach((g, i) => {
       ctx.save();
       ctx.translate(g.def.slide[0] * g.open, g.def.slide[1] * g.open);
-      ctx.fillStyle = this.stripes!;
-      ctx.fill(this.gates[i]);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = GATE.edge;
-      ctx.stroke(this.gates[i]);
+      if (g.def.platform || g.def.period) {
+        /* a moving platform: a chunky rail with bright end caps */
+        const ys = [g.def.a[1], g.def.b[1]];
+        const gr = ctx.createLinearGradient(0, Math.min(...ys) - g.r, 0, Math.max(...ys) + g.r);
+        gr.addColorStop(0, '#ffe27a');
+        gr.addColorStop(0.5, '#ffb21f');
+        gr.addColorStop(1, '#e06a00');
+        ctx.fillStyle = gr;
+        ctx.fill(this.gates[i]);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(160, 70, 0, 0.6)';
+        ctx.stroke(this.gates[i]);
+        ctx.fillStyle = '#ffffff';
+        for (const e of [g.def.a, g.def.b]) {
+          ctx.beginPath();
+          ctx.arc(e[0], e[1], g.r * 0.4, 0, TAU);
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = g.def.invert ? this.stripesTeal! : this.stripes!;
+        ctx.fill(this.gates[i]);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = g.def.invert ? 'rgba(0, 120, 110, 0.6)' : GATE.edge;
+        ctx.stroke(this.gates[i]);
+      }
       ctx.restore();
     });
+    void L;
+  }
+
+  /** Arrows along a one-way rail, pointing the way balls may pass. */
+  private chevrons(ctx: CanvasRenderingContext2D, r: RailArt, t: number) {
+    const d = r.dir!, path = r.path;
+    const a = path[0], b = path[path.length - 1];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const n = Math.max(1, Math.floor(len / 70));
+    ctx.save();
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const bob = Math.sin(t * 5) * 4;
+    for (let k = 0; k < n; k++) {
+      const f = (k + 0.5) / n;
+      const x = a[0] + (b[0] - a[0]) * f + d[0] * bob, y = a[1] + (b[1] - a[1]) * f + d[1] * bob;
+      const px = -d[1], py = d[0];
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.beginPath();
+      ctx.moveTo(x - d[0] * 7 + px * 9, y - d[1] * 7 + py * 9);
+      ctx.lineTo(x + d[0] * 7, y + d[1] * 7);
+      ctx.lineTo(x - d[0] * 7 - px * 9, y - d[1] * 7 - py * 9);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  private drawFans(ctx: CanvasRenderingContext2D, t: number) {
+    for (const f of this.lab!.fans) {
+      const d = f.def;
+      ctx.save();
+      ctx.beginPath();
+      roundRect(ctx, d.x, d.y, d.w, d.h, 26);
+      ctx.fillStyle = f.on ? 'rgba(100, 220, 255, 0.16)' : 'rgba(160, 140, 255, 0.07)';
+      ctx.fill();
+      ctx.setLineDash([10, 12]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = f.on ? 'rgba(31, 182, 255, 0.45)' : 'rgba(140, 120, 230, 0.3)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (f.on) {
+        /* streams of air flowing along the fan's direction */
+        ctx.clip();
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 5;
+        const along = Math.abs(d.dir[0]) > Math.abs(d.dir[1]) ? d.w : d.h;
+        const across = along === d.w ? d.h : d.w;
+        const lanes = Math.max(2, Math.round(across / 60));
+        for (let k = 0; k < lanes; k++) {
+          for (let j = 0; j < 3; j++) {
+            const u = ((t * 0.9 + j / 3 + k * 0.37) % 1) * (along + 80) - 40;
+            const w = ((k + 0.5) / lanes) * across;
+            const x0 = d.dir[0] ? (d.dir[0] > 0 ? d.x + u : d.x + d.w - u) : d.x + w;
+            const y0 = d.dir[1] ? (d.dir[1] > 0 ? d.y + u : d.y + d.h - u) : d.y + w;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x0 - d.dir[0] * 34, y0 - d.dir[1] * 34);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+      /* the fan unit at its source edge, blades spinning */
+      const cx = d.dir[0] > 0 ? d.x : d.dir[0] < 0 ? d.x + d.w : d.x + d.w / 2;
+      const cy = d.dir[1] > 0 ? d.y : d.dir[1] < 0 ? d.y + d.h : d.y + d.h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      const hg = ctx.createRadialGradient(-6, -6, 2, 0, 0, 30);
+      hg.addColorStop(0, '#ffffff');
+      hg.addColorStop(1, '#8fdcff');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(0, 0, 28, 0, TAU);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 98, 214, 0.55)';
+      ctx.stroke();
+      ctx.rotate(f.on ? t * 14 : 0);
+      ctx.fillStyle = '#1fb6ff';
+      for (let k = 0; k < 4; k++) {
+        ctx.rotate(Math.PI / 2);
+        ctx.beginPath();
+        ctx.ellipse(0, -11, 6, 12, 0.5, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  private drawSprings(ctx: CanvasRenderingContext2D) {
+    this.lab!.springs.forEach((sp, i) => {
+      const a = sp.def.a, b = sp.def.b, n = sp.normal;
+      const sq = sp.squash * 8;
+      /* a zig-zag coil under the pad */
+      ctx.save();
+      ctx.lineWidth = 5;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#a347ff';
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, ux = (b[0] - a[0]) / 2, uy = (b[1] - a[1]) / 2;
+      ctx.beginPath();
+      for (let k = 0; k <= 6; k++) {
+        const depth = 14 + (k / 6) * (26 - sq), side = k % 2 ? 0.6 : -0.6;
+        const x = mx - n[0] * depth + ux * side, y = my - n[1] * depth + uy * side;
+        if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+      ctx.translate(-n[0] * sq, -n[1] * sq);
+      const g = ctx.createLinearGradient(mx + n[0] * 14, my + n[1] * 14, mx - n[0] * 14, my - n[1] * 14);
+      g.addColorStop(0, '#fff27a');
+      g.addColorStop(1, '#ffb21f');
+      ctx.fillStyle = g;
+      ctx.fill(this.springPaths[i]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(200, 110, 0, 0.7)';
+      ctx.stroke(this.springPaths[i]);
+      ctx.restore();
+    });
+  }
+
+  private drawSeesaws(ctx: CanvasRenderingContext2D) {
+    for (const sw of this.lab!.seesaws) {
+      const [px, py] = sw.def.pivot;
+      /* the stand */
+      ctx.fillStyle = '#c9b8ff';
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + 30, py + 60);
+      ctx.lineTo(px - 30, py + 60);
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.translate(sw.x, sw.y);
+      ctx.rotate(sw.angle);
+      const g = ctx.createLinearGradient(0, -14, 0, 14);
+      g.addColorStop(0, '#ff9ccc');
+      g.addColorStop(0.5, '#ff3d9a');
+      g.addColorStop(1, '#c4006a');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      roundRect(ctx, -sw.def.half, -14, sw.def.half * 2, 28, 14);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(140, 0, 70, 0.6)';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(-sw.def.half + 12, -9, sw.def.half * 2 - 24, 5);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  private drawMagnetFields(ctx: CanvasRenderingContext2D, t: number) {
+    for (const m of this.lab!.magnets) {
+      const d = m.def;
+      const g = ctx.createRadialGradient(d.x, d.y, 30, d.x, d.y, d.r);
+      const col = d.repel ? '255, 61, 154' : '163, 71, 255';
+      g.addColorStop(0, `rgba(${col}, ${m.on ? 0.22 : 0.06})`);
+      g.addColorStop(1, `rgba(${col}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, TAU);
+      ctx.fill();
+      if (!m.on) continue;
+      /* rings drift inward for a pull, outward for a push */
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 3; k++) {
+        let f = (t * 0.6 + k / 3) % 1;
+        if (!d.repel) f = 1 - f;
+        ctx.strokeStyle = `rgba(${col}, ${0.45 * (1 - Math.abs(f - 0.5) * 2) + 0.05})`;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 34 + f * (d.r - 34), 0, TAU);
+        ctx.stroke();
+      }
+    }
+  }
+
+  private drawMagnets(ctx: CanvasRenderingContext2D, t: number) {
+    for (const m of this.lab!.magnets) {
+      const d = m.def;
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      const g = ctx.createRadialGradient(-8, -10, 3, 0, 0, 30);
+      g.addColorStop(0, m.on ? '#ffffff' : '#f2eaff');
+      g.addColorStop(0.5, m.on ? (d.repel ? '#ff7cc0' : '#c58aff') : '#ddd0ff');
+      g.addColorStop(1, m.on ? (d.repel ? '#e2007a' : '#6a1fd6') : '#b8a6f0');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, 0, TAU);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(70, 10, 150, 0.5)';
+      ctx.stroke();
+      /* N/S marks: a plus for pull, a minus for push */
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-11, 0);
+      ctx.lineTo(11, 0);
+      if (!d.repel) { ctx.moveTo(0, -11); ctx.lineTo(0, 11); }
+      ctx.stroke();
+      if (m.on) {
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = `rgba(255,255,255,${0.4 + 0.3 * Math.sin(t * 6)})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 36, 0, TAU);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 }
 

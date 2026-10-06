@@ -7,12 +7,14 @@
  * which is what lets tools/solve.ts prove every level can be beaten.
  *
  * No DOM here: this runs in Node as well as the browser. */
-import { World, Vec2, Circle, Chain, Box } from 'planck';
-import type { Body, Fixture } from 'planck';
-import type { LevelDef, Colour, Pt, GateDef, SwitchDef, TargetDef } from '../entities/types.ts';
+import { World, Vec2, Circle, Chain, Box, RevoluteJoint } from 'planck';
+import type { Body, Fixture, Contact } from 'planck';
+import type {
+  LevelDef, Colour, Pt, GateDef, SwitchDef, TargetDef, SeesawDef, FanDef, SpringDef, MagnetDef
+} from '../entities/types.ts';
 import { KINDS, BALL_R } from '../entities/types.ts';
 import {
-  CHAMBER, chamberLoop, railOutline, cupOutline, cupRest, strokeOutline, segDist, RAIL_R
+  CHAMBER, chamberLoop, railOutline, railPath, cupOutline, cupRest, strokeOutline, segDist, nearestOnPath, gatePath, RAIL_R
 } from '../entities/geometry.ts';
 
 /** chamber units per metre */
@@ -27,6 +29,9 @@ const TILT_MAX_SPEED = 2.3;   /* rad/s */
 const SETTLE_SPEED = 55;      /* units/s: slow enough to count as home */
 const SETTLE_TIME = 0.3;
 const GATE_SPEED = 1.8;       /* fraction of the slide per second */
+const MAGNET_REACH = 46;      /* how far from a magnetic rail's surface it grabs */
+const MAGNET_PULL = 1.7;      /* ...and how hard, in g: enough to hang upside down */
+const SPRING_COOLDOWN = 0.25;
 
 export type LabEvent =
   | { t: 'impact'; x: number; y: number; power: number; colour: Colour }
@@ -34,6 +39,7 @@ export type LabEvent =
   | { t: 'gate'; open: boolean; x: number; y: number }
   | { t: 'home' | 'away'; colour: Colour; x: number; y: number }
   | { t: 'lost'; colour: Colour; x: number; y: number }
+  | { t: 'spring'; x: number; y: number }
   | { t: 'won' };
 
 export interface Ball {
@@ -45,12 +51,14 @@ export interface Ball {
   x: number; y: number; vx: number; vy: number; angle: number; speed: number; touching: number;
   lastHit: number;
   lost: boolean;
+  sprung: number;   /* time of its last spring launch */
 }
 
 export interface Target { def: TargetDef; rest: Pt; ball: Ball | null; settle: number; outline: Pt[] }
 
 export interface Switch {
   def: SwitchDef; body: Body; active: boolean; latched: boolean;
+  wasLoaded: boolean; timer: number;
   load: number;   /* weight on it this step */
   press: number;  /* 0..1, eased, for drawing */
   outline: Pt[];
@@ -61,7 +69,18 @@ export interface Gate {
   wantOpen: boolean; r: number; outline: Pt[];
 }
 
-type Tag = { kind: 'ball'; ball: Ball } | { kind: 'switch'; sw: Switch } | { kind: 'solid' };
+export interface Seesaw { def: SeesawDef; body: Body; angle: number; x: number; y: number }
+export interface Fan { def: FanDef; on: boolean }
+export interface Spring { def: SpringDef; outline: Pt[]; normal: Pt; squash: number }
+export interface Magnet { def: MagnetDef; on: boolean }
+export interface OneWay { dir: Pt; path: Pt[] }
+
+type Tag =
+  | { kind: 'ball'; ball: Ball }
+  | { kind: 'switch'; sw: Switch }
+  | { kind: 'spring'; sp: Spring }
+  | { kind: 'oneway'; ow: OneWay }
+  | { kind: 'solid' };
 
 const v = (p: Pt) => Vec2(p[0] / S, p[1] / S);
 
@@ -73,7 +92,15 @@ export class Lab {
   readonly switches: Switch[] = [];
   readonly gates: Gate[] = [];
   readonly rails: Pt[][] = [];
+  readonly seesaws: Seesaw[] = [];
+  readonly fans: Fan[] = [];
+  readonly springs: Spring[] = [];
+  readonly magnets: Magnet[] = [];
   readonly events: LabEvent[] = [];
+  /** centre lines of magnetic rails, for the pull */
+  private magRails: { path: Pt[]; r: number }[] = [];
+  /** ball/one-way contacts that began on the pass-through side */
+  private passing = new Set<Contact>();
 
   /** tilt input, -1 (full left) .. 1 (full right); set before step() */
   input = 0;
@@ -98,7 +125,11 @@ export class Lab {
     for (const r of level.rails) {
       const o = railOutline(r);
       this.rails.push(o);
-      ground.createFixture(Chain(o.map(v), true), { friction: 0.7, restitution: 0.12, userData: solid });
+      const tag: Tag = r.oneWay ? { kind: 'oneway', ow: { dir: r.oneWay, path: railPath(r) } } : solid;
+      ground.createFixture(Chain(o.map(v), true), r.bouncy
+        ? { friction: 0.35, restitution: 0.92, userData: tag }
+        : { friction: 0.7, restitution: 0.12, userData: tag });
+      if (r.magnetic) this.magRails.push({ path: railPath(r), r: r.r ?? RAIL_R });
     }
 
     for (const t of level.targets) {
@@ -110,7 +141,7 @@ export class Lab {
     for (const d of level.switches || []) {
       const body = this.world.createBody();
       const outline = strokeOutline([d.a, d.b], 11);
-      const sw: Switch = { def: d, body, active: false, latched: false, load: 0, press: 0, outline };
+      const sw: Switch = { def: d, body, active: false, latched: false, wasLoaded: false, timer: d.toggle ? 1 : 0, load: 0, press: 0, outline };
       body.createFixture(Chain(outline.map(v), true), { friction: 0.8, restitution: 0.05, userData: { kind: 'switch', sw } as Tag });
       this.switches.push(sw);
     }
@@ -118,15 +149,49 @@ export class Lab {
     for (const d of level.gates || []) {
       const r = d.r ?? RAIL_R;
       const body = this.world.createKinematicBody({ position: Vec2(0, 0) });
-      /* a capsule from a to b: a box and two round ends */
-      const a = v(d.a), b = v(d.b);
-      const mid = Vec2((a.x + b.x) / 2, (a.y + b.y) / 2);
-      const L = Math.hypot(b.x - a.x, b.y - a.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
-      body.createFixture(Box(L / 2, r / S, mid, ang), { friction: 0.6, userData: solid });
-      body.createFixture(Circle(a, r / S), { friction: 0.6, userData: solid });
-      body.createFixture(Circle(b, r / S), { friction: 0.6, userData: solid });
-      this.gates.push({ def: d, body, open: 0, wantOpen: false, r, outline: strokeOutline([d.a, d.b], r) });
+      /* the bar (or tray) as a closed outline, like a rail */
+      const outline = strokeOutline(gatePath(d), r);
+      body.createFixture(Chain(outline.map(v), true), { friction: 0.9, userData: solid });
+      /* an inverted gate starts open; a platform starts at its phase */
+      const open0 = d.period ? 0.5 - 0.5 * Math.cos(Math.PI * 2 * (d.phase || 0)) : d.invert ? 1 : 0;
+      body.setPosition(Vec2(d.slide[0] * open0 / S, d.slide[1] * open0 / S));
+      this.gates.push({ def: d, body, open: open0, wantOpen: !!d.invert, r, outline });
     }
+
+    for (const d of level.seesaws || []) {
+      const body = this.world.createDynamicBody({ position: v(d.pivot), angularDamping: 1.2, angle: (d.angle || 0) * Math.PI / 180 });
+      body.createFixture(Box(d.half / S, 14 / S), { density: 0.4, friction: 0.8, restitution: 0.05, userData: solid });
+      const lim = (d.limit ?? 22) * Math.PI / 180;
+      this.world.createJoint(RevoluteJoint({ enableLimit: true, lowerAngle: -lim, upperAngle: lim }, ground, body, v(d.pivot)));
+      this.seesaws.push({ def: d, body, angle: body.getAngle(), x: d.pivot[0], y: d.pivot[1] });
+    }
+
+    for (const d of level.fans || []) this.fans.push({ def: d, on: !d.by });
+    for (const d of level.magnets || []) {
+      this.magnets.push({ def: d, on: !d.by !== !!d.invert });
+      /* the magnet's core is solid: a pulled ball comes to rest against it */
+      ground.createFixture(Circle(v([d.x, d.y]), 30 / S), { friction: 0.9, restitution: 0, userData: solid });
+    }
+
+    for (const d of level.springs || []) {
+      const outline = strokeOutline([d.a, d.b], 12);
+      const dx = d.b[0] - d.a[0], dy = d.b[1] - d.a[1], l = Math.hypot(dx, dy) || 1;
+      const sp: Spring = { def: d, outline, normal: [dy / l, -dx / l], squash: 0 };
+      ground.createFixture(Chain(outline.map(v), true), { friction: 0.6, restitution: 0, userData: { kind: 'spring', sp } as Tag });
+      this.springs.push(sp);
+    }
+
+    /* one-way rails: a contact that starts on the pass-through side is
+       switched off until the ball has gone through */
+    this.world.on('begin-contact', (c: Contact) => {
+      const hit = this.oneWayHit(c);
+      if (!hit) return;
+      const { ball, ow } = hit;
+      const { q } = nearestOnPath([ball.x, ball.y], ow.path);
+      if ((ball.x - q[0]) * ow.dir[0] + (ball.y - q[1]) * ow.dir[1] < 0) this.passing.add(c);
+    });
+    this.world.on('end-contact', (c: Contact) => { this.passing.delete(c); });
+    this.world.on('pre-solve', (c: Contact) => { if (this.passing.has(c)) c.setEnabled(false); });
 
     for (const d of level.balls) {
       const k = KINDS[d.colour];
@@ -136,7 +201,7 @@ export class Lab {
       });
       const ball: Ball = {
         colour: d.colour, body, weight: k.density, home: null,
-        x: d.x, y: d.y, vx: 0, vy: 0, angle: 0, speed: 0, touching: 0, lastHit: -1, lost: false
+        x: d.x, y: d.y, vx: 0, vy: 0, angle: 0, speed: 0, touching: 0, lastHit: -1, lost: false, sprung: -1
       };
       body.createFixture(Circle(BALL_R / S), {
         density: k.density, friction: k.friction, restitution: k.restitution, userData: { kind: 'ball', ball } as Tag
@@ -145,6 +210,13 @@ export class Lab {
     }
 
     this.sync();
+  }
+
+  private oneWayHit(c: Contact): { ball: Ball; ow: OneWay } | null {
+    const a = c.getFixtureA().getUserData() as Tag, b = c.getFixtureB().getUserData() as Tag;
+    if (a?.kind === 'ball' && b?.kind === 'oneway') return { ball: a.ball, ow: b.ow };
+    if (b?.kind === 'ball' && a?.kind === 'oneway') return { ball: b.ball, ow: a.ow };
+    return null;
   }
 
   /** Gravity in the chamber's frame for the current tilt. */
@@ -180,6 +252,7 @@ export class Lab {
     this.world.setGravity(Vec2(g[0], g[1]));
 
     this.updateGates(dt);
+    this.applyFields();
     /* rolling resistance: a ball on a surface loses speed at a steady rate,
        so it comes to rest on the flat instead of creeping for ever */
     for (const b of this.balls) {
@@ -192,7 +265,14 @@ export class Lab {
       b.body.setAngularVelocity(b.body.getAngularVelocity() * (1 - dv / sp));
     }
     this.world.step(dt, 10, 6);
+    this.updateSprings(dt);
     this.sync(true);
+    for (const s of this.seesaws) {
+      const p = s.body.getPosition();
+      s.angle = s.body.getAngle();
+      s.x = p.x * S;
+      s.y = p.y * S;
+    }
     this.updateSwitches(dt);
     if (this.state === 'play') {
       this.updateTargets(dt);
@@ -227,6 +307,71 @@ export class Lab {
     }
   }
 
+  /** Fans, magnets and magnetic rails: forces in the chamber's frame. */
+  private applyFields() {
+    const active = new Set(this.switches.filter(s => s.active).map(s => s.def.id));
+    const on = (by?: string[], invert?: boolean) => (by ? by.some(id => active.has(id)) : true) !== !!invert;
+    for (const f of this.fans) f.on = on(f.def.by);
+    for (const m of this.magnets) m.on = on(m.def.by, m.def.invert);
+    for (const b of this.balls) {
+      if (b.lost || b.body.isStatic()) continue;
+      const area = Math.PI * (BALL_R / S) * (BALL_R / S);
+      const m = b.body.getMass(), c = b.body.getWorldCenter();
+      let fx = 0, fy = 0;
+      /* a fan pushes every ball with the same force, so the lighter the
+         ball, the further it goes */
+      for (const f of this.fans) {
+        const d = f.def;
+        if (!f.on || b.x < d.x || b.x > d.x + d.w || b.y < d.y || b.y > d.y + d.h) continue;
+        fx += d.dir[0] * d.strength * area;
+        fy += d.dir[1] * d.strength * area;
+      }
+      if (b.colour === 'purple') {
+        for (const mg of this.magnets) {
+          if (!mg.on) continue;
+          const dx = mg.def.x - b.x, dy = mg.def.y - b.y, dist = Math.hypot(dx, dy);
+          if (dist > mg.def.r || dist < 1) continue;
+          /* strong all through its reach, strongest close in */
+          const k = mg.def.strength * (0.5 + 0.5 * (1 - dist / mg.def.r)) * (mg.def.repel ? -1 : 1);
+          fx += dx / dist * k * m;
+          fy += dy / dist * k * m;
+        }
+        for (const r of this.magRails) {
+          const { q, d } = nearestOnPath([b.x, b.y], r.path);
+          const gap = d - r.r - BALL_R;
+          if (gap > MAGNET_REACH || d < 1) continue;
+          const k = MAGNET_PULL * GRAVITY * (gap < 0 ? 1 : 1 - 0.5 * gap / MAGNET_REACH);
+          fx += (q[0] - b.x) / d * k * m;
+          fy += (q[1] - b.y) / d * k * m;
+        }
+      }
+      if (fx || fy) b.body.applyForce(Vec2(fx, fy), c, true);
+    }
+  }
+
+  /** A ball touching a spring pad is launched straight off its face. */
+  private updateSprings(dt: number) {
+    for (const sp of this.springs) sp.squash = Math.max(0, sp.squash - dt * 4);
+    for (const b of this.balls) {
+      if (b.lost || this.time - b.sprung < SPRING_COOLDOWN) continue;
+      for (let ce = b.body.getContactList(); ce; ce = ce.next!) {
+        if (!ce.contact.isTouching()) continue;
+        const fa = ce.contact.getFixtureA(), fb = ce.contact.getFixtureB();
+        const tag = ((fa.getBody() === b.body ? fb : fa).getUserData()) as Tag;
+        if (tag?.kind !== 'spring') continue;
+        const sp = tag.sp, n = sp.normal, lv = b.body.getLinearVelocity();
+        /* keep the slide along the pad; replace the bounce with the launch */
+        const along = lv.x * -n[1] + lv.y * n[0];
+        const p = sp.def.power / S;
+        b.body.setLinearVelocity(Vec2(n[0] * p - n[1] * along, n[1] * p + n[0] * along));
+        b.sprung = this.time;
+        sp.squash = 1;
+        this.events.push({ t: 'spring', x: b.x, y: b.y });
+        break;
+      }
+    }
+  }
+
   private updateSwitches(dt: number) {
     for (const s of this.switches) s.load = 0;
     for (const b of this.balls) {
@@ -243,9 +388,20 @@ export class Lab {
       if (s.def.latch) {
         if (heavy) s.latched = true;
         s.active = s.latched;
+      } else if (s.def.toggle) {
+        /* a new press only counts after the pad has been clear a moment,
+           so a ball bumping across it is one press, not several */
+        if (heavy && !s.wasLoaded && s.timer > 0.3) s.latched = !s.latched;
+        s.timer = heavy ? 0 : s.timer + dt;
+        s.active = s.latched;
+      } else if (s.def.hold) {
+        if (heavy) s.timer = s.def.hold;
+        else s.timer = Math.max(0, s.timer - dt);
+        s.active = heavy || s.timer > 0;
       } else {
         s.active = heavy;
       }
+      s.wasLoaded = heavy;
       const m = s.def.a, n = s.def.b, cx = (m[0] + n[0]) / 2, cy = (m[1] + n[1]) / 2;
       if (s.active && !was) this.events.push({ t: 'press', id: s.def.id, x: cx, y: cy });
       if (!s.active && was) this.events.push({ t: 'release', id: s.def.id, x: cx, y: cy });
@@ -256,14 +412,22 @@ export class Lab {
   private updateGates(dt: number) {
     const active = new Set(this.switches.filter(s => s.active).map(s => s.def.id));
     for (const g of this.gates) {
-      const want = g.def.by.some(id => active.has(id));
+      if (g.def.period) {
+        /* a moving platform: shuttles on its own, smoothly */
+        const next = 0.5 - 0.5 * Math.cos(Math.PI * 2 * ((this.time + dt) / g.def.period + (g.def.phase || 0)));
+        const vel = (next - g.open) / dt;
+        g.body.setLinearVelocity(Vec2(g.def.slide[0] * vel / S, g.def.slide[1] * vel / S));
+        g.open = next;
+        continue;
+      }
+      const want = (g.def.by || []).some(id => active.has(id)) !== !!g.def.invert;
       if (want !== g.wantOpen) {
         g.wantOpen = want;
         const m = g.def.a, n = g.def.b;
         this.events.push({ t: 'gate', open: want, x: (m[0] + n[0]) / 2, y: (m[1] + n[1]) / 2 });
       }
       const goal = want ? 1 : 0;
-      let next = g.open + Math.sign(goal - g.open) * GATE_SPEED * dt;
+      let next = g.open + Math.sign(goal - g.open) * (g.def.speed ?? GATE_SPEED) * dt;
       if ((goal - g.open) * (goal - next) <= 0) next = goal;
       /* a closing gate waits rather than crush a ball in its way */
       if (next < g.open) {

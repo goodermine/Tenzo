@@ -9,16 +9,17 @@ export interface Save {
   sound: boolean;
   music: boolean;
   motion: boolean;
+  worlds: number[];    /* world intros already shown */
 }
 
-const DEFAULTS = (): Save => ({ done: [], last: null, sound: true, music: true, motion: false });
+const DEFAULTS = (): Save => ({ done: [], last: null, sound: true, music: true, motion: false, worlds: [] });
 
 export function load(): Save {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS();
     const d = JSON.parse(raw);
-    return { ...DEFAULTS(), ...d, done: Array.isArray(d.done) ? d.done : [] };
+    return { ...DEFAULTS(), ...d, done: Array.isArray(d.done) ? d.done : [], worlds: Array.isArray(d.worlds) ? d.worlds : [] };
   } catch (_) {
     return DEFAULTS();
   }

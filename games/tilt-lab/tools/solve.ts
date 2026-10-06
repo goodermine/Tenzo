@@ -1,6 +1,7 @@
 /* TILT LAB - level checker, headless.
  *
  *   node --experimental-strip-types tools/solve.ts            check every level
+ *   node --experimental-strip-types tools/solve.ts --world 2  check one world
  *   node --experimental-strip-types tools/solve.ts search 3   look for solutions to level 3
  *
  * For each level the checker proves:
@@ -12,7 +13,7 @@
  *   - its traps - the obvious wrong moves - do not win.
  */
 import { Lab } from '../src/core/physics.ts';
-import { LEVELS } from '../src/levels/levelLoader.ts';
+import { LEVELS, place } from '../src/levels/levelLoader.ts';
 import type { LevelDef, Solution } from '../src/entities/types.ts';
 
 function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean } {
@@ -36,9 +37,11 @@ function jitter(sol: Solution, seed: number, ms = 0.08): Solution {
     .sort((a, b) => a[0] - b[0]);
 }
 
-function check() {
+function check(world?: number) {
   let bad = 0;
   LEVELS.forEach((level, i) => {
+    const { w, n } = place(i);
+    if (world && w + 1 !== world) return;
     const s = run(level, level.solution);
     const idle = run(level, [[0, 0]], 8);
     let ok = 0;
@@ -46,7 +49,7 @@ function check() {
     const traps = (level.traps || []).filter(t => run(level, t, 16).won).length;
     const pass = s.won && !idle.won && ok >= 8 && traps === 0;
     if (!pass) bad++;
-    console.log(`${pass ? 'ok  ' : 'FAIL'}  ${i + 1} ${level.name.padEnd(14)} solution ${s.won ? 'wins at ' + s.t.toFixed(1) + 's' : s.lost ? 'LOSES' : 'does not win'}` +
+    console.log(`${pass ? 'ok  ' : 'FAIL'}  ${w + 1}-${n + 1} ${level.name.padEnd(14)} solution ${s.won ? 'wins at ' + s.t.toFixed(1) + 's' : s.lost ? 'LOSES' : 'does not win'}` +
       ` | idle ${idle.won ? 'WINS' : 'no win'} | timing-nudged ${ok}/9` +
       (level.traps ? ` | traps ${traps ? traps + ' WIN' : 'all fail'}` : ''));
   });
@@ -84,4 +87,4 @@ function search(i: number, tries = 3000) {
 
 const [cmd, arg] = process.argv.slice(2);
 if (cmd === 'search') search(+arg, +(process.argv[4] || 3000));
-else check();
+else check(cmd === '--world' ? +arg : undefined);
