@@ -80,6 +80,7 @@ type Tag =
   | { kind: 'switch'; sw: Switch }
   | { kind: 'spring'; sp: Spring }
   | { kind: 'oneway'; ow: OneWay }
+  | { kind: 'cup' }
   | { kind: 'solid' };
 
 const v = (p: Pt) => Vec2(p[0] / S, p[1] / S);
@@ -132,9 +133,11 @@ export class Lab {
       if (r.magnetic) this.magRails.push({ path: railPath(r), r: r.r ?? RAIL_R });
     }
 
+    /* cups are padded: they catch even a bouncing green ball */
+    const cup: Tag = { kind: 'cup' };
     for (const t of level.targets) {
       const outline = cupOutline(t);
-      ground.createFixture(Chain(outline.map(v), true), { friction: 0.8, restitution: 0.05, userData: solid });
+      ground.createFixture(Chain(outline.map(v), true), { friction: 0.8, restitution: 0.05, userData: cup });
       this.targets.push({ def: t, rest: cupRest(t), ball: null, settle: 0, outline });
     }
 
@@ -198,7 +201,10 @@ export class Lab {
       if ((ball.x - q[0]) * ow.dir[0] + (ball.y - q[1]) * ow.dir[1] < 0) this.passing.add(c);
     });
     this.world.on('end-contact', (c: Contact) => { this.passing.delete(c); });
-    this.world.on('pre-solve', (c: Contact) => { if (this.passing.has(c)) c.setEnabled(false); });
+    this.world.on('pre-solve', (c: Contact) => {
+      if (this.passing.has(c)) c.setEnabled(false);
+      if ((c.getFixtureA().getUserData() as Tag)?.kind === 'cup' || (c.getFixtureB().getUserData() as Tag)?.kind === 'cup') c.setRestitution(0);
+    });
 
     for (const d of level.balls) {
       const k = KINDS[d.colour];

@@ -6,6 +6,7 @@ import { PROTO } from './data/proto.ts';
 import { WORLD1 } from './data/world1.ts';
 import { WORLD2 } from './data/world2.ts';
 import { WORLD3 } from './data/world3.ts';
+import { WORLD4 } from './data/world4.ts';
 
 export interface World {
   name: string;
@@ -29,6 +30,11 @@ export const WORLDS: World[] = [
     name: 'WEIGHT',
     intro: { title: 'WEIGHT', text: 'Meet BLUE: light as air. Fans lift it high, while heavy red barely notices.', balls: ['blue', 'red'] },
     levels: WORLD3
+  },
+  {
+    name: 'BOUNCE',
+    intro: { title: 'BOUNCE', text: 'Meet GREEN: it bounces. Springs throw any ball, and lime rails make everything spring back.', balls: ['green', 'yellow'] },
+    levels: WORLD4
   }
 ];
 
