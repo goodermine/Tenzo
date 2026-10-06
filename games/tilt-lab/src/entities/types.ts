@@ -68,7 +68,9 @@ export interface FanDef { x: number; y: number; w: number; h: number; dir: Pt; s
 
 /** A spring pad from `a` to `b`: launches a ball that lands on it at
     `power` units/s, square off its face. */
-export interface SpringDef { a: Pt; b: Pt; power: number }
+/** A spring pad: launches a ball off its face at a fixed speed. A `once`
+ *  spring throws one ball and then lies flat for good. */
+export interface SpringDef { a: Pt; b: Pt; power: number; once?: boolean }
 
 /** A magnet: pulls (or with `repel`, pushes) purple balls within `r`,
     with an acceleration of `strength` m/s^2 at its edge rising to twice

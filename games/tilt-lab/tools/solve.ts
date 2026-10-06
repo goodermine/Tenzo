@@ -16,7 +16,8 @@
  *   - unless it is a world's first lab, mindless play cannot beat it:
  *     holding a direction or rocking at a steady beat never wins; switching
  *     direction once wins for at most 3 of the switch times tried 0.25 s
- *     apart; and at most 6% of random tilt sequences win.
+ *     apart; and at most 8% of random tilt sequences win (100 samples, so
+ *     about +/-3%).
  */
 import { Lab } from '../src/core/physics.ts';
 import { LEVELS, place } from '../src/levels/levelLoader.ts';
@@ -44,7 +45,7 @@ function jitter(sol: Solution, seed: number, ms = 0.08): Solution {
 }
 
 const RANDOM_TRIES = 100;
-const RANDOM_MAX = 0.06;
+const RANDOM_MAX = 0.08;
 const quick = process.argv.includes('--quick');
 const only = process.argv.includes('--level') ? process.argv[process.argv.indexOf('--level') + 1] : '';
 

@@ -45,6 +45,15 @@ function run(l: Lab, seconds: number, input = 0, each?: () => void) {
   check('a spring launches a ball higher than it fell from', top < 600 && launched > 0, `rose to ${top.toFixed(0)}, ${launched} launch(es)`);
 }
 
+/* one-shot spring: fires once, then the ball just lands on it */
+{
+  const l = lab({ balls: [{ colour: 'yellow', x: 500, y: 700 }], springs: [{ a: [440, 850], b: [560, 850], power: 1300, once: true }] });
+  let launches = 0;
+  for (let i = 0; i < 600; i++) { l.step(); launches += l.events.filter(e => e.t === 'spring').length; l.events.length = 0; }
+  check('a one-shot spring launches once, then lies flat', launches === 1 && l.springs[0].used && l.balls[0].speed < 30,
+    `${launches} launch(es), ball speed ${l.balls[0].speed.toFixed(0)}`);
+}
+
 /* toggle: each press flips it */
 {
   const l = lab({

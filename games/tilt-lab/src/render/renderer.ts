@@ -655,12 +655,14 @@ export class Renderer {
   private drawSprings(ctx: CanvasRenderingContext2D) {
     this.lab!.springs.forEach((sp, i) => {
       const a = sp.def.a, b = sp.def.b, n = sp.normal;
-      const sq = sp.squash * 8;
+      /* a one-shot spring that has fired lies flat */
+      const spent = !!sp.def.once && sp.used;
+      const sq = spent ? 10 : sp.squash * 8;
       /* a zig-zag coil under the pad */
       ctx.save();
       ctx.lineWidth = 5;
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#a347ff';
+      ctx.strokeStyle = spent ? '#d9c8ff' : '#a347ff';
       const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, ux = (b[0] - a[0]) / 2, uy = (b[1] - a[1]) / 2;
       ctx.beginPath();
       for (let k = 0; k <= 6; k++) {
@@ -671,13 +673,28 @@ export class Renderer {
       ctx.stroke();
       ctx.translate(-n[0] * sq, -n[1] * sq);
       const g = ctx.createLinearGradient(mx + n[0] * 14, my + n[1] * 14, mx - n[0] * 14, my - n[1] * 14);
-      g.addColorStop(0, '#fff27a');
-      g.addColorStop(1, '#ffb21f');
+      if (spent) {
+        g.addColorStop(0, '#f4ecff');
+        g.addColorStop(1, '#ddd0ff');
+      } else if (sp.def.once) {
+        g.addColorStop(0, '#ffc4b0');
+        g.addColorStop(1, '#ff5f6d');
+      } else {
+        g.addColorStop(0, '#fff27a');
+        g.addColorStop(1, '#ffb21f');
+      }
       ctx.fillStyle = g;
       ctx.fill(this.springPaths[i]);
       ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(200, 110, 0, 0.7)';
+      ctx.strokeStyle = spent ? 'rgba(140, 110, 200, 0.5)' : sp.def.once ? 'rgba(190, 30, 60, 0.7)' : 'rgba(200, 110, 0, 0.7)';
       ctx.stroke(this.springPaths[i]);
+      /* a one-shot spring wears a single white dot */
+      if (sp.def.once && !spent) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(mx, my, 4.5, 0, TAU);
+        ctx.fill();
+      }
       ctx.restore();
     });
   }

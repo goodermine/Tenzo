@@ -71,7 +71,7 @@ export interface Gate {
 
 export interface Seesaw { def: SeesawDef; body: Body; angle: number; x: number; y: number }
 export interface Fan { def: FanDef; on: boolean }
-export interface Spring { def: SpringDef; outline: Pt[]; normal: Pt; squash: number }
+export interface Spring { def: SpringDef; outline: Pt[]; normal: Pt; squash: number; used: boolean }
 export interface Magnet { def: MagnetDef; on: boolean }
 export interface OneWay { dir: Pt; path: Pt[] }
 
@@ -186,7 +186,7 @@ export class Lab {
     for (const d of level.springs || []) {
       const outline = strokeOutline([d.a, d.b], 12);
       const dx = d.b[0] - d.a[0], dy = d.b[1] - d.a[1], l = Math.hypot(dx, dy) || 1;
-      const sp: Spring = { def: d, outline, normal: [dy / l, -dx / l], squash: 0 };
+      const sp: Spring = { def: d, outline, normal: [dy / l, -dx / l], squash: 0, used: false };
       ground.createFixture(Chain(outline.map(v), true), { friction: 0.6, restitution: 0, userData: { kind: 'spring', sp } as Tag });
       this.springs.push(sp);
     }
@@ -375,6 +375,8 @@ export class Lab {
         const tag = ((fa.getBody() === b.body ? fb : fa).getUserData()) as Tag;
         if (tag?.kind !== 'spring') continue;
         const sp = tag.sp, n = sp.normal, lv = b.body.getLinearVelocity();
+        if (sp.def.once && sp.used) continue;
+        sp.used = true;
         /* keep the slide along the pad; replace the bounce with the launch */
         const along = lv.x * -n[1] + lv.y * n[0];
         const p = sp.def.power / S;
