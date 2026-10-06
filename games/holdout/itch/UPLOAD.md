@@ -45,7 +45,9 @@ but every step also works in a phone browser.
      unticked.
 
 6. **Details.**
-   - **Description:** paste the description block from `page.md`.
+   - **Description:** tap the editor's `<>` (source) button and paste
+     `description.html`, then tap `<>` again to see it formatted. On a
+     narrow phone screen, turn the phone sideways if `<>` is hidden.
    - **Genre:** Action.
    - **Tags:** add the ten tags listed in `page.md`.
    - **App store links**, **Custom noun** and **Community:** leave as

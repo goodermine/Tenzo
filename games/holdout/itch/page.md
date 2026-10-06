@@ -30,7 +30,9 @@ Survive fifteen minutes against the swarm. One thumb, hundreds of enemies.
 
 ## Description
 
-Paste everything between the two lines below.
+The same text is in `description.html`, ready to paste into the description
+editor's `<>` (source) view so the headings and lists come out formatted.
+Or paste everything between the two lines below as plain text.
 
 ---
 
