@@ -7,6 +7,7 @@ import { WORLD1 } from './data/world1.ts';
 import { WORLD2 } from './data/world2.ts';
 import { WORLD3 } from './data/world3.ts';
 import { WORLD4 } from './data/world4.ts';
+import { WORLD5 } from './data/world5.ts';
 
 export interface World {
   name: string;
@@ -35,6 +36,11 @@ export const WORLDS: World[] = [
     name: 'BOUNCE',
     intro: { title: 'BOUNCE', text: 'Meet GREEN: it bounces. Springs throw any ball, and lime rails make everything spring back.', balls: ['green', 'yellow'] },
     levels: WORLD4
+  },
+  {
+    name: 'MAGNETIC',
+    intro: { title: 'MAGNETIC', text: 'Meet PURPLE: it clings to magnetic rails, even upside down, and magnets pull it through the air.', balls: ['purple', 'yellow'] },
+    levels: WORLD5
   }
 ];
 

@@ -101,7 +101,7 @@ function run(l: Lab, seconds: number, input = 0, each?: () => void) {
 {
   const l = lab({
     balls: [{ colour: 'purple', x: 300, y: 818 }, { colour: 'yellow', x: 700, y: 818 }],
-    magnets: [{ x: 300, y: 560, r: 320, strength: 60 }, { x: 700, y: 560, r: 320, strength: 60 }]
+    magnets: [{ x: 300, y: 560, r: 420, strength: 60 }, { x: 700, y: 560, r: 420, strength: 60 }]
   });
   run(l, 1.5, 0);
   check('a magnet pulls purple up against its core and ignores yellow', Math.hypot(l.balls[0].x - 300, l.balls[0].y - 560) < 80 && l.balls[1].y > 800,

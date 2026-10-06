@@ -279,7 +279,7 @@ export class Renderer {
     this.drawPads(ctx, t);
     this.drawSprings(ctx);
     this.drawSeesaws(ctx);
-    this.drawGates(ctx);
+    this.drawGates(ctx, t);
     this.drawMagnets(ctx, t);
 
     /* -- balls, shadows first */
@@ -515,9 +515,23 @@ export class Renderer {
     });
   }
 
-  private drawGates(ctx: CanvasRenderingContext2D) {
+  private drawGates(ctx: CanvasRenderingContext2D, t: number) {
     const L = this.look;
     this.lab!.gates.forEach((g, i) => {
+      /* a bridge that a switch brings in: a dashed ghost marks where it
+         will be, so the player can see what the switch is for */
+      if (g.def.invert && !g.def.period && g.open > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, g.open * 1.5) * 0.75;
+        ctx.setLineDash([10, 9]);
+        ctx.lineDashOffset = -t * 18;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0, 150, 140, 0.9)';
+        ctx.fillStyle = 'rgba(40, 220, 200, 0.12)';
+        ctx.fill(this.gates[i]);
+        ctx.stroke(this.gates[i]);
+        ctx.restore();
+      }
       ctx.save();
       ctx.translate(g.def.slide[0] * g.open, g.def.slide[1] * g.open);
       if (g.def.platform || g.def.period) {

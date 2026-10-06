@@ -344,8 +344,10 @@ export class Lab {
           if (!mg.on) continue;
           const dx = mg.def.x - b.x, dy = mg.def.y - b.y, dist = Math.hypot(dx, dy);
           if (dist > mg.def.r || dist < 1) continue;
-          /* strong all through its reach, strongest close in */
-          const k = mg.def.strength * (0.5 + 0.5 * (1 - dist / mg.def.r)) * (mg.def.repel ? -1 : 1);
+          /* full strength over the inner half of its reach, fading to
+             nothing at the edge - so a repelled ball floats at the height
+             where the push matches its weight */
+          const k = mg.def.strength * Math.min(1, 2 * (1 - dist / mg.def.r)) * (mg.def.repel ? -1 : 1);
           fx += dx / dist * k * m;
           fy += dy / dist * k * m;
         }
