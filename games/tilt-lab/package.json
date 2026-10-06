@@ -1,0 +1,22 @@
+{
+  "name": "tilt-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --format=esm --minify --target=es2020 --outfile=dist/tilt-lab.js --log-level=warning",
+    "dev": "esbuild src/main.ts --bundle --format=esm --target=es2020 --outfile=dist/tilt-lab.js --sourcemap --watch",
+    "typecheck": "tsc --noEmit",
+    "solve": "node --experimental-strip-types --no-warnings tools/solve.ts",
+    "package:itch": "node tools/package-itch.mjs",
+    "probe": "node --experimental-strip-types --no-warnings tools/probe.ts"
+  },
+  "dependencies": {
+    "planck": "^1.5.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2"
+  }
+}
