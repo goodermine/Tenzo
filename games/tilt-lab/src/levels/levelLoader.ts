@@ -8,6 +8,7 @@ import { WORLD2 } from './data/world2.ts';
 import { WORLD3 } from './data/world3.ts';
 import { WORLD4 } from './data/world4.ts';
 import { WORLD5 } from './data/world5.ts';
+import { WORLD6 } from './data/world6.ts';
 
 export interface World {
   name: string;
@@ -41,6 +42,11 @@ export const WORLDS: World[] = [
     name: 'MAGNETIC',
     intro: { title: 'MAGNETIC', text: 'Meet PURPLE: it clings to magnetic rails, even upside down, and magnets pull it through the air.', balls: ['purple', 'yellow'] },
     levels: WORLD5
+  },
+  {
+    name: 'MASTER LAB',
+    intro: { title: 'MASTER LAB', text: 'Platforms that ferry, lifts that answer to switches, and everything you have learned so far.', balls: ['red', 'yellow', 'purple'] },
+    levels: WORLD6
   }
 ];
 

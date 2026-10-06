@@ -532,6 +532,29 @@ export class Renderer {
         ctx.stroke(this.gates[i]);
         ctx.restore();
       }
+      /* a platform shows where it travels: a dashed track and a faint
+         outline at the far end of it */
+      if (g.def.platform || g.def.period) {
+        const mx = (g.def.a[0] + g.def.b[0]) / 2, my = (g.def.a[1] + g.def.b[1]) / 2;
+        const far = g.open < 0.5 ? 1 : 0;
+        ctx.save();
+        ctx.setLineDash([8, 10]);
+        ctx.lineDashOffset = -t * 14;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(224, 106, 0, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(mx + g.def.slide[0], my + g.def.slide[1]);
+        ctx.stroke();
+        ctx.translate(g.def.slide[0] * far, g.def.slide[1] * far);
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = 'rgba(224, 106, 0, 0.8)';
+        ctx.fillStyle = 'rgba(255, 178, 31, 0.12)';
+        ctx.fill(this.gates[i]);
+        ctx.stroke(this.gates[i]);
+        ctx.restore();
+      }
       ctx.save();
       ctx.translate(g.def.slide[0] * g.open, g.def.slide[1] * g.open);
       if (g.def.platform || g.def.period) {

@@ -60,6 +60,8 @@ async function open(browser, opts, w, h, errors) {
     check('phone: boots inside a cross-origin iframe', phone.ready);
     await f.tap('#title .play');
     await wait(500);
+    /* PLAY meets World 1's intro card first */
+    if (await f.$('#worldintro.on')) { await f.tap('#worldintro .go'); await wait(400); }
     const cdp = await phone.context.newCDPSession(phone.page);
     const pad = await f.$('#pads .tilt-r');
     const box = await pad.boundingBox();
@@ -78,6 +80,7 @@ async function open(browser, opts, w, h, errors) {
     check('desktop: boots in a 960x640 embed', desk.ready);
     await d.click('#title .play');
     await wait(500);
+    if (await d.$('#worldintro.on')) { await d.click('#worldintro .go'); await wait(400); }
     await desk.page.keyboard.down('d');
     await wait(600);
     const k = await d.evaluate(() => window.__game.game.lab.angle);
