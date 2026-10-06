@@ -344,6 +344,13 @@ export class Lab {
           if (!mg.on) continue;
           const dx = mg.def.x - b.x, dy = mg.def.y - b.y, dist = Math.hypot(dx, dy);
           if (dist > mg.def.r || dist < 1) continue;
+          /* an attracting magnet grabs: a ball against its core stops
+             swinging round it, so it hangs still and drops cleanly */
+          if (!mg.def.repel && dist < 30 + BALL_R + 4) {
+            const lv = b.body.getLinearVelocity();
+            b.body.setLinearVelocity(Vec2(lv.x * 0.8, lv.y * 0.8));
+            b.body.setAngularVelocity(b.body.getAngularVelocity() * 0.8);
+          }
           /* full strength over the inner half of its reach, fading to
              nothing at the edge - so a repelled ball floats at the height
              where the push matches its weight */
@@ -353,6 +360,10 @@ export class Lab {
         }
         for (const r of this.magRails) {
           const { q, d } = nearestOnPath([b.x, b.y], r.path);
+          /* past either end of the rail there is no pull, so a ball rolls
+             cleanly off the end instead of wrapping round it */
+          const end0 = r.path[0], end1 = r.path[r.path.length - 1];
+          if ((q[0] === end0[0] && q[1] === end0[1]) || (q[0] === end1[0] && q[1] === end1[1])) continue;
           const gap = d - r.r - BALL_R;
           if (gap > MAGNET_REACH || d < 1) continue;
           const k = MAGNET_PULL * GRAVITY * (gap < 0 ? 1 : 1 - 0.5 * gap / MAGNET_REACH);
