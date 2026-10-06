@@ -48,8 +48,19 @@ export interface GateDef {
   period?: number; phase?: number; speed?: number; platform?: boolean; tray?: boolean;
 }
 
-/** A plank on a pivot: tips under weight, within `limit` degrees. */
-export interface SeesawDef { pivot: Pt; half: number; limit?: number; angle?: number }
+/** A plank on a pivot: tips under weight, within `limit` degrees.
+    `offset` slides the plank along so one side is longer - and heavier -
+    and rests down until enough weight lands on the short side; `density`
+    sets how heavy the plank is (0.4 light, 1.5 needs a red to tip it). */
+export interface SeesawDef {
+  pivot: Pt; half: number; limit?: number; angle?: number; offset?: number; density?: number;
+  /** an uneven swing, [lowest, highest] in degrees (overrides limit): a
+      plank that stops short of level throws what it carries sideways */
+  range?: [number, number];
+  /** short posts standing on the plank, at these distances from the pivot,
+      making seats that hold a ball as the plank tips */
+  posts?: number[];
+}
 
 /** A fan: pushes every ball inside the box along `dir`. Light balls fly,
     heavy ones barely notice. `by` switches it (on while any is on). */

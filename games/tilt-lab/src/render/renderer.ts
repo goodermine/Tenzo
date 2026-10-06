@@ -264,7 +264,7 @@ export class Renderer {
       ctx.translate(sw.x, sw.y);
       ctx.rotate(sw.angle);
       ctx.beginPath();
-      roundRect(ctx, -sw.def.half, -14, sw.def.half * 2, 28, 14);
+      roundRect(ctx, (sw.def.offset || 0) - sw.def.half, -14, sw.def.half * 2, 28, 14);
       ctx.fill();
       ctx.restore();
     }
@@ -687,14 +687,29 @@ export class Renderer {
       g.addColorStop(0.5, '#ff3d9a');
       g.addColorStop(1, '#c4006a');
       ctx.fillStyle = g;
+      const o = sw.def.offset || 0;
       ctx.beginPath();
-      roundRect(ctx, -sw.def.half, -14, sw.def.half * 2, 28, 14);
+      roundRect(ctx, o - sw.def.half, -14, sw.def.half * 2, 28, 14);
       ctx.fill();
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = 'rgba(140, 0, 70, 0.6)';
       ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillRect(-sw.def.half + 12, -9, sw.def.half * 2 - 24, 5);
+      ctx.fillRect(o - sw.def.half + 12, -9, sw.def.half * 2 - 24, 5);
+      /* a heavy plank shows its weight as bands */
+      if ((sw.def.density ?? 0.4) > 1) {
+        ctx.fillStyle = 'rgba(140, 0, 70, 0.35)';
+        for (let k = -2; k <= 2; k++) ctx.fillRect(o + k * sw.def.half * 0.35 - 3, -12, 6, 24);
+      }
+      for (const px of sw.def.posts || []) {
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        roundRect(ctx, px - 9, -58, 18, 50, 9);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(140, 0, 70, 0.6)';
+        ctx.stroke();
+      }
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(0, 0, 7, 0, TAU);

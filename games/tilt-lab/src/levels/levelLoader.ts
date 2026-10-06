@@ -5,6 +5,7 @@ import type { LevelDef, Colour } from '../entities/types.ts';
 import { PROTO } from './data/proto.ts';
 import { WORLD1 } from './data/world1.ts';
 import { WORLD2 } from './data/world2.ts';
+import { WORLD3 } from './data/world3.ts';
 
 export interface World {
   name: string;
@@ -23,6 +24,11 @@ export const WORLDS: World[] = [
     name: 'GATES',
     intro: { title: 'GATES', text: 'Switches that flip, doors on a timer, barriers that only let you through one way.', balls: ['yellow', 'yellow'] },
     levels: WORLD2
+  },
+  {
+    name: 'WEIGHT',
+    intro: { title: 'WEIGHT', text: 'Meet BLUE: light as air. Fans lift it high, while heavy red barely notices.', balls: ['blue', 'red'] },
+    levels: WORLD3
   }
 ];
 

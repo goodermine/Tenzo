@@ -160,9 +160,16 @@ export class Lab {
 
     for (const d of level.seesaws || []) {
       const body = this.world.createDynamicBody({ position: v(d.pivot), angularDamping: 1.2, angle: (d.angle || 0) * Math.PI / 180 });
-      body.createFixture(Box(d.half / S, 14 / S), { density: 0.4, friction: 0.8, restitution: 0.05, userData: solid });
-      const lim = (d.limit ?? 22) * Math.PI / 180;
-      this.world.createJoint(RevoluteJoint({ enableLimit: true, lowerAngle: -lim, upperAngle: lim }, ground, body, v(d.pivot)));
+      body.createFixture(Box(d.half / S, 14 / S, Vec2((d.offset || 0) / S, 0), 0),
+        { density: d.density ?? 0.4, friction: 0.8, restitution: 0.05, userData: solid });
+      for (const px of d.posts || []) {
+        body.createFixture(Box(9 / S, 24 / S, Vec2(px / S, -34 / S), 0), { density: 0.1, friction: 0.6, userData: solid });
+      }
+      const lim = d.limit ?? 22, [lo, hi] = d.range ?? [-lim, lim];
+      /* limits are measured from level (a plank may start tipped) */
+      this.world.createJoint(RevoluteJoint({
+        enableLimit: true, lowerAngle: lo * Math.PI / 180, upperAngle: hi * Math.PI / 180, referenceAngle: 0
+      } as any, ground, body, v(d.pivot)));
       this.seesaws.push({ def: d, body, angle: body.getAngle(), x: d.pivot[0], y: d.pivot[1] });
     }
 
