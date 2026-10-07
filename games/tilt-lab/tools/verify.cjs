@@ -159,7 +159,7 @@ async function playSolution(page, limit = 25000) {
     await wait(1600);
     const finalCard = await G(d, () => ({ mode: window.__game.game.mode, title: document.querySelector('#clear h2').textContent }));
     check('clearing the last lab shows LAB COMPLETE', finalCard.title.includes('LAB COMPLETE'), JSON.stringify(finalCard));
-    check('every level is cleared by its solution in the browser', results.length === nLevels && results.every(r => r.includes('cleared') && !r.includes('NOT')),
+    check('every level is cleared by its solution in the browser', results.length === nLevels && results.every(r => r.endsWith(': cleared')),
       results.join(', '));
 
     /* the clear card's NEXT */

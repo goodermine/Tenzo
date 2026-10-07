@@ -3,6 +3,14 @@
  * Gates now read their plates with logic: ALL needs every plate pressed at
  * once, ONE exactly one.
  *   1 ANCHOR       orange home on its plate brings the bridge for yellow
+ *   2 HALF TILT    half a tilt rolls yellow and leaves orange put
+ *   3 ALL OR NOTHING  an ALL trapdoor: both plates at once
+ *   4 ONE AT A TIME   a ONE bridge: exactly one plate, not both
+ *   5 BOTH PLATES  park orange high, then send red
+ *   6 BALANCE      a ONE bridge, and orange decides which plate
+ *
+ * Labs 2-6 came out of the design search (plates at wall ends driving a
+ * trapdoor or a bridge) and pass the tier-2 bar.
  *
  * Conventions as World 1. A plate inside a cup is pressed by the ball at
  * home there. */
@@ -137,4 +145,33 @@ export const BOTHPLATES: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD8: LevelDef[] = [ANCHOR, HALFTILT, ALLORNOTHING, ONEATATIME, BOTHPLATES];
+export const BALANCE: LevelDef = {
+  id: 'w8-balance',
+  par: 18,
+  name: 'BALANCE',
+  hint: 'The bridge stays only while exactly ONE plate is held. Orange decides which',
+  balls: [{ colour: 'orange', x: 463, y: 168 }, { colour: 'red', x: 197, y: 168 }],
+  targets: [{ colour: 'orange', x: 110, y: 895 }, { colour: 'red', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [620, 230]] },
+    { pts: [[780, 230], [960, 230]] },
+    { pts: [[40, 400], [420, 400]] },
+    { pts: [[580, 400], [960, 400]] },
+    { pts: [[40, 570], [600, 570]] },
+    { pts: [[40, 740], [420, 740]] },
+    { pts: [[580, 740], [960, 740]] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [960, 880]] }
+  ],
+  switches: [
+    { id: 'w0', a: [870, 378], b: [930, 378] },
+    { id: 'w1', a: [70, 718], b: [130, 718] }
+  ],
+  gates: [
+    { a: [442, 400], b: [558, 400], slide: [0, -150], by: ['w0', 'w1'], logic: 'xor', invert: true, platform: true }
+  ],
+  solution: [[0, 1], [2.98, -1], [5.04, 1], [6.99, -1], [8.45, -0.5], [8.98, 0.5], [10.11, -1], [14.19, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD8: LevelDef[] = [ANCHOR, HALFTILT, ALLORNOTHING, ONEATATIME, BOTHPLATES, BALANCE];
