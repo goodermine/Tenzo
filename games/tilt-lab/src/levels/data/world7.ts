@@ -9,6 +9,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const FILTER: LevelDef = {
   id: 'w7-filter',
+  par: 8.5,
   name: 'FILTER',
   hint: 'Yellow falls through a yellow grate. Red rolls right over it',
   balls: [{ colour: 'red', x: 150, y: 338 }, { colour: 'yellow', x: 280, y: 338 }],
