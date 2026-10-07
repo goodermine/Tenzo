@@ -4,6 +4,7 @@
  *   1 FIRST COME   tilt left, then right: watch who leads
  *   2 QUEUE        send them down in the right order
  *   3 SHUFFLE      blue starts in the middle and must end at the far end
+ *   4 LAST IN LINE red is in front but belongs at the far end
  *
  * Conventions as World 1. Labs here came out of the design search and
  * pass the tier-2 bar. */
@@ -66,4 +67,23 @@ export const SHUFFLE: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE];
+export const LASTINLINE: LevelDef = {
+  id: 'w10-lastinline',
+  par: 18.5,
+  name: 'LAST IN LINE',
+  hint: 'Red is in front but belongs at the far end. Let the others go first',
+  balls: [{ colour: 'yellow', x: 729, y: 168 }, { colour: 'red', x: 875, y: 168 }, { colour: 'blue', x: 680, y: 338 }],
+  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 110, y: 895 }, { colour: 'blue', x: 500, y: 895 }],
+  rails: [
+    { pts: [[400, 230], [960, 230]] },
+    { pts: [[400, 400], [960, 400]] },
+    { pts: [[40, 570], [680, 570]] },
+    { pts: [[560, 740], [960, 740]], only: ['red'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, -1], [2.88, 1], [5.13, 0], [5.99, 1], [6.94, -1], [9.89, 0], [10.67, 1], [12.74, 1], [14.16, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE, LASTINLINE];
