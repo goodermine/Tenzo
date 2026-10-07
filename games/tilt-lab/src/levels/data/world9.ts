@@ -66,4 +66,44 @@ export const FALLAWAY: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS, FALLAWAY];
+export const LASTONE: LevelDef = {
+  id: 'w9-lastone',
+  par: 18.5,
+  name: 'LAST ONE ACROSS',
+  hint: 'Whoever crosses last takes the floor with them. Choose the order',
+  balls: [{ colour: 'red', x: 189, y: 168 }, { colour: 'blue', x: 371, y: 168 }],
+  targets: [{ colour: 'red', x: 890, y: 895 }, { colour: 'blue', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [520, 230]] },
+    { pts: [[40, 400], [220, 400]], crumble: true },
+    { pts: [[380, 400], [960, 400]] },
+    { pts: [[40, 570], [600, 570]], only: ['blue'] },
+    { pts: [[400, 740], [960, 740]], only: ['blue'] },
+    { pts: [[40, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [2.39, -1], [3.6, 0], [4.63, -1], [6.88, 1], [8.04, 0], [9.2, -1], [11.73, 1], [14.36, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const NOWAYBACK: LevelDef = {
+  id: 'w9-nowayback',
+  par: 18.5,
+  name: 'NO WAY BACK',
+  hint: 'Every cracked floor is a one-time ticket. Spend them in the right order',
+  balls: [{ colour: 'yellow', x: 183, y: 168 }, { colour: 'red', x: 379, y: 168 }],
+  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [620, 230]] },
+    { pts: [[780, 230], [960, 230]] },
+    { pts: [[320, 400], [960, 400]], crumble: true },
+    { pts: [[40, 570], [680, 570]], only: ['red'] },
+    { pts: [[400, 740], [960, 740]] },
+    { pts: [[40, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [1.3, -1], [2.67, 1], [5.32, 0], [7.74, -1], [10.06, 0], [11.82, 1], [14.61, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS, FALLAWAY, LASTONE, NOWAYBACK];
