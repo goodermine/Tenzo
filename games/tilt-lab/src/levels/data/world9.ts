@@ -8,6 +8,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const CRUMBLE: LevelDef = {
   id: 'w9-crumble',
+  par: 10.5,
   name: 'CRUMBLE',
   hint: 'Yellow crosses first. Once it is off, the bridge falls - and leaves a hole',
   balls: [{ colour: 'yellow', x: 300, y: 338 }, { colour: 'blue', x: 100, y: 338 }],
@@ -23,4 +24,26 @@ export const CRUMBLE: LevelDef = {
   traps: [[[0, 1], [1.2, 0]], [[0, -1]]]
 };
 
-export const WORLD9: LevelDef[] = [CRUMBLE];
+export const THREECRACKS: LevelDef = {
+  id: 'w9-threecracks',
+  par: 15.5,
+  name: 'THREE CRACKS',
+  hint: 'Each cracked floor carries one crossing. The holes they leave are the way down',
+  balls: [{ colour: 'yellow', x: 344, y: 168 }, { colour: 'blue', x: 147, y: 168 }],
+  targets: [{ colour: 'yellow', x: 110, y: 895 }, { colour: 'blue', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [420, 230]] },
+    { pts: [[580, 230], [960, 230]] },
+    { pts: [[40, 400], [620, 400]], crumble: true },
+    { pts: [[780, 400], [960, 400]] },
+    { pts: [[320, 570], [960, 570]], crumble: true },
+    { pts: [[40, 740], [220, 740]], crumble: true },
+    { pts: [[380, 740], [960, 740]], only: ['yellow'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [960, 880]] }
+  ],
+  solution: [[0, 1], [2.43, -1], [4.6, 1], [6.06, 0], [7.38, 1], [8.97, -1], [11.82, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS];

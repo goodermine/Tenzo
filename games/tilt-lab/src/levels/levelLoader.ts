@@ -11,6 +11,7 @@ import { WORLD5 } from './data/world5.ts';
 import { WORLD6 } from './data/world6.ts';
 import { WORLD7 } from './data/world7.ts';
 import { WORLD8 } from './data/world8.ts';
+import { WORLD9 } from './data/world9.ts';
 
 export interface World {
   name: string;
@@ -59,6 +60,11 @@ export const WORLDS: World[] = [
     name: 'ANCHOR',
     intro: { title: 'ANCHOR', text: 'Meet ORANGE: so heavy it barely rolls, and it holds down any plate it stops on. Gates marked ALL need every plate pressed; ONE needs exactly one.', balls: ['orange', 'yellow'] },
     levels: WORLD8
+  },
+  {
+    name: 'CRUMBLE',
+    intro: { title: 'CRUMBLE', text: 'Cracked floors hold while a ball is on them. Once one has been used and left empty, it falls away - and leaves a hole.', balls: ['yellow', 'blue'] },
+    levels: WORLD9
   }
 ];
 
