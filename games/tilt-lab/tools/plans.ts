@@ -7,7 +7,7 @@
 import { Lab, STEP } from '../src/core/physics.ts';
 import type { LevelDef, Solution } from '../src/entities/types.ts';
 
-export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean; home: number } {
+export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean; home: number; gap: number } {
   const lab = new Lab(level);
   /* Once the last input is given and the lab has come to rest - every ball
      still, every gate where it is going, no timer running, no floor about
@@ -28,7 +28,16 @@ export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean;
     calm = still ? calm + STEP : 0;
     if (calm > 0.6) break;
   }
-  return { won: lab.state === 'won', lost: lab.state === 'lost', t: lab.time, home: lab.targets.filter(t => t.ball).length };
+  /* how far the balls not yet home ended from their cups: a design search
+     climbs on this */
+  let gap = 0;
+  for (const t of lab.targets) {
+    if (t.ball) continue;
+    let d = 1000;
+    for (const b of lab.balls) if (!b.lost && !b.home && b.colour === t.def.colour) d = Math.min(d, Math.hypot(b.x - t.rest[0], b.y - t.rest[1]));
+    gap += d;
+  }
+  return { won: lab.state === 'won', lost: lab.state === 'lost', t: lab.time, home: lab.targets.filter(t => t.ball).length, gap };
 }
 
 export function rng(seed: number) {

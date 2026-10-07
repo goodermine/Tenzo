@@ -53,4 +53,32 @@ export const HALFTILT: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD8: LevelDef[] = [ANCHOR, HALFTILT];
+export const ALLORNOTHING: LevelDef = {
+  id: 'w8-allornothing',
+  par: 17.5,
+  name: 'ALL OR NOTHING',
+  hint: 'The trapdoor needs both plates at once. Orange holds one wherever it stops',
+  balls: [{ colour: 'orange', x: 252, y: 168 }, { colour: 'blue', x: 141, y: 168 }],
+  targets: [{ colour: 'orange', x: 890, y: 895 }, { colour: 'blue', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [420, 230]] },
+    { pts: [[580, 230], [960, 230]] },
+    { pts: [[40, 400], [150, 400]] },
+    { pts: [[330, 400], [440, 400]] },
+    { pts: [[40, 570], [600, 570]] },
+    { pts: [[40, 740], [620, 740]] },
+    { pts: [[780, 740], [960, 740]] },
+    { pts: [[244, 880], [756, 880]] }
+  ],
+  switches: [
+    { id: 'w0', a: [70, 378], b: [130, 378] },
+    { id: 'w1', a: [70, 548], b: [130, 548] }
+  ],
+  gates: [
+    { a: [170, 400], b: [310, 400], slide: [0, 140], by: ['w0', 'w1'], logic: 'all' }
+  ],
+  solution: [[0, 0], [2.28, 1], [4.97, -0.5], [7.7, 1], [9.2, 0.5], [10.26, -1], [12.01, -0.5], [14.76, 0.5], [16.94, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD8: LevelDef[] = [ANCHOR, HALFTILT, ALLORNOTHING];
