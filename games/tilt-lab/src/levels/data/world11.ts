@@ -4,6 +4,7 @@
  *   1 LIFT OFF     red home on its plate starts the fan that lifts blue
  *   2 PLATE LIFT   one ball holds the plate, the other rides the lift
  *   3 BLOWBACK     a fan keeps blue from dropping straight down
+ *   4 UPDRAUGHT    hold the plate below to run the fan above
  *
  * Conventions as World 1. Labs 2-6 came out of the design search and pass
  * the tier-2 bar; in each, the solution fails without its machine. */
@@ -74,4 +75,29 @@ export const BLOWBACK: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK];
+export const UPDRAUGHT: LevelDef = {
+  id: 'w11-updraught',
+  par: 15,
+  name: 'UPDRAUGHT',
+  hint: 'The plate below starts the fan above. Someone has to hold it while someone flies',
+  balls: [{ colour: 'yellow', x: 200, y: 168 }, { colour: 'red', x: 361, y: 168 }],
+  targets: [{ colour: 'yellow', x: 500, y: 895 }, { colour: 'red', x: 890, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [440, 230]] },
+    { pts: [[320, 400], [960, 400]], only: ['red'] },
+    { pts: [[400, 570], [960, 570]] },
+    { pts: [[40, 740], [680, 740]] },
+    { pts: [[40, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  switches: [
+    { id: 'm', a: [70, 718], b: [130, 718] }
+  ],
+  fans: [
+    { x: 50, y: 200, w: 260, h: 330, dir: [0, -1], strength: 28, by: ['m'] }
+  ],
+  solution: [[0, 1], [2.43, -1], [4.6, 1], [6.06, 0], [7.12, 1], [8.97, -1], [11.82, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK, UPDRAUGHT];
