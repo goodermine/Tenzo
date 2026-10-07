@@ -7,7 +7,7 @@
 import { Lab, STEP } from '../src/core/physics.ts';
 import type { LevelDef, Solution } from '../src/entities/types.ts';
 
-export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean } {
+export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean; home: number } {
   const lab = new Lab(level);
   /* Once the last input is given and the lab has come to rest - every ball
      still, every gate where it is going, no timer running, no floor about
@@ -28,7 +28,7 @@ export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean;
     calm = still ? calm + STEP : 0;
     if (calm > 0.6) break;
   }
-  return { won: lab.state === 'won', lost: lab.state === 'lost', t: lab.time };
+  return { won: lab.state === 'won', lost: lab.state === 'lost', t: lab.time, home: lab.targets.filter(t => t.ball).length };
 }
 
 export function rng(seed: number) {

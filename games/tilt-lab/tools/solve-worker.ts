@@ -15,7 +15,7 @@ parentPort!.on('message', async (job: { id: number; level: number | { file: stri
     if (!files.has(job.level.file)) files.set(job.level.file, await import(job.level.file));
     def = files.get(job.level.file)![job.level.name];
   }
-  const out: { won: boolean; t: number }[] = [];
-  for (const p of job.plans) { const r = run(def, p, job.limit); out.push({ won: r.won, t: r.t }); }
+  const out: { won: boolean; t: number; home: number }[] = [];
+  for (const p of job.plans) { const r = run(def, p, job.limit); out.push({ won: r.won, t: r.t, home: r.home }); }
   parentPort!.postMessage({ id: job.id, out });
 });
