@@ -1,4 +1,4 @@
-/* TILT LAB - the campaign: six worlds of six labs, each world teaching one
+/* TILT LAB - the campaign: worlds of six labs, each world teaching one
    new idea. Levels are data (src/levels/data/); this file only orders
    them. */
 import type { LevelDef, Colour } from '../entities/types.ts';
@@ -9,6 +9,7 @@ import { WORLD3 } from './data/world3.ts';
 import { WORLD4 } from './data/world4.ts';
 import { WORLD5 } from './data/world5.ts';
 import { WORLD6 } from './data/world6.ts';
+import { WORLD7 } from './data/world7.ts';
 
 export interface World {
   name: string;
@@ -47,6 +48,11 @@ export const WORLDS: World[] = [
     name: 'MASTER LAB',
     intro: { title: 'MASTER LAB', text: 'Platforms that ferry, lifts that answer to switches, and everything you have learned so far.', balls: ['red', 'yellow', 'purple'] },
     levels: WORLD6
+  },
+  {
+    name: 'FILTERS',
+    intro: { title: 'FILTERS', text: 'Colour grates: a ball the grate is striped for drops straight through it. Every other ball is stopped. Each lab from here on takes a real plan.', balls: ['yellow', 'red'] },
+    levels: WORLD7
   }
 ];
 

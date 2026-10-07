@@ -87,6 +87,78 @@ export const LOOKS: WorldLook[] = [
     rail: ['#8ad0ff', '#3b6bff', '#2a22c4'],
     railEdge: 'rgba(30, 20, 150, 0.55)',
     shadow: 'rgba(80, 40, 170, 0.22)'
+  },
+  { /* 7 FILTERS: teal lagoon, coral rails */
+    name: 'FILTERS',
+    sky: ['#c8fff4', '#5fe8d6', '#19b8c4'],
+    blobs: ['rgba(255, 120, 110, 0.32)', 'rgba(255, 236, 110, 0.32)', 'rgba(255, 255, 255, 0.4)'],
+    frame: ['#ffffff', '#effffc'],
+    glow: 'rgba(255, 100, 90, 0.42)',
+    interior: ['#fbfffe', '#ecfbf9'],
+    grid: 'rgba(20, 170, 170, 0.12)',
+    rail: ['#ffc0b4', '#ff6f5e', '#d6352a'],
+    railEdge: 'rgba(150, 20, 10, 0.55)',
+    shadow: 'rgba(10, 110, 120, 0.22)'
+  },
+  { /* 8 ANCHOR: indigo dusk, gold rails */
+    name: 'ANCHOR',
+    sky: ['#b9b4ff', '#7a6cff', '#4b39d9'],
+    blobs: ['rgba(255, 200, 60, 0.36)', 'rgba(255, 110, 200, 0.30)', 'rgba(120, 230, 255, 0.28)'],
+    frame: ['#ffffff', '#f3f1ff'],
+    glow: 'rgba(255, 196, 40, 0.50)',
+    interior: ['#fdfcff', '#efedff'],
+    grid: 'rgba(90, 70, 230, 0.13)',
+    rail: ['#ffe89a', '#ffc21f', '#d68a00'],
+    railEdge: 'rgba(140, 80, 0, 0.55)',
+    shadow: 'rgba(60, 40, 170, 0.24)'
+  },
+  { /* 9 CRUMBLE: warm sand, magenta rails */
+    name: 'CRUMBLE',
+    sky: ['#fff1cc', '#ffd38a', '#ffa86b'],
+    blobs: ['rgba(255, 60, 170, 0.28)', 'rgba(110, 220, 255, 0.28)', 'rgba(255, 255, 255, 0.4)'],
+    frame: ['#ffffff', '#fff8ef'],
+    glow: 'rgba(230, 30, 160, 0.40)',
+    interior: ['#fffdf8', '#fbf3ea'],
+    grid: 'rgba(210, 130, 40, 0.13)',
+    rail: ['#ffa6e0', '#f02fb0', '#a8007a'],
+    railEdge: 'rgba(120, 0, 80, 0.55)',
+    shadow: 'rgba(160, 80, 20, 0.22)'
+  },
+  { /* 10 ORDER: ice blue, cherry rails */
+    name: 'ORDER',
+    sky: ['#eef9ff', '#b6e6ff', '#7cc8ff'],
+    blobs: ['rgba(255, 70, 100, 0.26)', 'rgba(255, 255, 255, 0.5)', 'rgba(190, 150, 255, 0.28)'],
+    frame: ['#ffffff', '#f2faff'],
+    glow: 'rgba(255, 45, 85, 0.40)',
+    interior: ['#fdfeff', '#eef6ff'],
+    grid: 'rgba(60, 140, 230, 0.12)',
+    rail: ['#ffa3b5', '#ff2d55', '#b8002e'],
+    railEdge: 'rgba(130, 0, 30, 0.55)',
+    shadow: 'rgba(30, 90, 170, 0.22)'
+  },
+  { /* 11 MACHINES: copper, cyan rails */
+    name: 'MACHINES',
+    sky: ['#ffd9b8', '#f2a06b', '#c96a3a'],
+    blobs: ['rgba(60, 230, 255, 0.32)', 'rgba(255, 230, 120, 0.32)', 'rgba(255, 255, 255, 0.3)'],
+    frame: ['#ffffff', '#fff5ee'],
+    glow: 'rgba(0, 210, 255, 0.45)',
+    interior: ['#fffcf9', '#f8efe8'],
+    grid: 'rgba(200, 100, 40, 0.13)',
+    rail: ['#a8f4ff', '#1fd0f0', '#0088b8'],
+    railEdge: 'rgba(0, 80, 120, 0.55)',
+    shadow: 'rgba(140, 60, 20, 0.24)'
+  },
+  { /* 12 GRAND LAB: full rainbow, midnight rails */
+    name: 'GRAND LAB',
+    sky: ['#ff8ccb', '#ffe95c', '#5fe8a0'],
+    blobs: ['rgba(95, 212, 255, 0.36)', 'rgba(163, 71, 255, 0.30)', 'rgba(255, 90, 60, 0.28)'],
+    frame: ['#ffffff', '#fbf6ff'],
+    glow: 'rgba(163, 71, 255, 0.50)',
+    interior: ['#ffffff', '#f5f1ff'],
+    grid: 'rgba(163, 71, 255, 0.11)',
+    rail: ['#9aa4ff', '#3f37c9', '#1d1580'],
+    railEdge: 'rgba(20, 10, 100, 0.6)',
+    shadow: 'rgba(90, 30, 160, 0.24)'
   }
 ];
 
