@@ -5,6 +5,7 @@
  *   2 PLATE LIFT   one ball holds the plate, the other rides the lift
  *   3 BLOWBACK     a fan keeps blue from dropping straight down
  *   4 UPDRAUGHT    hold the plate below to run the fan above
+ *   5 HEADWIND     a high plate starts the fan over yellow's cup
  *
  * Conventions as World 1. Labs 2-6 came out of the design search and pass
  * the tier-2 bar; in each, the solution fails without its machine. */
@@ -100,4 +101,30 @@ export const UPDRAUGHT: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK, UPDRAUGHT];
+export const HEADWIND: LevelDef = {
+  id: 'w11-headwind',
+  par: 19.5,
+  name: 'HEADWIND',
+  hint: 'The high plate starts the fan over yellow cup. Use it, then get off it',
+  balls: [{ colour: 'yellow', x: 205, y: 168 }, { colour: 'red', x: 353, y: 168 }],
+  targets: [{ colour: 'yellow', x: 110, y: 895 }, { colour: 'red', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [440, 230]] },
+    { pts: [[320, 400], [960, 400]] },
+    { pts: [[40, 570], [420, 570]], only: ['yellow'] },
+    { pts: [[580, 570], [960, 570]] },
+    { pts: [[320, 740], [960, 740]] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [960, 880]] }
+  ],
+  switches: [
+    { id: 'm', a: [870, 378], b: [930, 378] }
+  ],
+  fans: [
+    { x: 50, y: 540, w: 260, h: 330, dir: [0, -1], strength: 34, by: ['m'] }
+  ],
+  solution: [[0, 1], [1.58, -1], [4.65, 0], [7.38, 1], [8.83, -1], [10.21, 1], [12.29, 1], [14.05, -1], [15.26, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK, UPDRAUGHT, HEADWIND];
