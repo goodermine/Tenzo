@@ -30,6 +30,7 @@ const game = {
   demo: true,
   shake: 0,
   clearAt: 0,
+  winTime: 0,
   levelsFrom: 'title' as Mode,
   /* the world shown in level select */
   page: 0,
@@ -112,6 +113,7 @@ function setMode(m: Mode) {
   if (m !== 'play') input.clear();
   if (m === 'title' || prev === 'title') layout();
   if (m === 'title') {
+    renderStars();
     game.demo = true;
     game.lab = new Lab(DEMO);
     renderer.setLook(LOOKS[0]);
@@ -140,10 +142,22 @@ function showWorldIntro(w: number) {
   setMode('intro');
 }
 
+/** A star: the lab cleared within its par time. */
+function starred(l: { id: string; par?: number }) {
+  return l.par !== undefined && save.best[l.id] !== undefined && save.best[l.id] <= l.par;
+}
+
+function renderStars() {
+  const got = LEVELS.filter(starred).length;
+  $('#title .stars').textContent = got ? `★ ${got} / ${LEVELS.length}` : '';
+}
+
 function renderLevels() {
   const grid = $('#levels .grid'), w = game.page, W = WORLDS[w];
   grid.replaceChildren();
   $('#levels .world-name').textContent = `WORLD ${w + 1} · ${W.name}`;
+  const got = W.levels.filter(starred).length;
+  if (got) $('#levels .world-name').append(Object.assign(document.createElement('span'), { className: 'wstars', textContent: ` ★ ${got}/${W.levels.length}` }));
   ($('#levels .wprev') as HTMLButtonElement).disabled = w === 0;
   ($('#levels .wnext') as HTMLButtonElement).disabled = w === WORLDS.length - 1;
   const dots = $('#levels .world-dots');
@@ -160,7 +174,7 @@ function renderLevels() {
     const open = i === 0 || save.done.includes(LEVELS[i - 1].id) || save.done.includes(l.id);
     const b = document.createElement('button');
     const [a, bb, d] = tints[(n + w) % tints.length];
-    b.className = 'tile' + (open ? '' : ' locked') + (save.done.includes(l.id) ? ' done' : '');
+    b.className = 'tile' + (open ? '' : ' locked') + (save.done.includes(l.id) ? ' done' : '') + (starred(l) ? ' star' : '');
     b.style.setProperty('--a', a);
     b.style.setProperty('--b', bb);
     b.style.setProperty('--d', d);
@@ -243,6 +257,8 @@ function react(ev: LabEvent) {
       }
       game.shake = 0.4;
       if (!save.done.includes(lab.level.id)) save.done.push(lab.level.id);
+      game.winTime = lab.time;
+      if (!(save.best[lab.level.id] <= lab.time)) save.best[lab.level.id] = +lab.time.toFixed(2);
       store(save);
       game.clearAt = game.t + 0.85;
       break;
@@ -339,6 +355,10 @@ function showClear() {
   const final = game.index >= LEVELS.length - 1, worldEnd = n === WORLDS[w].levels.length - 1;
   $('#clear .lname').textContent = final ? 'EVERY LAB CLEARED'
     : worldEnd ? `WORLD ${w + 1} · ${WORLDS[w].name} COMPLETE` : `LEVEL ${w + 1}-${n + 1} · ${game.lab.level.name}`;
+  const par = game.lab.level.par, star = par !== undefined && game.winTime <= par;
+  const tl = $('#clear .time');
+  tl.textContent = `${game.winTime.toFixed(1)} s` + (par !== undefined ? ` · par ${par.toFixed(1)} s` : '') + (star ? ' ★' : '');
+  tl.classList.toggle('star', star);
   $('#clear h2').textContent = final ? 'LAB COMPLETE!' : worldEnd ? 'WORLD CLEAR!' : 'LAB CLEAR!';
   $('#clear .next').textContent = final ? 'LEVELS' : worldEnd ? 'NEXT WORLD' : 'NEXT';
   setMode('clear');
@@ -370,6 +390,7 @@ async function boot() {
   document.body.classList.toggle('touch', TOUCH);
   input.bindPad($('#pads .tilt-l'), -1);
   input.bindPad($('#pads .tilt-r'), 1);
+  renderStars();
   $('#title .keys').textContent = TOUCH ? 'Hold the arrows or drag to tilt' : 'A / D or ← → to tilt · R restarts';
   const first = () => { audio.unlock(); audio.setMuted(!save.sound); if (save.music) audio.startMusic(); };
   $('#title .play').addEventListener('click', () => {

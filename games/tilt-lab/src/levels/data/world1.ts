@@ -15,6 +15,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const ROLL: LevelDef = {
   id: 'w1-roll',
+  par: 4.5,
   name: 'ROLL',
   hint: 'Tilt right to roll the ball home',
   balls: [{ colour: 'yellow', x: 150, y: 318 }],
@@ -28,6 +29,7 @@ export const ROLL: LevelDef = {
 
 export const SWITCHBACK: LevelDef = {
   id: 'w1-switchback',
+  par: 10.5,
   name: 'SWITCHBACK',
   hint: 'Right, left, right. Turn back the moment you drop',
   balls: [{ colour: 'yellow', x: 260, y: 168 }],
@@ -45,6 +47,7 @@ export const SWITCHBACK: LevelDef = {
 
 export const SWING: LevelDef = {
   id: 'w1-swing',
+  par: 9.5,
   name: 'SWING',
   hint: 'Rock it to climb. Too hard to the left and it is gone',
   balls: [{ colour: 'yellow', x: 480, y: 620 }],
@@ -59,6 +62,7 @@ export const SWING: LevelDef = {
 
 export const HEAVY: LevelDef = {
   id: 'w1-heavy',
+  par: 7.5,
   name: 'HEAVY',
   hint: 'Red needs a run-up. Yellow fills its cup first, or red falls in',
   balls: [{ colour: 'red', x: 560, y: 498 }, { colour: 'yellow', x: 470, y: 498 }],
@@ -74,6 +78,7 @@ export const HEAVY: LevelDef = {
 
 export const BUTTON: LevelDef = {
   id: 'w1-button',
+  par: 11.5,
   name: 'BUTTON',
   hint: 'The button raises the bridge. Find a way to reach it first',
   balls: [{ colour: 'yellow', x: 450, y: 168 }],
@@ -93,6 +98,7 @@ export const BUTTON: LevelDef = {
 
 export const COUNTERWEIGHT: LevelDef = {
   id: 'w1-counterweight',
+  par: 6.5,
   name: 'COUNTERWEIGHT',
   hint: 'Red in its cup holds the bridge. Just a tap the other way',
   balls: [{ colour: 'red', x: 610, y: 498 }, { colour: 'yellow', x: 290, y: 498 }],

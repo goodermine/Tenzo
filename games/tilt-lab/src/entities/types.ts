@@ -100,6 +100,8 @@ export interface LevelDef {
   magnets?: MagnetDef[];
   /** proves the level can be solved; checked by tools/solve.ts */
   solution: Solution;
+  /** par time in seconds: clear the lab faster for a star */
+  par?: number;
   /** the obvious wrong moves, which must not win - the puzzle's point */
   traps?: Solution[];
 }

@@ -16,6 +16,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const BOING: LevelDef = {
   id: 'w4-boing',
+  par: 5.5,
   name: 'BOING',
   hint: 'Green bounces. Let it fly',
   balls: [{ colour: 'green', x: 100, y: 438 }],
@@ -32,6 +33,7 @@ export const BOING: LevelDef = {
 
 export const HIGHBUTTON: LevelDef = {
   id: 'w4-highbutton',
+  par: 6.5,
   name: 'HIGH BUTTON',
   hint: 'A spring throws you up to the button. Then red can cross, if you are quick',
   balls: [{ colour: 'yellow', x: 270, y: 818 }, { colour: 'red', x: 900, y: 168 }],
@@ -53,6 +55,7 @@ export const HIGHBUTTON: LevelDef = {
 
 export const RICOCHET: LevelDef = {
   id: 'w4-ricochet',
+  par: 7,
   name: 'RICOCHET',
   hint: 'The lime floor bounces anything. Drop straight, then lean at the top',
   balls: [{ colour: 'yellow', x: 130, y: 338 }],
@@ -68,6 +71,7 @@ export const RICOCHET: LevelDef = {
 
 export const SORTER: LevelDef = {
   id: 'w4-sorter',
+  par: 7.5,
   name: 'SORTER',
   hint: 'One spring, thrown both ways. Blue goes first, and red will not wait long',
   balls: [{ colour: 'blue', x: 215, y: 818 }, { colour: 'red', x: 560, y: 818 }],
@@ -86,6 +90,7 @@ export const SORTER: LevelDef = {
 
 export const ONESHOT: LevelDef = {
   id: 'w4-oneshot',
+  par: 4,
   name: 'ONE SHOT',
   hint: 'Coral springs fire once. Creep on, then lean the right way',
   balls: [{ colour: 'yellow', x: 260, y: 818 }],
@@ -103,6 +108,7 @@ export const ONESHOT: LevelDef = {
 
 export const RELAY: LevelDef = {
   id: 'w4-relay',
+  par: 7,
   name: 'RELAY',
   hint: 'Two springs, one shot each. Steer while you fly',
   balls: [{ colour: 'yellow', x: 90, y: 798 }],

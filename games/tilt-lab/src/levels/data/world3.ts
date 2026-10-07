@@ -14,6 +14,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const FLOAT: LevelDef = {
   id: 'w3-float',
+  par: 7.5,
   name: 'FLOAT',
   hint: 'Blue is light as air. The fan lifts it',
   balls: [{ colour: 'blue', x: 150, y: 698 }],
@@ -28,6 +29,7 @@ export const FLOAT: LevelDef = {
 
 export const UPDRAFT: LevelDef = {
   id: 'w3-updraft',
+  par: 10,
   name: 'UPDRAFT',
   hint: 'Red rolls under the fan. Blue rides it up: turn back at the top',
   balls: [{ colour: 'red', x: 200, y: 818 }, { colour: 'blue', x: 290, y: 818 }],
@@ -45,6 +47,7 @@ export const UPDRAFT: LevelDef = {
 
 export const TIPPING: LevelDef = {
   id: 'w3-tipping',
+  par: 6,
   name: 'TIPPING',
   hint: 'Too steep to roll up. Back away for a run-up, but not too far',
   balls: [{ colour: 'red', x: 370, y: 538 }],
@@ -61,6 +64,7 @@ export const TIPPING: LevelDef = {
 
 export const FANSWITCH: LevelDef = {
   id: 'w3-fanswitch',
+  par: 8.5,
   name: 'FAN SWITCH',
   hint: 'Red in its cup runs the fan. Blue must wait for it',
   balls: [{ colour: 'red', x: 470, y: 698 }, { colour: 'blue', x: 370, y: 698 }],
@@ -80,6 +84,7 @@ export const FANSWITCH: LevelDef = {
 
 export const LIFT: LevelDef = {
   id: 'w3-lift',
+  par: 6.5,
   name: 'SEESAW LIFT',
   hint: 'Send red over to be the weight. Blue is waiting for its ride',
   balls: [{ colour: 'red', x: 820, y: 238 }, { colour: 'blue', x: 650, y: 690 }],
@@ -97,6 +102,7 @@ export const LIFT: LevelDef = {
 
 export const BALLAST: LevelDef = {
   id: 'w3-ballast',
+  par: 12.5,
   name: 'BALLAST',
   hint: 'One red is not enough',
   balls: [{ colour: 'red', x: 90, y: 378 }, { colour: 'red', x: 90, y: 198 }, { colour: 'blue', x: 670, y: 700 }],

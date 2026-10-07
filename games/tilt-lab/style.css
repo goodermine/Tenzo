@@ -365,6 +365,25 @@ body.portrait #title { align-items: flex-end; justify-content: center; }
 }
 @keyframes rays { to { transform: rotate(360deg); } }
 #clear .lname { font-weight: 600; color: var(--ink-soft); letter-spacing: 0.12em; margin-bottom: 6px; }
+#clear .time { font-weight: 600; color: var(--ink-soft); letter-spacing: 0.08em; margin-bottom: 14px; font-size: 15px; }
+#clear .time.star { color: #e08a00; }
+#title .stars { margin-top: 10px; font-weight: 700; letter-spacing: 0.14em; color: #e08a00; min-height: 1em; }
+.world-name .wstars { color: #e08a00; white-space: nowrap; }
+/* a star: cleared within par, next to the check */
+.tile.star::before {
+  content: "★";
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  color: #ffb31f;
+  font-size: 17px;
+  line-height: 26px;
+  box-shadow: 0 3px 8px rgba(80, 40, 160, 0.3);
+}
 
 #boot {
   position: fixed;

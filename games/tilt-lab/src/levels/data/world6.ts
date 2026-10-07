@@ -14,6 +14,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const SHUTTLE: LevelDef = {
   id: 'w6-shuttle',
+  par: 8,
   name: 'SHUTTLE',
   hint: 'Board when it docks. Keep level while it carries you',
   balls: [{ colour: 'yellow', x: 150, y: 538 }],
@@ -29,6 +30,7 @@ export const SHUTTLE: LevelDef = {
 
 export const LIFT: LevelDef = {
   id: 'w6-lift',
+  par: 7,
   name: 'LIFT',
   hint: 'Red in its cup sends the lift up. Make sure yellow is on it',
   balls: [{ colour: 'red', x: 90, y: 818 }, { colour: 'yellow', x: 490, y: 818 }],
@@ -47,6 +49,7 @@ export const LIFT: LevelDef = {
 
 export const CALL: LevelDef = {
   id: 'w6-call',
+  par: 11.5,
   name: 'CALL',
   hint: 'The plate calls the lift down. Wait for it, then ride up',
   balls: [{ colour: 'yellow', x: 150, y: 818 }],
@@ -64,6 +67,7 @@ export const CALL: LevelDef = {
 
 export const UPANDOVER: LevelDef = {
   id: 'w6-upandover',
+  par: 8,
   name: 'UP AND OVER',
   hint: 'Red sends the lift up. At the top, purple has a ceiling to hang from',
   balls: [{ colour: 'red', x: 910, y: 818 }, { colour: 'purple', x: 510, y: 818 }],
@@ -82,6 +86,7 @@ export const UPANDOVER: LevelDef = {
 
 export const LAUNCHLIFT: LevelDef = {
   id: 'w6-launchlift',
+  par: 6,
   name: 'LAUNCH LIFT',
   hint: 'This lift is fast. It will throw you: be steering when it does',
   balls: [{ colour: 'red', x: 90, y: 818 }, { colour: 'yellow', x: 490, y: 818 }],
@@ -100,6 +105,7 @@ export const LAUNCHLIFT: LevelDef = {
 
 export const FINALE: LevelDef = {
   id: 'w6-finale',
+  par: 8,
   name: 'FINALE',
   hint: 'Up, across, home. Everything you have learned, in one run',
   balls: [{ colour: 'red', x: 90, y: 818 }, { colour: 'yellow', x: 490, y: 818 }],

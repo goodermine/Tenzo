@@ -14,6 +14,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const TOGGLE: LevelDef = {
   id: 'w2-toggle',
+  par: 5.5,
   name: 'TOGGLE',
   hint: 'Roll over the switch to flip it. Cross it again and it flips back',
   balls: [{ colour: 'yellow', x: 130, y: 498 }],
@@ -26,6 +27,7 @@ export const TOGGLE: LevelDef = {
 
 export const TIMER: LevelDef = {
   id: 'w2-timer',
+  par: 11,
   name: 'TIMER',
   hint: 'The pad brings the bridge for a few seconds. Plan the whole run first',
   balls: [{ colour: 'yellow', x: 400, y: 338 }],
@@ -43,6 +45,7 @@ export const TIMER: LevelDef = {
 
 export const ONEWAY: LevelDef = {
   id: 'w2-oneway',
+  par: 13,
   name: 'ONE WAY',
   hint: 'Arrows let you through one way only. There is no coming back',
   balls: [{ colour: 'yellow', x: 780, y: 388 }],
@@ -62,6 +65,7 @@ export const ONEWAY: LevelDef = {
 
 export const PAIR: LevelDef = {
   id: 'w2-pair',
+  par: 10,
   name: 'PAIR',
   hint: 'Each crossing flips the bridge. Two crossings undo one',
   balls: [{ colour: 'yellow', x: 650, y: 338 }, { colour: 'yellow', x: 740, y: 338 }],
@@ -80,6 +84,7 @@ export const PAIR: LevelDef = {
 
 export const SWITCHYARD: LevelDef = {
   id: 'w2-switchyard',
+  par: 11,
   name: 'SWITCHYARD',
   hint: 'One switch, two bridges: when one comes, the other goes',
   balls: [{ colour: 'yellow', x: 130, y: 318 }, { colour: 'red', x: 300, y: 698 }],
@@ -100,6 +105,7 @@ export const SWITCHYARD: LevelDef = {
 
 export const LOCKSTEP: LevelDef = {
   id: 'w2-lockstep',
+  par: 10,
   name: 'LOCKSTEP',
   hint: 'Yellow works the timer. Red has to be ready at the gap',
   balls: [{ colour: 'yellow', x: 420, y: 318 }, { colour: 'red', x: 150, y: 698 }],

@@ -17,6 +17,7 @@ import type { LevelDef } from '../../entities/types.ts';
 
 export const CLING: LevelDef = {
   id: 'w5-cling',
+  par: 5,
   name: 'CLING',
   hint: 'Purple sticks to magnetic rails. Even upside down',
   balls: [{ colour: 'purple', x: 150, y: 698 }],
@@ -32,6 +33,7 @@ export const CLING: LevelDef = {
 
 export const MAGNET: LevelDef = {
   id: 'w5-magnet',
+  par: 8.5,
   name: 'MAGNET',
   hint: 'The plate runs the magnet for a moment. Be over the gap when it catches',
   balls: [{ colour: 'purple', x: 700, y: 698 }],
@@ -49,6 +51,7 @@ export const MAGNET: LevelDef = {
 
 export const REPEL: LevelDef = {
   id: 'w5-repel',
+  par: 10.5,
   name: 'REPEL',
   hint: 'The field turns purple back. Yellow can switch it off, for a moment',
   balls: [{ colour: 'yellow', x: 420, y: 318 }, { colour: 'purple', x: 180, y: 698 }],
@@ -67,6 +70,7 @@ export const REPEL: LevelDef = {
 
 export const PULL: LevelDef = {
   id: 'w5-pull',
+  par: 6.5,
   name: 'PULL',
   hint: 'Yellow wakes the magnet. Lean the right way when it lets go',
   balls: [{ colour: 'purple', x: 600, y: 818 }, { colour: 'yellow', x: 400, y: 818 }],
@@ -84,6 +88,7 @@ export const PULL: LevelDef = {
 
 export const STICKY: LevelDef = {
   id: 'w5-sticky',
+  par: 5.5,
   name: 'STICKY',
   hint: 'One throw up to the magnetic ceiling. Then hang on and turn back',
   balls: [{ colour: 'purple', x: 200, y: 818 }],
@@ -100,6 +105,7 @@ export const STICKY: LevelDef = {
 
 export const HANDOFF: LevelDef = {
   id: 'w5-handoff',
+  par: 13,
   name: 'HANDOFF',
   hint: 'One plate lets go, the next one catches. Then turn yellow home',
   balls: [{ colour: 'purple', x: 360, y: 374 }, { colour: 'yellow', x: 330, y: 698 }],

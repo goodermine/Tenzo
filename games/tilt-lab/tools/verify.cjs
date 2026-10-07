@@ -168,6 +168,10 @@ async function playSolution(page, limit = 25000) {
     await G(d, () => { window.__game.input.read = () => 0; });
     await wait(500);
     await d.screenshot({ path: join(OUT, 'clear-card.png') });
+    const card = await G(d, () => ({ time: document.querySelector('#clear .time').textContent, star: document.querySelector('#clear .time').classList.contains('star'),
+      best: JSON.parse(localStorage.getItem('tiltlab.save')).best[window.__game.LEVELS[0].id], par: window.__game.LEVELS[0].par }));
+    check('beating par shows the time, par and a star, and saves the best time',
+      card.star && /^\d+\.\d s · par \d+\.\d s ★$/.test(card.time) && card.best <= card.par, JSON.stringify(card));
     await d.click('#clear .next');
     await wait(400);
     const nxt = await G(d, () => ({ mode: window.__game.game.mode, i: window.__game.game.index }));
@@ -196,12 +200,16 @@ async function playSolution(page, limit = 25000) {
     await d.reload();
     await boot(d);
     await wait(800);
+    const titleStars = await G(d, () => [document.querySelector('#title .stars').textContent, window.__game.LEVELS.length]);
+    check('the title counts stars out of every lab', titleStars[0] === `★ ${titleStars[1]} / ${titleStars[1]}`, titleStars[0]);
     await d.click('#title .levels-open');
     await wait(400);
     const tiles = await G(d, () => [...document.querySelectorAll('#levels .tile')].map(t => t.className));
     await d.screenshot({ path: join(OUT, 'levels.png') });
     check('progress survives a reload: cleared levels ticked, all open',
       tiles.length === 6 && tiles.every(c => c.includes('done')) && !tiles.some(c => c.includes('locked')), tiles.join(' | '));
+    const wname = await G(d, () => document.querySelector('#levels .world-name').textContent);
+    check('stars survive a reload: on the tiles and the world name', tiles.every(c => c.includes('star')) && wname.includes('★ 6/6'), wname);
     /* paging between worlds */
     const pages = await G(d, async () => {
       const name = () => document.querySelector('#levels .world-name').textContent;
