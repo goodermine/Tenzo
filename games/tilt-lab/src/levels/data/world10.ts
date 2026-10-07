@@ -5,6 +5,7 @@
  *   2 QUEUE        send them down in the right order
  *   3 SHUFFLE      blue starts in the middle and must end at the far end
  *   4 LAST IN LINE red is in front but belongs at the far end
+ *   5 CUT IN       blue needs the first cup before the others arrive
  *
  * Conventions as World 1. Labs here came out of the design search and
  * pass the tier-2 bar. */
@@ -86,4 +87,25 @@ export const LASTINLINE: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE, LASTINLINE];
+export const CUTIN: LevelDef = {
+  id: 'w10-cutin',
+  par: 16.5,
+  name: 'CUT IN',
+  hint: 'Blue starts below the others but needs the first cup. Get it there before they arrive',
+  balls: [{ colour: 'yellow', x: 137, y: 168 }, { colour: 'red', x: 327, y: 168 }, { colour: 'blue', x: 360, y: 338 }],
+  targets: [{ colour: 'yellow', x: 500, y: 895 }, { colour: 'red', x: 890, y: 895 }, { colour: 'blue', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [620, 230]] },
+    { pts: [[780, 230], [960, 230]] },
+    { pts: [[40, 400], [680, 400]] },
+    { pts: [[40, 570], [440, 570]] },
+    { pts: [[40, 740], [620, 740]], only: ['red'] },
+    { pts: [[780, 740], [960, 740]], only: ['red'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [1.44, 0], [2.3, 1], [4.63, -1], [5.56, 1], [5.99, -1], [8.04, -1]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE, LASTINLINE, CUTIN];
