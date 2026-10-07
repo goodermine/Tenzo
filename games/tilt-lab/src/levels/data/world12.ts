@@ -1,6 +1,12 @@
 /* TILT LAB - World 12: GRAND LAB. Everything at once: grates, crumbling
  * floors, pits, plates and machines, mixed. The hardest labs in the
  * building.
+ *   1 GRAND TOUR      one last warm-up: grates sort yellow from blue
+ *   2 SINKING FEELING blue drops through blue, red stays up top
+ *   3 COLLAPSE        three cracked floors, two balls
+ *   4 PITFALL         cracked floors above, a pit below
+ *   5 CROSSROADS      grates sort them, cracked floors close behind
+ *   6 GRAND FINALE    nine moves from here to home
  *
  * Conventions as World 1. Labs came out of the design search; 2-6 pass
  * the tier-2 bar. */
@@ -108,4 +114,24 @@ export const PITFALL: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD12: LevelDef[] = [GRANDTOUR, SINKING, COLLAPSE, PITFALL, GRANDFINALE];
+export const CROSSROADS: LevelDef = {
+  id: 'w12-crossroads',
+  par: 13,
+  name: 'CROSSROADS',
+  hint: 'Grates sort them, cracked floors close behind them. Choose each route once',
+  balls: [{ colour: 'yellow', x: 245, y: 168 }, { colour: 'red', x: 125, y: 168 }],
+  targets: [{ colour: 'yellow', x: 110, y: 895 }, { colour: 'red', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [420, 230]] },
+    { pts: [[580, 230], [960, 230]] },
+    { pts: [[320, 400], [960, 400]], only: ['red'] },
+    { pts: [[40, 570], [520, 570]], only: ['red'] },
+    { pts: [[40, 740], [600, 740]], crumble: true },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [960, 880]] }
+  ],
+  solution: [[0, 1], [2.8, -1], [4.85, 1], [7.23, -1], [9.95, 1], [11.11, -1], [11.87, 0], [13.19, -1], [14.55, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD12: LevelDef[] = [GRANDTOUR, SINKING, COLLAPSE, PITFALL, CROSSROADS, GRANDFINALE];
