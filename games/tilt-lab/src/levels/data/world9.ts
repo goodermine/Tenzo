@@ -46,4 +46,24 @@ export const THREECRACKS: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS];
+export const FALLAWAY: LevelDef = {
+  id: 'w9-fallaway',
+  par: 19,
+  name: 'FALLAWAY',
+  hint: 'A floor you leave is gone. Who needs it after you?',
+  balls: [{ colour: 'yellow', x: 292, y: 168 }, { colour: 'red', x: 471, y: 168 }],
+  targets: [{ colour: 'yellow', x: 500, y: 895 }, { colour: 'red', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [600, 230]] },
+    { pts: [[40, 400], [220, 400]], crumble: true },
+    { pts: [[380, 400], [960, 400]], crumble: true },
+    { pts: [[40, 570], [600, 570]] },
+    { pts: [[40, 740], [220, 740]], only: ['red'] },
+    { pts: [[380, 740], [960, 740]] },
+    { pts: [[244, 880], [366, 880]] }
+  ],
+  solution: [[0, 1], [2.98, -1], [5.67, 1], [7.66, 0], [9.41, 1], [10.96, -1], [13.53, 1], [14.07, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS, FALLAWAY];
