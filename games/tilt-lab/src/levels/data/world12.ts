@@ -87,4 +87,25 @@ export const GRANDFINALE: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD12: LevelDef[] = [GRANDTOUR, SINKING, COLLAPSE, GRANDFINALE];
+export const PITFALL: LevelDef = {
+  id: 'w12-pitfall',
+  par: 16,
+  name: 'PITFALL',
+  hint: 'Cracked floors above, a pit below. Leave each floor at the right moment',
+  balls: [{ colour: 'yellow', x: 130, y: 168 }, { colour: 'red', x: 332, y: 168 }],
+  targets: [{ colour: 'yellow', x: 110, y: 895 }, { colour: 'red', x: 500, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [420, 230]] },
+    { pts: [[580, 230], [960, 230]] },
+    { pts: [[320, 400], [960, 400]], crumble: true },
+    { pts: [[40, 570], [420, 570]] },
+    { pts: [[580, 570], [960, 570]] },
+    { pts: [[40, 740], [600, 740]], crumble: true },
+    { pts: [[244, 880], [366, 880]] }
+  ],
+  hazards: [{ x: 654, y: 900, w: 286, h: 100 }],
+  solution: [[0, 1], [1.02, 0], [2.76, -1], [5.14, 0], [7.67, 1], [10.21, 0], [11.11, -1], [12.36, 0], [12.95, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD12: LevelDef[] = [GRANDTOUR, SINKING, COLLAPSE, PITFALL, GRANDFINALE];
