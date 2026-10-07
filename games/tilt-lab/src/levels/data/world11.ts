@@ -6,6 +6,7 @@
  *   3 BLOWBACK     a fan keeps blue from dropping straight down
  *   4 UPDRAUGHT    hold the plate below to run the fan above
  *   5 HEADWIND     a high plate starts the fan over yellow's cup
+ *   6 FEEDBACK     the fan's own plate sits in its updraft
  *
  * Conventions as World 1. Labs 2-6 came out of the design search and pass
  * the tier-2 bar; in each, the solution fails without its machine. */
@@ -127,4 +128,28 @@ export const HEADWIND: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK, UPDRAUGHT, HEADWIND];
+export const FEEDBACK: LevelDef = {
+  id: 'w11-feedback',
+  par: 19,
+  name: 'FEEDBACK',
+  hint: 'The plate that runs the fan sits in its own updraft. Who can hold it down?',
+  balls: [{ colour: 'blue', x: 142, y: 168 }, { colour: 'red', x: 485, y: 168 }],
+  targets: [{ colour: 'blue', x: 500, y: 895 }, { colour: 'red', x: 890, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [600, 230]] },
+    { pts: [[560, 400], [960, 400]] },
+    { pts: [[560, 570], [960, 570]] },
+    { pts: [[40, 740], [440, 740]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  switches: [
+    { id: 'm', a: [870, 548], b: [930, 548] }
+  ],
+  fans: [
+    { x: 450, y: 540, w: 500, h: 330, dir: [0, -1], strength: 22, by: ['m'] }
+  ],
+  solution: [[0, 1], [2.45, 0], [3.39, 1], [4.49, 0], [7.41, -1], [10, 1], [12.32, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK, UPDRAUGHT, HEADWIND, FEEDBACK];
