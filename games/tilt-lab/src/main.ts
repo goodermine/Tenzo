@@ -152,6 +152,21 @@ function renderStars() {
   $('#title .stars').textContent = got ? `★ ${got} / ${LEVELS.length}` : '';
 }
 
+/* Testing: open every world and lab. The game link with #unlock (or
+   ?unlock) on the end turns it on, #lock turns it off, and it is saved, so
+   one visit is enough. Inside a host page that drops the hash, tapping the
+   logo 7 times in 3 s toggles it. Nothing is marked cleared. */
+function setUnlockAll(on: boolean) {
+  save.unlockAll = on;
+  store(save);
+  if (game.mode === 'levels') renderLevels();
+}
+function readUnlockLink() {
+  const where = location.hash + location.search;
+  if (/\bunlock\b/.test(where)) setUnlockAll(true);
+  else if (/\block\b/.test(where)) setUnlockAll(false);
+}
+
 function renderLevels() {
   const grid = $('#levels .grid'), w = game.page, W = WORLDS[w];
   grid.replaceChildren();
@@ -163,7 +178,7 @@ function renderLevels() {
   const dots = $('#levels .world-dots');
   dots.replaceChildren(...WORLDS.map((_, k) => { const i = document.createElement('i'); if (k === w) i.className = 'on'; return i; }));
   const base = firstOf(w);
-  const worldOpen = base === 0 || save.done.includes(LEVELS[base - 1].id) || W.levels.some(l => save.done.includes(l.id));
+  const worldOpen = save.unlockAll || base === 0 || save.done.includes(LEVELS[base - 1].id) || W.levels.some(l => save.done.includes(l.id));
   $('#levels .world-lock').textContent = worldOpen ? '' : `Clear World ${w} to open ${W.name}`;
   const tints = [
     ['#ffe45c', '#ffb31f', '#d98200'], ['#ff7aa8', '#ff2d55', '#b8002e'], ['#7ae0ff', '#1fb6ff', '#0062d6'],
@@ -171,7 +186,7 @@ function renderLevels() {
   ];
   W.levels.forEach((l, n) => {
     const i = base + n;
-    const open = i === 0 || save.done.includes(LEVELS[i - 1].id) || save.done.includes(l.id);
+    const open = save.unlockAll || i === 0 || save.done.includes(LEVELS[i - 1].id) || save.done.includes(l.id);
     const b = document.createElement('button');
     const [a, bb, d] = tints[(n + w) % tints.length];
     b.className = 'tile' + (open ? '' : ' locked') + (save.done.includes(l.id) ? ' done' : '') + (starred(l) ? ' star' : '');
@@ -395,6 +410,19 @@ async function boot() {
   document.body.classList.toggle('touch', TOUCH);
   input.bindPad($('#pads .tilt-l'), -1);
   input.bindPad($('#pads .tilt-r'), 1);
+  readUnlockLink();
+  window.addEventListener('hashchange', readUnlockLink);
+  let taps: number[] = [];
+  $('#title .logo').addEventListener('click', () => {
+    const now = performance.now();
+    taps = taps.filter(t => now - t < 3000).concat(now);
+    if (taps.length < 7) return;
+    taps = [];
+    setUnlockAll(!save.unlockAll);
+    const el = $('#title .stars');
+    el.textContent = save.unlockAll ? 'ALL LABS OPEN' : 'LABS LOCKED';
+    window.setTimeout(renderStars, 1600);
+  });
   renderStars();
   $('#title .keys').textContent = TOUCH ? 'Hold the arrows or drag to tilt' : 'A / D or ← → to tilt · R restarts';
   const first = () => { audio.unlock(); audio.setMuted(!save.sound); if (save.music) audio.startMusic(); };

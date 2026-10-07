@@ -246,6 +246,42 @@ async function playSolution(page, limit = 25000) {
     check('level select pages between worlds', pages.out[0] !== pages.out[1] && pages.out[2] === pages.out[0], JSON.stringify(pages));
     await desk.close();
 
+    /* ============================================ testing unlock */
+    /* the tiles of world k (from 1) in level select, opened from the title */
+    const tilesOf = (page, k) => page.evaluate(async k => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      document.querySelector('#title .levels-open').click();
+      await sleep(300);
+      for (let i = 0; i < 12 && !document.querySelector('#levels .world-name').textContent.startsWith(`WORLD ${k} `); i++) {
+        document.querySelector('#levels .wnext').click();
+        await sleep(120);
+      }
+      const out = { name: document.querySelector('#levels .world-name').textContent, tiles: [...document.querySelectorAll('#levels .tile')].map(t => t.className) };
+      document.querySelector('#levels .back').click();
+      await sleep(300);
+      return out;
+    }, k);
+    const fresh = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const f = await fresh.newPage();
+    await boot(f);
+    await wait(500);
+    const lockedW7 = await tilesOf(f, 7);
+    for (let i = 0; i < 7; i++) { await f.click('#title .logo'); await wait(80); }
+    await wait(200);
+    const openedW12 = await tilesOf(f, 12);
+    check('a new player finds World 7 locked; 7 taps on the logo open every lab',
+      lockedW7.tiles.length === 6 && lockedW7.tiles.every(c => c.includes('locked')) && openedW12.name.startsWith('WORLD 12') && openedW12.tiles.length === 6 && !openedW12.tiles.some(c => c.includes('locked')),
+      `${lockedW7.name}: ${lockedW7.tiles.filter(c => c.includes('locked')).length} locked; ${openedW12.name}: ${openedW12.tiles.filter(c => c.includes('locked')).length} locked`);
+    await fresh.close();
+    const viaLink = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const v = await viaLink.newPage();
+    await v.goto(`http://127.0.0.1:${PORT}/index.html#unlock`);
+    for (let i = 0; i < 60 && !(await v.evaluate(() => window.__ready === true)); i++) await wait(500);
+    await wait(500);
+    const linked = await tilesOf(v, 12);
+    check('the game link with #unlock opens every lab', linked.name.startsWith('WORLD 12') && !linked.tiles.some(c => c.includes('locked')), linked.name);
+    await viaLink.close();
+
     /* ================================================== phone */
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     const p = await phone.newPage();

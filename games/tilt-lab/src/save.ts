@@ -11,9 +11,10 @@ export interface Save {
   motion: boolean;
   worlds: number[];    /* world intros already shown */
   best: Record<string, number>; /* fastest clear per level id, seconds */
+  unlockAll: boolean;  /* testing: every world and lab open (#unlock) */
 }
 
-const DEFAULTS = (): Save => ({ done: [], last: null, sound: true, music: true, motion: false, worlds: [], best: {} });
+const DEFAULTS = (): Save => ({ done: [], last: null, sound: true, music: true, motion: false, worlds: [], best: {}, unlockAll: false });
 
 export function load(): Save {
   try {
