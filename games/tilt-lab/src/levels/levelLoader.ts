@@ -10,6 +10,7 @@ import { WORLD4 } from './data/world4.ts';
 import { WORLD5 } from './data/world5.ts';
 import { WORLD6 } from './data/world6.ts';
 import { WORLD7 } from './data/world7.ts';
+import { WORLD8 } from './data/world8.ts';
 
 export interface World {
   name: string;
@@ -53,6 +54,11 @@ export const WORLDS: World[] = [
     name: 'FILTERS',
     intro: { title: 'FILTERS', text: 'Colour grates: a ball the grate is striped for drops straight through it. Every other ball is stopped. Each lab from here on takes a real plan.', balls: ['yellow', 'red'] },
     levels: WORLD7
+  },
+  {
+    name: 'ANCHOR',
+    intro: { title: 'ANCHOR', text: 'Meet ORANGE: so heavy it barely rolls, and it holds down any plate it stops on. Gates marked ALL need every plate pressed; ONE needs exactly one.', balls: ['orange', 'yellow'] },
+    levels: WORLD8
   }
 ];
 
