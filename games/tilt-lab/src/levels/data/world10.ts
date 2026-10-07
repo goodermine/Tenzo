@@ -24,4 +24,24 @@ export const QUEUE: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD10: LevelDef[] = [QUEUE];
+export const SHUFFLE: LevelDef = {
+  id: 'w10-shuffle',
+  name: 'SHUFFLE',
+  hint: 'Blue starts in the middle and must end at the far end. Who lets it past?',
+  balls: [{ colour: 'yellow', x: 620, y: 168 }, { colour: 'red', x: 426, y: 168 }, { colour: 'blue', x: 280, y: 338 }],
+  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 500, y: 895 }, { colour: 'blue', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [680, 230]] },
+    { pts: [[40, 400], [520, 400]], only: ['red'] },
+    { pts: [[40, 570], [620, 570]], only: ['blue'] },
+    { pts: [[780, 570], [960, 570]] },
+    { pts: [[40, 740], [420, 740]] },
+    { pts: [[580, 740], [960, 740]], only: ['blue'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [1.06, -1], [3.51, 0], [3.97, 1], [4.43, -1], [6.07, 1], [10.69, -1]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD10: LevelDef[] = [QUEUE, SHUFFLE];
