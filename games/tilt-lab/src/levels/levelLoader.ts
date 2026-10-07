@@ -14,6 +14,7 @@ import { WORLD8 } from './data/world8.ts';
 import { WORLD9 } from './data/world9.ts';
 import { WORLD10 } from './data/world10.ts';
 import { WORLD11 } from './data/world11.ts';
+import { WORLD12 } from './data/world12.ts';
 
 export interface World {
   name: string;
@@ -77,6 +78,11 @@ export const WORLDS: World[] = [
     name: 'MACHINES',
     intro: { title: 'MACHINES', text: 'Plates start fans and lifts. Set the machines going in the right order, and ride them where they take you.', balls: ['blue', 'red'] },
     levels: WORLD11
+  },
+  {
+    name: 'GRAND LAB',
+    intro: { title: 'GRAND LAB', text: 'Everything at once: grates, cracked floors, pits and machines. The hardest labs in the building.', balls: ['yellow', 'red', 'blue'] },
+    levels: WORLD12
   }
 ];
 
