@@ -2,6 +2,14 @@
  * them; once one has been used and is left empty, it falls away. Every
  * route can be crossed once - by everyone who needs it, together.
  *   1 CRUMBLE      yellow crosses; the fallen bridge drops blue home
+ *   2 THREE CRACKS the holes the floors leave are the way down
+ *   3 FALLAWAY     a floor you leave is gone: who needs it after you?
+ *   4 LAST ONE ACROSS  whoever crosses last takes the floor with them
+ *   5 NO WAY BACK  each cracked floor is a one-time ticket
+ *   6 DEMOLITION   bring the floors down in the right order
+ *
+ * Labs 2-6 came out of the design search and pass the tier-2 bar - and
+ * each one's solution fails if its cracked floors are made solid.
  *
  * Conventions as World 1. */
 import type { LevelDef } from '../../entities/types.ts';
@@ -106,4 +114,24 @@ export const NOWAYBACK: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS, FALLAWAY, LASTONE, NOWAYBACK];
+export const DEMOLITION: LevelDef = {
+  id: 'w9-demolition',
+  par: 19,
+  name: 'DEMOLITION',
+  hint: 'Bring the floors down in the right order and the way home opens up',
+  balls: [{ colour: 'red', x: 417, y: 168 }, { colour: 'blue', x: 283, y: 168 }],
+  targets: [{ colour: 'red', x: 890, y: 895 }, { colour: 'blue', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [680, 230]] },
+    { pts: [[40, 400], [420, 400]], crumble: true },
+    { pts: [[580, 400], [960, 400]] },
+    { pts: [[400, 570], [960, 570]] },
+    { pts: [[40, 740], [620, 740]], only: ['blue'] },
+    { pts: [[780, 740], [960, 740]] },
+    { pts: [[244, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [3.43, -1], [5.7, 1], [8.22, -1], [10.89, 1], [13.37, -1], [14.5, 1], [15.4, 0], [16.31, 0], [18.82, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD9: LevelDef[] = [CRUMBLE, THREECRACKS, FALLAWAY, LASTONE, NOWAYBACK, DEMOLITION];
