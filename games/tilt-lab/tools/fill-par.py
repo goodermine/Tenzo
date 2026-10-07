@@ -8,6 +8,6 @@ for f in sorted(glob.glob('src/levels/data/world*.ts')):
     s = open(f).read()
     def add(m):
         nxt = s[m.end():m.end() + 30]
-        return m.group(0) if nxt.lstrip().startswith('par:') else m.group(0) + f"\n  par: {pars[m.group(1)]},"
+        return m.group(0) if nxt.lstrip().startswith("par:") or m.group(1) not in pars else m.group(0) + f"\n  par: {pars[m.group(1)]},"
     t = re.sub(r"  id: '([^']+)',", add, s)
     if t != s: open(f, 'w').write(t); print('pars added in', f)
