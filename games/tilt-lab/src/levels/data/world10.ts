@@ -6,6 +6,7 @@
  *   3 SHUFFLE      blue starts in the middle and must end at the far end
  *   4 LAST IN LINE red is in front but belongs at the far end
  *   5 CUT IN       blue needs the first cup before the others arrive
+ *   6 GRIDLOCK     everyone wants the same way down
  *
  * Conventions as World 1. Labs here came out of the design search and
  * pass the tier-2 bar. */
@@ -108,4 +109,24 @@ export const CUTIN: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE, LASTINLINE, CUTIN];
+export const GRIDLOCK: LevelDef = {
+  id: 'w10-gridlock',
+  par: 14.5,
+  name: 'GRIDLOCK',
+  hint: 'Everyone wants the same way down. Untangle them one at a time',
+  balls: [{ colour: 'yellow', x: 464, y: 168 }, { colour: 'red', x: 143, y: 168 }, { colour: 'blue', x: 360, y: 338 }],
+  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 500, y: 895 }, { colour: 'blue', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [620, 230]] },
+    { pts: [[780, 230], [960, 230]] },
+    { pts: [[40, 400], [680, 400]] },
+    { pts: [[40, 570], [440, 570]] },
+    { pts: [[480, 740], [960, 740]], only: ['red'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, 1], [2.44, 0], [3.13, -1], [4.09, 0], [4.52, -1], [7.41, 0], [8.05, 1], [8.7, 1], [9.23, 1], [11.3, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD10: LevelDef[] = [FIRSTCOME, QUEUE, SHUFFLE, LASTINLINE, CUTIN, GRIDLOCK];
