@@ -239,6 +239,11 @@ function react(ev: LabEvent) {
     case 'gate':
       if (live) audio.gate(ev.open);
       break;
+    case 'crumble':
+      if (live) audio.crumble();
+      particles.burst(ev.x, ev.y, ['#f2c27a', '#c98a3a', '#fff1cf'], 26, 380, ['shard', 'dot']);
+      game.shake = Math.max(game.shake, 0.35);
+      break;
     case 'home':
       if (live) audio.home(ev.colour);
       particles.ring(ev.x, ev.y, KINDS[ev.colour].fill, 26, 0.6);

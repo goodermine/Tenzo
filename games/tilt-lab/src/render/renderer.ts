@@ -5,9 +5,9 @@
  * the top-left and shadows fall straight down however the lab is tilted.
  * That is what makes the chamber read as a real object turning in front of
  * you rather than a picture being rotated. */
-import type { Lab, Ball } from '../core/physics.ts';
-import { MAX_TILT } from '../core/physics.ts';
-import type { Pt } from '../entities/types.ts';
+import type { Lab, Ball, Crumble } from '../core/physics.ts';
+import { MAX_TILT, driven } from '../core/physics.ts';
+import type { Pt, Colour, Logic } from '../entities/types.ts';
 import { KINDS, BALL_R } from '../entities/types.ts';
 import { CHAMBER, CHAMBER_CORNER, railPath, cupPath, CUP_WALL } from '../entities/geometry.ts';
 import { LOOKS, GATE, BUTTON, PIT } from './palette.ts';
@@ -35,7 +35,8 @@ function roundRect(p: Path2D | CanvasRenderingContext2D, x: number, y: number, w
 
 interface RailArt {
   outline: Path2D; center: Path2D; top: number; bottom: number; r: number;
-  kind: 'plain' | 'bouncy' | 'magnetic' | 'oneway'; path: Pt[]; dir?: Pt;
+  kind: 'plain' | 'bouncy' | 'magnetic' | 'oneway' | 'grate' | 'crumble'; path: Pt[]; dir?: Pt;
+  only?: Colour[]; crumble?: Crumble; cracks?: Path2D;
 }
 
 /* special rails wear their behaviour: jelly lime bounces, purple grabs
@@ -43,8 +44,27 @@ interface RailArt {
 const RAIL_KINDS = {
   bouncy: { grad: ['#e4ff8a', '#8ff03a', '#36b81f'], edge: 'rgba(30, 120, 20, 0.6)' },
   magnetic: { grad: ['#e8c4ff', '#a347ff', '#5d14c9'], edge: 'rgba(70, 10, 150, 0.6)' },
-  oneway: { grad: ['#b4fff2', '#1fd8bb', '#0a948c'], edge: 'rgba(0, 110, 100, 0.6)' }
+  oneway: { grad: ['#b4fff2', '#1fd8bb', '#0a948c'], edge: 'rgba(0, 110, 100, 0.6)' },
+  crumble: { grad: ['#fff1cf', '#f2c27a', '#c98a3a'], edge: 'rgba(130, 70, 10, 0.6)' }
 };
+const CRUMBLE_FALL = 0.6;   /* s a fallen floor takes to drop out of sight */
+
+/** Zigzag cracks across a crumbling floor, one per tile. */
+function crackPath(path: Pt[], r: number): Path2D {
+  const p = new Path2D();
+  for (let i = 0; i < path.length - 1; i++) {
+    const [ax, ay] = path[i], [bx, by] = path[i + 1];
+    const len = Math.hypot(bx - ax, by - ay), tx = (bx - ax) / len, ty = (by - ay) / len, nx = -ty, ny = tx;
+    for (let s = 20, k = 0; s < len - 10; s += 40, k++) {
+      const x = ax + tx * s, y = ay + ty * s, j = k % 2 ? 1 : -1;
+      p.moveTo(x + nx * r * 1.2, y + ny * r * 1.2);
+      p.lineTo(x + tx * 5 * j + nx * r * 0.35, y + ty * 5 * j + ny * r * 0.35);
+      p.lineTo(x - tx * 6 * j - nx * r * 0.25, y - ty * 6 * j - ny * r * 0.25);
+      p.lineTo(x + tx * 3 * j - nx * r * 1.2, y + ty * 3 * j - ny * r * 1.2);
+    }
+  }
+  return p;
+}
 
 export class Renderer {
   readonly canvas: HTMLCanvasElement;
@@ -135,8 +155,9 @@ export class Renderer {
       return {
         outline: pathOf(lab.rails[i]), center: pathOf(railPath(r), false),
         top: Math.min(...ys), bottom: Math.max(...ys), r: r.r ?? 18,
-        kind: r.bouncy ? 'bouncy' : r.magnetic ? 'magnetic' : r.oneWay ? 'oneway' : 'plain',
-        path: railPath(r), dir: r.oneWay
+        kind: r.only ? 'grate' : r.crumble ? 'crumble' : r.bouncy ? 'bouncy' : r.magnetic ? 'magnetic' : r.oneWay ? 'oneway' : 'plain',
+        path: railPath(r), dir: r.oneWay, only: r.only, crumble: lab.crumbles.find(c => c.rail === i),
+        cracks: r.crumble ? crackPath(railPath(r), r.r ?? 18) : undefined
       } as RailArt;
     });
     this.cups = lab.targets.map(t => ({ outline: pathOf(t.outline), center: pathOf(cupPath(t.def), false) }));
@@ -249,7 +270,7 @@ export class Renderer {
     ctx.save();
     ctx.translate(down[0] * 9, down[1] * 9);
     ctx.fillStyle = L.shadow;
-    for (const r of this.rails) ctx.fill(r.outline);
+    for (const r of this.rails) if (r.kind !== 'grate' && !(r.crumble && r.crumble.gone >= 0)) ctx.fill(r.outline);
     for (const c of this.cups) ctx.fill(c.outline);
     for (const p of this.pads) ctx.fill(p.path);
     lab.gates.forEach((g, i) => {
@@ -280,6 +301,7 @@ export class Renderer {
     this.drawSprings(ctx);
     this.drawSeesaws(ctx);
     this.drawGates(ctx, t);
+    this.drawBadges(ctx);
     this.drawMagnets(ctx, t);
 
     /* -- balls, shadows first */
@@ -372,6 +394,21 @@ export class Renderer {
   private drawRails(ctx: CanvasRenderingContext2D, t: number) {
     const L = this.look;
     for (const r of this.rails) {
+      if (r.kind === 'grate') { this.grate(ctx, r, t); continue; }
+      ctx.save();
+      if (r.crumble) {
+        const cr = r.crumble, lab = this.lab!;
+        if (cr.gone >= 0) {
+          /* fallen: drops away and fades */
+          const s = lab.time - cr.gone;
+          if (s > CRUMBLE_FALL) { ctx.restore(); continue; }
+          ctx.globalAlpha = 1 - s / CRUMBLE_FALL;
+          ctx.translate(0, 900 * s * s);
+        } else if (cr.emptyAt >= 0) {
+          /* about to go: it shakes */
+          ctx.translate(Math.sin(t * 90) * 2.5, Math.cos(t * 70) * 1.5);
+        }
+      }
       const k = r.kind === 'plain' ? { grad: L.rail, edge: L.railEdge } : RAIL_KINDS[r.kind];
       const g = ctx.createLinearGradient(0, r.top - r.r, 0, r.bottom + r.r);
       g.addColorStop(0, k.grad[0]);
@@ -394,6 +431,23 @@ export class Renderer {
         ctx.restore();
       }
       if (r.kind === 'oneway' && r.dir) this.chevrons(ctx, r, t);
+      if (r.kind === 'crumble') {
+        /* tile seams, and cracks once a ball has been on it */
+        ctx.save();
+        ctx.clip(r.outline);
+        ctx.setLineDash([3, 37]);
+        ctx.lineWidth = r.r * 2 + 4;
+        ctx.strokeStyle = 'rgba(130, 70, 10, 0.45)';
+        ctx.stroke(r.center);
+        if (r.crumble!.used) {
+          ctx.setLineDash([]);
+          ctx.lineWidth = 3;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = 'rgba(100, 45, 0, 0.85)';
+          ctx.stroke(r.cracks!);
+        }
+        ctx.restore();
+      }
       /* the glossy streak along the top of the tube */
       ctx.save();
       ctx.clip(r.outline);
@@ -403,6 +457,70 @@ export class Renderer {
       ctx.lineWidth = r.r * 0.55;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
       ctx.stroke(r.center);
+      ctx.restore();
+      ctx.restore();
+    }
+  }
+
+  /** A colour grate: a see-through bar of bars, striped in the colours
+      that pass through it. */
+  private grate(ctx: CanvasRenderingContext2D, r: RailArt, t: number) {
+    const cols = r.only!;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.fill(r.outline);
+    ctx.clip(r.outline);
+    ctx.lineCap = 'butt';
+    const n = cols.length, w = 9, gap = 9;
+    cols.forEach((c, k) => {
+      ctx.setLineDash([w, (w + gap) * n - w]);
+      ctx.lineDashOffset = -k * (w + gap) - t * 6;
+      ctx.lineWidth = r.r * 2 + 4;
+      ctx.strokeStyle = KINDS[c].fill;
+      ctx.stroke(r.center);
+    });
+    ctx.restore();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = hexA(KINDS[cols[0]].dark, 0.8);
+    ctx.stroke(r.outline);
+  }
+
+  /** Logic badges: a gate, fan or magnet that needs ALL its switches, or
+      exactly ONE, says so - with a light for each switch. */
+  private drawBadges(ctx: CanvasRenderingContext2D) {
+    const lab = this.lab!;
+    const active = new Set(lab.switches.filter(s => s.active).map(s => s.def.id));
+    const items: { by: string[]; logic: string; x: number; y: number }[] = [];
+    for (const g of lab.gates) if (g.def.by && g.def.logic && g.def.logic !== 'any') {
+      items.push({ by: g.def.by, logic: g.def.logic,
+        x: (g.def.a[0] + g.def.b[0]) / 2 + g.def.slide[0] * g.open, y: (g.def.a[1] + g.def.b[1]) / 2 + g.def.slide[1] * g.open });
+    }
+    for (const f of lab.fans) if (f.def.by && f.def.logic && f.def.logic !== 'any') items.push({ by: f.def.by, logic: f.def.logic, x: f.def.x + f.def.w / 2, y: f.def.y + 40 });
+    for (const m of lab.magnets) if (m.def.by && m.def.logic && m.def.logic !== 'any') items.push({ by: m.def.by, logic: m.def.logic, x: m.def.x, y: m.def.y - 62 });
+    for (const it of items) {
+      const n = it.by.length, w = 66 + n * 22, h = 34, x = it.x - w / 2, y = it.y - h / 2;
+      const ok = driven(it.by, it.logic as Logic, active);
+      ctx.save();
+      ctx.beginPath();
+      roundRect(ctx, x, y, w, h, h / 2);
+      ctx.fillStyle = ok ? '#ff3d9a' : '#ffffff';
+      ctx.shadowColor = 'rgba(80, 40, 160, 0.35)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ff3d9a';
+      ctx.stroke();
+      ctx.font = '700 17px Fredoka, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = ok ? '#ffffff' : '#ff3d9a';
+      ctx.fillText(it.logic === 'all' ? 'ALL' : 'ONE', x + 13, it.y + 1);
+      it.by.forEach((id, k) => {
+        ctx.beginPath();
+        ctx.arc(x + 60 + k * 22, it.y, 7, 0, TAU);
+        ctx.fillStyle = active.has(id) ? (ok ? '#ffffff' : '#ff3d9a') : 'rgba(255, 61, 154, 0.18)';
+        ctx.fill();
+      });
       ctx.restore();
     }
   }

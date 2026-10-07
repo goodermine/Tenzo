@@ -4,15 +4,29 @@
  * A plan (a Solution) is a list of [time, input]: from that time on, hold
  * that tilt. A "move" is one entry whose input differs from the one before.
  */
-import { Lab } from '../src/core/physics.ts';
+import { Lab, STEP } from '../src/core/physics.ts';
 import type { LevelDef, Solution } from '../src/entities/types.ts';
 
 export function run(level: LevelDef, sol: Solution, limit = 20): { won: boolean; t: number; lost: boolean } {
   const lab = new Lab(level);
+  /* Once the last input is given and the lab has come to rest - every ball
+     still, every gate where it is going, no timer running, no floor about
+     to crumble, nothing shuttling - nothing more can happen: stop early.
+     The result is the same; the solver just gets there sooner. */
+  const last = sol.length ? sol[sol.length - 1][0] : 0, shuttles = (level.gates || []).some(g => g.period);
+  let calm = 0;
   while (lab.time < limit && lab.state === 'play') {
     lab.input = Lab.inputAt(sol, lab.time);
     lab.step();
     lab.events.length = 0;
+    if (shuttles || lab.time < last + 0.3) continue;
+    const still = Math.abs(lab.angVel) < 1e-3 && lab.balls.every(b => b.lost || b.speed < 4)
+      && lab.gates.every(g => g.open === (g.wantOpen ? 1 : 0))
+      && lab.switches.every(s => !s.def.hold || s.load > 0 || s.timer === 0)
+      && lab.crumbles.every(c => c.gone >= 0 || c.emptyAt < 0)
+      && lab.seesaws.every(s => Math.abs(s.body.getAngularVelocity()) < 0.01);
+    calm = still ? calm + STEP : 0;
+    if (calm > 0.6) break;
   }
   return { won: lab.state === 'won', lost: lab.state === 'lost', t: lab.time };
 }

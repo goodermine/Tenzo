@@ -144,6 +144,14 @@ export class AudioManager {
     this.hiss(0.4, 0.14, open ? 400 : 1400, open ? 1600 : 380);
   }
 
+  /** a crumbling floor giving way: a dry crack and a rumble */
+  crumble() {
+    if (!this.ctx) return;
+    this.hiss(0.08, 0.22, 3200, 900);
+    this.hiss(0.45, 0.16, 500, 120, 0.03);
+    this.tone(90, 0.3, 0.18, 'triangle', 0, 0.5);
+  }
+
   home(colour: Colour) {
     if (!this.ctx) return;
     this.bell(PITCH[colour] + 5, 0.22);

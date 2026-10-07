@@ -18,8 +18,19 @@ export interface TargetDef { colour: Colour; x: number; y: number }
  *  - `bouncy`: springy jelly - everything rebounds off it.
  *  - `magnetic`: purple balls near it are pulled onto it, even upside down.
  *  - `oneWay`: balls may pass through it travelling this way, and not back.
+ *  - `only`: a colour grate - balls of these colours pass straight
+ *    through it; every other ball is stopped.
+ *  - `crumble`: a crumbling floor - once a ball has been on it, it gives
+ *    way for good when it has been left empty for 0.35 s.
  */
-export interface RailDef { pts: Pt[]; r?: number; smooth?: boolean; bouncy?: boolean; magnetic?: boolean; oneWay?: Pt }
+export interface RailDef {
+  pts: Pt[]; r?: number; smooth?: boolean; bouncy?: boolean; magnetic?: boolean; oneWay?: Pt;
+  only?: Colour[]; crumble?: boolean;
+}
+
+/** How a switched thing reads its switches: `any` (the default) is on while
+    any of them is on; `all` needs every one on at once; `xor` exactly one. */
+export type Logic = 'any' | 'all' | 'xor';
 
 /**
  * A switch set into a surface: a pad from `a` to `b` (its top face).
@@ -45,7 +56,7 @@ export interface SwitchDef {
  */
 export interface GateDef {
   a: Pt; b: Pt; r?: number; slide: Pt; by?: string[]; invert?: boolean;
-  period?: number; phase?: number; speed?: number; platform?: boolean; tray?: boolean;
+  period?: number; phase?: number; speed?: number; platform?: boolean; tray?: boolean; logic?: Logic;
 }
 
 /** A plank on a pivot: tips under weight, within `limit` degrees.
@@ -64,7 +75,7 @@ export interface SeesawDef {
 
 /** A fan: pushes every ball inside the box along `dir`. Light balls fly,
     heavy ones barely notice. `by` switches it (on while any is on). */
-export interface FanDef { x: number; y: number; w: number; h: number; dir: Pt; strength: number; by?: string[] }
+export interface FanDef { x: number; y: number; w: number; h: number; dir: Pt; strength: number; by?: string[]; logic?: Logic }
 
 /** A spring pad from `a` to `b`: launches a ball that lands on it at
     `power` units/s, square off its face. */
@@ -76,7 +87,7 @@ export interface SpringDef { a: Pt; b: Pt; power: number; once?: boolean }
     with an acceleration of `strength` m/s^2 at its edge rising to twice
     that close in (gravity is 26). Its core is solid. `by` switches it on;
     `invert` switches it off instead. */
-export interface MagnetDef { x: number; y: number; r: number; strength: number; repel?: boolean; by?: string[]; invert?: boolean }
+export interface MagnetDef { x: number; y: number; r: number; strength: number; repel?: boolean; by?: string[]; invert?: boolean; logic?: Logic }
 
 /** A pit: any ball touching this rectangle is lost. */
 export interface HazardDef { x: number; y: number; w: number; h: number }

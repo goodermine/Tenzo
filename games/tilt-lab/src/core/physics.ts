@@ -10,7 +10,7 @@
 import { World, Vec2, Circle, Chain, Box, RevoluteJoint } from 'planck';
 import type { Body, Fixture, Contact } from 'planck';
 import type {
-  LevelDef, Colour, Pt, GateDef, SwitchDef, TargetDef, SeesawDef, FanDef, SpringDef, MagnetDef
+  LevelDef, Colour, Pt, GateDef, SwitchDef, TargetDef, SeesawDef, FanDef, SpringDef, MagnetDef, Logic
 } from '../entities/types.ts';
 import { KINDS, BALL_R } from '../entities/types.ts';
 import {
@@ -32,6 +32,7 @@ const GATE_SPEED = 1.8;       /* fraction of the slide per second */
 const MAGNET_REACH = 46;      /* how far from a magnetic rail's surface it grabs */
 const MAGNET_PULL = 1.7;      /* ...and how hard, in g: enough to hang upside down */
 const SPRING_COOLDOWN = 0.25;
+const CRUMBLE_DELAY = 0.35;  /* s from a crumbling floor going empty to giving way */
 
 export type LabEvent =
   | { t: 'impact'; x: number; y: number; power: number; colour: Colour }
@@ -40,6 +41,7 @@ export type LabEvent =
   | { t: 'home' | 'away'; colour: Colour; x: number; y: number }
   | { t: 'lost'; colour: Colour; x: number; y: number }
   | { t: 'spring'; x: number; y: number }
+  | { t: 'crumble'; rail: number; x: number; y: number }
   | { t: 'won' };
 
 export interface Ball {
@@ -74,12 +76,23 @@ export interface Fan { def: FanDef; on: boolean }
 export interface Spring { def: SpringDef; outline: Pt[]; normal: Pt; squash: number; used: boolean }
 export interface Magnet { def: MagnetDef; on: boolean }
 export interface OneWay { dir: Pt; path: Pt[] }
+/** A crumbling floor: `used` once a ball has been on it; `emptyAt` when it
+    was last left empty after that; `gone` when it gave way (-1: not yet). */
+export interface Crumble { rail: number; body: Body; used: boolean; emptyAt: number; gone: number }
+
+/** Whether something switched by `by` is on, given the switches now on. */
+export function driven(by: string[] | undefined, logic: Logic | undefined, active: Set<string>): boolean {
+  if (!by) return true;
+  const n = by.filter(id => active.has(id)).length;
+  return logic === 'all' ? n === by.length : logic === 'xor' ? n === 1 : n > 0;
+}
 
 type Tag =
   | { kind: 'ball'; ball: Ball }
   | { kind: 'switch'; sw: Switch }
   | { kind: 'spring'; sp: Spring }
   | { kind: 'oneway'; ow: OneWay }
+  | { kind: 'grate'; only: Colour[] }
   | { kind: 'cup' }
   | { kind: 'solid' };
 
@@ -97,6 +110,7 @@ export class Lab {
   readonly fans: Fan[] = [];
   readonly springs: Spring[] = [];
   readonly magnets: Magnet[] = [];
+  readonly crumbles: Crumble[] = [];
   readonly events: LabEvent[] = [];
   /** centre lines of magnetic rails, for the pull */
   private magRails: { path: Pt[]; r: number }[] = [];
@@ -123,15 +137,22 @@ export class Lab {
     ground.createFixture(Chain(chamberLoop().map(v), true), { friction: 0.6, restitution: 0.15, userData: solid });
 
     /* rails: each a closed outline, so balls roll smoothly over every joint */
-    for (const r of level.rails) {
+    level.rails.forEach((r, i) => {
       const o = railOutline(r);
       this.rails.push(o);
-      const tag: Tag = r.oneWay ? { kind: 'oneway', ow: { dir: r.oneWay, path: railPath(r) } } : solid;
-      ground.createFixture(Chain(o.map(v), true), r.bouncy
+      const tag: Tag = r.oneWay ? { kind: 'oneway', ow: { dir: r.oneWay, path: railPath(r) } }
+        : r.only ? { kind: 'grate', only: r.only } : solid;
+      /* a crumbling floor is its own body, so it can give way */
+      let body = ground;
+      if (r.crumble) {
+        body = this.world.createBody();
+        this.crumbles.push({ rail: i, body, used: false, emptyAt: -1, gone: -1 });
+      }
+      body.createFixture(Chain(o.map(v), true), r.bouncy
         ? { friction: 0.35, restitution: 0.92, userData: tag }
         : { friction: 0.7, restitution: 0.12, userData: tag });
       if (r.magnetic) this.magRails.push({ path: railPath(r), r: r.r ?? RAIL_R });
-    }
+    });
 
     /* cups are padded: they catch even a bouncing green ball */
     const cup: Tag = { kind: 'cup' };
@@ -203,6 +224,10 @@ export class Lab {
     this.world.on('end-contact', (c: Contact) => { this.passing.delete(c); });
     this.world.on('pre-solve', (c: Contact) => {
       if (this.passing.has(c)) c.setEnabled(false);
+      /* a colour grate lets its own colours straight through */
+      const ta = c.getFixtureA().getUserData() as Tag, tb = c.getFixtureB().getUserData() as Tag;
+      if (ta?.kind === 'grate' && tb?.kind === 'ball' && ta.only.includes(tb.ball.colour)) c.setEnabled(false);
+      if (tb?.kind === 'grate' && ta?.kind === 'ball' && tb.only.includes(ta.ball.colour)) c.setEnabled(false);
       if ((c.getFixtureA().getUserData() as Tag)?.kind === 'cup' || (c.getFixtureB().getUserData() as Tag)?.kind === 'cup') c.setRestitution(0);
     });
 
@@ -279,6 +304,7 @@ export class Lab {
     }
     this.world.step(dt, 10, 6);
     this.updateSprings(dt);
+    this.updateCrumbles();
     this.sync(true);
     for (const s of this.seesaws) {
       const p = s.body.getPosition();
@@ -323,9 +349,8 @@ export class Lab {
   /** Fans, magnets and magnetic rails: forces in the chamber's frame. */
   private applyFields() {
     const active = new Set(this.switches.filter(s => s.active).map(s => s.def.id));
-    const on = (by?: string[], invert?: boolean) => (by ? by.some(id => active.has(id)) : true) !== !!invert;
-    for (const f of this.fans) f.on = on(f.def.by);
-    for (const m of this.magnets) m.on = on(m.def.by, m.def.invert);
+    for (const f of this.fans) f.on = driven(f.def.by, f.def.logic, active);
+    for (const m of this.magnets) m.on = driven(m.def.by, m.def.logic, active) !== !!m.def.invert;
     for (const b of this.balls) {
       if (b.lost || b.body.isStatic()) continue;
       const area = Math.PI * (BALL_R / S) * (BALL_R / S);
@@ -400,6 +425,26 @@ export class Lab {
     }
   }
 
+  /** A crumbling floor gives way a moment after it is first left empty. */
+  private updateCrumbles() {
+    for (const cr of this.crumbles) {
+      if (cr.gone >= 0) continue;
+      let loaded = false;
+      for (let ce = cr.body.getContactList(); ce && !loaded; ce = ce.next!) {
+        if (ce.contact.isTouching() && (ce.other!.getFixtureList()?.getUserData() as Tag)?.kind === 'ball') loaded = true;
+      }
+      /* a ball landing back on it (a bounce) starts the count again */
+      if (loaded) { cr.used = true; cr.emptyAt = -1; }
+      else if (cr.used && cr.emptyAt < 0) cr.emptyAt = this.time;
+      if (cr.emptyAt >= 0 && this.time - cr.emptyAt >= CRUMBLE_DELAY) {
+        cr.gone = this.time;
+        this.world.destroyBody(cr.body);
+        const pts = this.level.rails[cr.rail].pts, m = pts[Math.floor(pts.length / 2)], a = pts[0];
+        this.events.push({ t: 'crumble', rail: cr.rail, x: (a[0] + m[0]) / 2, y: (a[1] + m[1]) / 2 });
+      }
+    }
+  }
+
   private updateSwitches(dt: number) {
     for (const s of this.switches) s.load = 0;
     for (const b of this.balls) {
@@ -448,7 +493,7 @@ export class Lab {
         g.open = next;
         continue;
       }
-      const want = (g.def.by || []).some(id => active.has(id)) !== !!g.def.invert;
+      const want = (!!g.def.by && driven(g.def.by, g.def.logic, active)) !== !!g.def.invert;
       if (want !== g.wantOpen) {
         g.wantOpen = want;
         const m = g.def.a, n = g.def.b;

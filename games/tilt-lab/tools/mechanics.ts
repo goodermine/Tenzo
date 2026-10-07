@@ -158,5 +158,58 @@ function run(l: Lab, seconds: number, input = 0, each?: () => void) {
   check('green on a bouncy rail rebounds most of the way', top < 420, `fell from 300, rebounded to ${top.toFixed(0)}`);
 }
 
+/* colour grate: yellow passes straight through, red is stopped on it */
+{
+  const l = lab({
+    balls: [{ colour: 'yellow', x: 300, y: 300 }, { colour: 'red', x: 700, y: 300 }],
+    rails: [{ pts: [[30, 880], [970, 880]] }, { pts: [[100, 600], [900, 600]], only: ['yellow'] }]
+  });
+  run(l, 2);
+  check('a colour grate lets its colour through and stops the rest', l.balls[0].y > 800 && l.balls[1].y < 560,
+    `yellow at ${l.balls[0].y.toFixed(0)}, red at ${l.balls[1].y.toFixed(0)}`);
+}
+
+/* logic: an ALL gate needs both plates; an XOR gate exactly one */
+for (const [logic, both, one] of [['all', true, false], ['xor', false, true]] as const) {
+  const mk = (n: number) => lab({
+    balls: [{ colour: 'orange', x: 200, y: 790 }, { colour: 'orange', x: 800, y: 790 }].slice(0, n),
+    switches: [{ id: 'a', a: [160, 858], b: [240, 858] }, { id: 'b', a: [760, 858], b: [840, 858] }],
+    gates: [{ a: [450, 400], b: [550, 400], slide: [0, -200], by: ['a', 'b'], logic }]
+  });
+  const l2 = mk(2), l1 = mk(1);
+  run(l2, 1.5);
+  run(l1, 1.5);
+  check(`an ${logic.toUpperCase()} gate opens for ${logic === 'all' ? 'both plates, not one' : 'one plate, not both'}`,
+    (l2.gates[0].open === 1) === both && (l1.gates[0].open === 1) === one, `both: ${l2.gates[0].open}, one: ${l1.gates[0].open}`);
+}
+
+/* crumbling floor: holds a ball, gives way once it rolls off */
+{
+  const l = lab({
+    balls: [{ colour: 'yellow', x: 400, y: 538 }],
+    rails: [{ pts: [[30, 880], [970, 880]] }, { pts: [[300, 600], [600, 600]], crumble: true }]
+  });
+  run(l, 1);
+  const held = l.crumbles[0].gone < 0 && l.balls[0].y < 560;
+  let leftAt = -1;
+  run(l, 4, 1, () => { if (l.crumbles[0].gone < 0) leftAt = l.crumbles[0].emptyAt; });
+  check('a crumbling floor holds a ball, then gives way 0.35 s after it is left', held && leftAt > 0 && l.crumbles[0].gone > 0 &&
+    Math.abs(l.crumbles[0].gone - leftAt - 0.35) < 0.02, `left ${leftAt.toFixed(2)}s, gave way ${l.crumbles[0].gone.toFixed(2)}s`);
+  const l3 = lab({
+    balls: [{ colour: 'yellow', x: 450, y: 300 }],
+    rails: [{ pts: [[30, 880], [970, 880]] }, { pts: [[300, 600], [600, 600]], crumble: true }]
+  });
+  run(l3, 2);
+  check('...and a dropped ball on an untouched floor stays put', l3.crumbles[0].gone < 0 && l3.balls[0].y < 560, `ball at ${l3.balls[0].y.toFixed(0)}`);
+}
+
+/* orange: an anchor - it shrugs off a gentle tilt that rolls yellow away */
+{
+  const l = lab({ balls: [{ colour: 'orange', x: 300, y: 818 }, { colour: 'yellow', x: 700, y: 818 }] });
+  run(l, 2, 0.5);
+  check('orange stays put on a half tilt; yellow rolls', Math.abs(l.balls[0].x - 300) < 20 && l.balls[1].x > 760,
+    `orange moved ${(l.balls[0].x - 300).toFixed(0)}, yellow ${(l.balls[1].x - 700).toFixed(0)}`);
+}
+
 if (failures.length) { console.error(`\n${failures.length} failed`); process.exit(1); }
 console.log('\nall mechanics work');
