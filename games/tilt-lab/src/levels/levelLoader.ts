@@ -12,6 +12,7 @@ import { WORLD6 } from './data/world6.ts';
 import { WORLD7 } from './data/world7.ts';
 import { WORLD8 } from './data/world8.ts';
 import { WORLD9 } from './data/world9.ts';
+import { WORLD10 } from './data/world10.ts';
 
 export interface World {
   name: string;
@@ -65,6 +66,11 @@ export const WORLDS: World[] = [
     name: 'CRUMBLE',
     intro: { title: 'CRUMBLE', text: 'Cracked floors hold while a ball is on them. Once one has been used and left empty, it falls away - and leaves a hole.', balls: ['yellow', 'blue'] },
     levels: WORLD9
+  },
+  {
+    name: 'ORDER',
+    intro: { title: 'ORDER', text: 'Three balls, three cups. A ball drops into the first empty cup it reaches, so who goes first decides everything.', balls: ['yellow', 'red', 'blue'] },
+    levels: WORLD10
   }
 ];
 
