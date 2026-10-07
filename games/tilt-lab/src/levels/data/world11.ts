@@ -3,6 +3,7 @@
  * right order.
  *   1 LIFT OFF     red home on its plate starts the fan that lifts blue
  *   2 PLATE LIFT   one ball holds the plate, the other rides the lift
+ *   3 BLOWBACK     a fan keeps blue from dropping straight down
  *
  * Conventions as World 1. Labs 2-6 came out of the design search and pass
  * the tier-2 bar; in each, the solution fails without its machine. */
@@ -51,4 +52,26 @@ export const PLATELIFT: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT];
+export const BLOWBACK: LevelDef = {
+  id: 'w11-blowback',
+  par: 17.5,
+  name: 'BLOWBACK',
+  hint: 'The fan keeps light blue from dropping straight down. Find the way round it',
+  balls: [{ colour: 'blue', x: 358, y: 168 }, { colour: 'yellow', x: 191, y: 168 }],
+  targets: [{ colour: 'blue', x: 500, y: 895 }, { colour: 'yellow', x: 110, y: 895 }],
+  rails: [
+    { pts: [[40, 230], [520, 230]] },
+    { pts: [[400, 400], [960, 400]] },
+    { pts: [[40, 570], [440, 570]], only: ['blue'] },
+    { pts: [[480, 740], [960, 740]], only: ['blue'] },
+    { pts: [[244, 880], [366, 880]] },
+    { pts: [[634, 880], [960, 880]] }
+  ],
+  fans: [
+    { x: 50, y: 540, w: 420, h: 330, dir: [0, -1], strength: 28 }
+  ],
+  solution: [[0, 1], [1.92, -1], [3.84, 0], [4.54, -1], [7.43, 1], [9.64, -1], [10.11, -1], [10.95, -1], [13.87, -1]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const WORLD11: LevelDef[] = [LIFTOFF, PLATELIFT, BLOWBACK];
