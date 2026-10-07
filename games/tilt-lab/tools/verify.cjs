@@ -47,6 +47,25 @@ async function playSolution(page, limit = 25000) {
   await page.evaluate(() => {
     const G = window.__game;
     G.input.read = () => G.Lab.inputAt(G.game.lab.level.solution, G.game.lab.time);
+    /* replay exactly as the solver does: the solution's input at every
+       physics step, not once per frame - so a slow frame cannot make a
+       recorded solution late */
+    if (!G.Lab.prototype.__exact) {
+      const advance = G.Lab.prototype.advance;
+      G.Lab.prototype.advance = function (dt) {
+        if (G.input.read.toString().indexOf('inputAt') < 0) return advance.call(this, dt);
+        this.acc = Math.min(this.acc + dt, 0.25);
+        let n = 0;
+        while (this.acc >= 1 / 120) {
+          this.input = G.Lab.inputAt(this.level.solution, this.time);
+          this.step();
+          this.acc -= 1 / 120;
+          n++;
+        }
+        return n;
+      };
+      G.Lab.prototype.__exact = true;
+    }
   });
   const t0 = Date.now();
   while (Date.now() - t0 < limit) {
