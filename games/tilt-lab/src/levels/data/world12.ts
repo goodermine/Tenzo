@@ -6,7 +6,7 @@
  *   3 COLLAPSE        three cracked floors, two balls
  *   4 PITFALL         cracked floors above, a pit below
  *   5 CROSSROADS      grates sort them, cracked floors close behind
- *   6 GRAND FINALE    nine moves from here to home
+ *   6 GRAND FINALE    three balls, cracked floors, a cup on a shelf
  *
  * Conventions as World 1. Labs came out of the design search; 2-6 pass
  * the tier-2 bar. */
@@ -73,25 +73,6 @@ export const COLLAPSE: LevelDef = {
   traps: [[[0, 1]], [[0, -1]]]
 };
 
-export const GRANDFINALE: LevelDef = {
-  id: 'w12-grandfinale',
-  par: 18.5,
-  name: 'GRAND FINALE',
-  hint: 'Nine moves from here to home. Plan every one',
-  balls: [{ colour: 'red', x: 538, y: 168 }, { colour: 'blue', x: 277, y: 168 }],
-  targets: [{ colour: 'red', x: 110, y: 895 }, { colour: 'blue', x: 890, y: 895 }],
-  rails: [
-    { pts: [[40, 230], [600, 230]] },
-    { pts: [[40, 400], [220, 400]] },
-    { pts: [[380, 400], [960, 400]], crumble: true },
-    { pts: [[400, 570], [960, 570]] },
-    { pts: [[40, 740], [620, 740]] },
-    { pts: [[780, 740], [960, 740]] },
-    { pts: [[244, 880], [756, 880]] }
-  ],
-  solution: [[0, 1], [2.63, -1], [3.73, 0], [6.67, 1], [9.56, 0], [10.8, 1], [11.43, -1], [14.15, 0], [15.83, 1]],
-  traps: [[[0, 1]], [[0, -1]]]
-};
 
 export const PITFALL: LevelDef = {
   id: 'w12-pitfall',
@@ -131,6 +112,25 @@ export const CROSSROADS: LevelDef = {
     { pts: [[634, 880], [960, 880]] }
   ],
   solution: [[0, 1], [2.8, -1], [4.85, 1], [7.23, -1], [9.95, 1], [11.11, -1], [11.87, 0], [13.19, -1], [14.55, 0]],
+  traps: [[[0, 1]], [[0, -1]]]
+};
+
+export const GRANDFINALE: LevelDef = {
+  id: 'w12-finale3',
+  par: 21,
+  name: 'GRAND FINALE',
+  hint: 'Three balls, cracked floors and a cup up on a shelf. Every crossing counts',
+  balls: [{ colour: 'yellow', x: 580, y: 168 }, { colour: 'red', x: 707, y: 168 }, { colour: 'blue', x: 158, y: 508 }],
+  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 500, y: 895 }, { colour: 'blue', x: 110, y: 755 }],
+  rails: [
+    { pts: [[480, 230], [960, 230]] },
+    { pts: [[40, 400], [680, 400]], crumble: true },
+    { pts: [[40, 570], [520, 570]], crumble: true },
+    { pts: [[244, 740], [680, 740]] },
+    { pts: [[40, 880], [366, 880]] },
+    { pts: [[634, 880], [756, 880]] }
+  ],
+  solution: [[0, -1], [1.82, 1], [3.77, -1], [5.46, 0], [6.07, 1], [6.68, 1], [7.37, 0], [8.05, 0], [9.28, 1], [11.52, 0], [12.52, -1]],
   traps: [[[0, 1]], [[0, -1]]]
 };
 
