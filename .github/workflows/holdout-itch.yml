@@ -1,0 +1,50 @@
+# HOLDOUT - build the itch.io release on every change to the game.
+#
+# Always: builds games/holdout/release/holdout-itch.zip and keeps it as a
+# build artifact on the run's page.
+# Once configured (see games/holdout/itch/UPLOAD.md): also uploads it to
+# itch.io with butler. Needs the BUTLER_API_KEY secret and the ITCH_GAME
+# variable (yourname/holdout); without them that step is skipped.
+name: HOLDOUT itch.io build
+
+on:
+  push:
+    paths:
+      - 'games/holdout/**'
+      - '.github/workflows/holdout-itch.yml'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: games/holdout
+    env:
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+      ITCH_GAME: ${{ vars.ITCH_GAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: games/holdout/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run package:itch
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: holdout-itch
+          path: games/holdout/release/holdout-itch.zip
+
+      - name: Upload to itch.io
+        if: env.BUTLER_API_KEY != '' && env.ITCH_GAME != ''
+        run: |
+          curl -sSfL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler push release/holdout-itch "$ITCH_GAME:html5" --userversion "${GITHUB_SHA::7}"

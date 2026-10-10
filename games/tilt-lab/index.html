@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffc93c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>TILT LAB</title>
+<link rel="preload" href="fonts/fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="flash"></div>
+
+<div id="hud">
+  <div class="tag"><span class="num">1</span><span class="name">ROLL</span></div>
+  <div class="btns">
+    <button class="motion" aria-label="Tilt your phone" title="Tilt your phone"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M3 9 Q1.5 12 3 15M21 9 Q22.5 12 21 15"/></svg></button>
+    <button class="reset" aria-label="Restart (R)" title="Restart (R)"><svg viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4v4.5h-4.5"/></svg></button>
+    <button class="pause" aria-label="Pause (Esc)" title="Pause (Esc)"><svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg></button>
+  </div>
+</div>
+<div id="pads">
+  <button class="tilt-l" aria-label="Tilt left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="tilt-r" aria-label="Tilt right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
+<div id="hint"></div>
+<div id="intro"><div class="n"></div><div class="t"></div><div class="h"></div></div>
+
+<div id="title" class="overlay on">
+  <div class="panel">
+    <h1 class="logo" aria-label="TILT LAB"><span>T</span><span>I</span><span>L</span><span>T</span><i></i><span>L</span><span>A</span><span>B</span></h1>
+    <p class="sub">Tilt the lab. Roll every ball home.</p>
+    <button class="big play">PLAY</button>
+    <button class="soft levels-open">LEVELS</button>
+    <p class="stars"></p>
+    <p class="keys"></p>
+  </div>
+</div>
+
+<div id="levels" class="overlay">
+  <div class="panel">
+    <h2>LEVELS</h2>
+    <div class="world-bar">
+      <button class="round wprev" aria-label="Previous world"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="world-name"></div>
+      <button class="round wnext" aria-label="Next world"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="world-dots"></div>
+    <div class="grid"></div>
+    <div class="world-lock"></div>
+    <button class="soft back">BACK</button>
+  </div>
+</div>
+
+<div id="paused" class="overlay">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <button class="big resume">RESUME</button>
+    <button class="soft restart">RESTART</button>
+    <button class="soft levels-open">LEVELS</button>
+    <div class="toggles">
+      <button class="toggle" data-setting="sound">SOUND</button>
+      <button class="toggle" data-setting="music">MUSIC</button>
+      <button class="toggle motion-toggle" data-setting="motion">PHONE TILT</button>
+    </div>
+  </div>
+</div>
+
+<div id="clear" class="overlay">
+  <div class="burst"></div>
+  <div class="card">
+    <h2>LAB CLEAR!</h2>
+    <div class="lname"></div>
+    <div class="time"></div>
+    <button class="big next">NEXT</button>
+    <button class="soft replay">REPLAY</button>
+  </div>
+</div>
+
+<div id="worldintro" class="overlay">
+  <div class="card">
+    <div class="wnum"></div>
+    <h2 class="wtitle"></h2>
+    <canvas class="wballs" width="360" height="120"></canvas>
+    <p class="wtext"></p>
+    <button class="big go">LET'S GO</button>
+  </div>
+</div>
+
+<div id="boot">TILT LAB</div>
+<script type="module" src="dist/tilt-lab.js"></script>
+</body>
+</html>

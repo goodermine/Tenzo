@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>HOLDOUT</title>
+<link rel="preload" href="fonts/oxanium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+</head>
+<body>
+<div id="stage"></div>
+<div id="vignette"></div>
+<div id="touch"></div>
+<div id="stick-base"></div>
+<div id="stick-knob"></div>
+
+<div id="hud">
+  <div class="xp"><div class="xp-fill"></div></div>
+  <div class="row">
+    <button class="pause" aria-label="Pause"><span></span><span></span></button>
+    <div class="level">LV 1</div>
+    <div class="timer">00:00</div>
+    <div class="kills">0</div>
+  </div>
+  <div class="badge"></div>
+  <div class="weapons"></div>
+</div>
+
+<div id="banner"></div>
+<div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
+<div id="fps"></div>
+<div id="tip"><div class="finger"></div><div class="text"></div></div>
+
+<div id="levelup" class="overlay">
+  <div class="panel">
+    <div class="title">LEVEL UP</div>
+    <div class="lv">LEVEL 2</div>
+    <div class="pick-tip">PICK ONE</div>
+    <div class="cards"></div>
+    <button class="ghost reroll"></button>
+  </div>
+</div>
+
+<div id="title" class="overlay on">
+  <div class="panel">
+    <div class="logo">HOLD<span>OUT</span></div>
+    <div class="sub">Survive fifteen minutes.</div>
+    <div class="ships"></div>
+    <div class="diff" role="radiogroup" aria-label="Difficulty">
+      <button class="seg" data-diff="easy" role="radio">EASY</button>
+      <button class="seg" data-diff="normal" role="radio">NORMAL</button>
+    </div>
+    <button class="big start">DEPLOY</button>
+    <button class="ghost shop-open">UPGRADES <span class="credits"></span></button>
+    <button class="ghost howto-open">HOW TO PLAY</button>
+    <div class="best"></div>
+    <div class="hint">Drag anywhere to move. Weapons fire on their own.</div>
+  </div>
+</div>
+
+<div id="shop" class="overlay">
+  <div class="panel">
+    <div class="title">UPGRADES</div>
+    <div class="credits-big"></div>
+    <div class="ups"></div>
+    <div class="locks"></div>
+    <button class="big shop-close">DONE</button>
+  </div>
+</div>
+
+<div id="paused" class="overlay">
+  <div class="panel">
+    <div class="title">PAUSED</div>
+    <div class="loadout"></div>
+    <div class="toggles">
+      <button class="toggle" data-setting="sound">SOUND</button>
+      <button class="toggle" data-setting="haptics">VIBRATE</button>
+      <button class="toggle" data-setting="numbers">NUMBERS</button>
+      <button class="toggle" data-setting="fps">FPS</button>
+    </div>
+    <button class="big resume">RESUME</button>
+    <button class="ghost howto-open">HOW TO PLAY</button>
+    <button class="ghost quit">ABANDON RUN</button>
+  </div>
+</div>
+
+<div id="over" class="overlay">
+  <div class="panel">
+    <div class="title">SIGNAL LOST</div>
+    <div class="earned"></div>
+    <div class="stats"></div>
+    <div class="loadout"></div>
+    <div class="unlocks"></div>
+    <button class="big again">DEPLOY AGAIN</button>
+    <button class="ghost menu">MENU</button>
+  </div>
+</div>
+
+<div id="howto" class="overlay" role="dialog" aria-label="How to play">
+  <div class="panel">
+    <div class="head"><span>HOW TO PLAY</span><button class="skip">SKIP</button></div>
+    <div class="track"></div>
+    <div class="dots"></div>
+    <button class="big next">NEXT</button>
+  </div>
+</div>
+
+<div id="boot">LOADING</div>
+<script type="module" src="dist/holdout.js"></script>
+</body>
+</html>

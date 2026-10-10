@@ -1,0 +1,22 @@
+{
+  "name": "greyline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A browser first-person shooter built on three.js with fully procedural geometry, textures and audio.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=dist/greyline.js --log-level=warning",
+    "dev": "esbuild src/main.js --bundle --format=esm --outfile=dist/greyline.js --sourcemap --watch"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "esbuild": "^0.28.2",
+    "ktx2-encoder": "^0.6.0",
+    "sharp": "^0.35.5"
+  }
+}

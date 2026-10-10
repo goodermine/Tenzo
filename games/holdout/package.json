@@ -1,0 +1,19 @@
+{
+  "name": "holdout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A swarm-survival roguelite for phones: one thumb, hundreds of enemies, fifteen minutes.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=esm --minify --outfile=dist/holdout.js --log-level=warning",
+    "dev": "esbuild src/main.js --bundle --format=esm --outfile=dist/holdout.js --sourcemap --watch",
+    "package:itch": "node tools/package-itch.mjs"
+  },
+  "dependencies": {
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "sharp": "^0.35.5"
+  }
+}
