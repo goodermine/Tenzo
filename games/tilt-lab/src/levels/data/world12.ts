@@ -6,9 +6,10 @@
  *   3 COLLAPSE        three cracked floors, two balls
  *   4 PITFALL         cracked floors above, a pit below
  *   5 CROSSROADS      grates sort them, cracked floors close behind
- *   6 GRAND FINALE    three balls, cracked floors, a cup on a shelf
+ *   6 GRAND FINALE    four balls, one way down: every cup in the right order
  *
- * Conventions as World 1. Labs came out of the design search; 2-6 pass
+ * Conventions as World 1. Labs 1-5 came out of the design search; the
+ * finale is built by hand around cups that must fill in order. 2-6 pass
  * the tier-2 bar. */
 import type { LevelDef } from '../../entities/types.ts';
 
@@ -116,21 +117,21 @@ export const CROSSROADS: LevelDef = {
 };
 
 export const GRANDFINALE: LevelDef = {
-  id: 'w12-finale3',
-  par: 21,
+  id: 'w12-finale4',
+  par: 31,
   name: 'GRAND FINALE',
-  hint: 'Three balls, cracked floors and a cup up on a shelf. Every crossing counts',
-  balls: [{ colour: 'yellow', x: 580, y: 168 }, { colour: 'red', x: 707, y: 168 }, { colour: 'blue', x: 158, y: 508 }],
-  targets: [{ colour: 'yellow', x: 890, y: 895 }, { colour: 'red', x: 500, y: 895 }, { colour: 'blue', x: 110, y: 755 }],
+  hint: 'Four balls, one way down. An empty cup catches anyone; a full one is a bridge. Who goes first?',
+  balls: [{ colour: 'yellow', x: 100, y: 318 }, { colour: 'red', x: 210, y: 318 }, { colour: 'orange', x: 590, y: 138 }, { colour: 'blue', x: 860, y: 138 }],
+  targets: [{ colour: 'orange', x: 500, y: 575 }, { colour: 'yellow', x: 320, y: 895 }, { colour: 'blue', x: 625, y: 895 }, { colour: 'red', x: 890, y: 895 }],
   rails: [
-    { pts: [[480, 230], [960, 230]] },
-    { pts: [[40, 400], [680, 400]], crumble: true },
-    { pts: [[40, 570], [520, 570]], crumble: true },
-    { pts: [[244, 740], [680, 740]] },
-    { pts: [[40, 880], [366, 880]] },
-    { pts: [[634, 880], [756, 880]] }
+    { pts: [[530, 200], [960, 200]] },
+    { pts: [[40, 380], [340, 380]] },
+    { pts: [[250, 560], [366, 560]] },
+    { pts: [[634, 560], [960, 560]] },
+    { pts: [[40, 880], [186, 880]] },
+    { pts: [[454, 880], [491, 880]] }
   ],
-  solution: [[0, -1], [1.82, 1], [3.77, -1], [5.46, 0], [6.07, 1], [6.68, 1], [7.37, 0], [8.05, 0], [9.28, 1], [11.52, 0], [12.52, -1]],
+  solution: [[0, -1], [1.6, 1], [6, -1], [9.6, 1], [12.6, -1], [20, 1]],
   traps: [[[0, 1]], [[0, -1]]]
 };
 

@@ -105,23 +105,25 @@ export function suggestPar(t: number) { return Math.ceil(t * 1.15 * 2) / 2; }
 /** Hold one level to its bar. Returns whether it passes, and a report line. */
 async function assess(ref: Ref, label: string, first: boolean, tier2: boolean): Promise<{ pass: boolean; line: string }> {
   const level = await defOf(ref);
-  const s = run(level, level.solution);
+  const s = run(level, level.solution, 60);
+  /* long labs get long runs - and so does every plan held up against them */
+  const long = s.won && s.t > 15, lim = long ? Math.ceil(s.t + 4) : 20, hlim = long ? lim : 16;
   const idle = run(level, [[0, 0]], 8);
-  const nudged = wins(await runMany(ref, Array.from({ length: 9 }, (_, k) => jitter(level.solution, (k + 1) * 7919)), 20));
-  const traps = wins(await runMany(ref, level.traps || [], 16));
+  const nudged = wins(await runMany(ref, Array.from({ length: 9 }, (_, k) => jitter(level.solution, (k + 1) * 7919)), lim));
+  const traps = wins(await runMany(ref, level.traps || [], hlim));
   const parOk = level.par !== undefined && s.won && s.t <= level.par;
   let hard = true, note = '';
   if (!first && !quick) {
-    const nv = wins(await runMany(ref, naive()));
-    const sw = wins(await runMany(ref, switchOnce()));
+    const nv = wins(await runMany(ref, naive(), hlim));
+    const sw = wins(await runMany(ref, switchOnce(), hlim));
     const r = rng(4242), tries = tier2 ? T2_RANDOM_TRIES : RANDOM_TRIES;
-    const rw = wins(await runMany(ref, Array.from({ length: tries }, () => randomSol(r))));
+    const rw = wins(await runMany(ref, Array.from({ length: tries }, () => randomSol(r)), hlim));
     hard = nv === 0 && sw <= SWITCH_SLACK && rw <= tries * (tier2 ? T2_RANDOM_MAX : RANDOM_MAX);
     note = ` | naive ${nv ? nv + ' WIN' : 'all fail'} | one-switch ${sw}/${switchOnce().length} | random ${(100 * rw / tries).toFixed(1)}%`;
     if (tier2) {
-      const pl = wins(await runMany(ref, structuredPlans(T2_PLANS)));
+      const pl = wins(await runMany(ref, structuredPlans(T2_PLANS), hlim));
       const mv = moves(level.solution);
-      const short = shortPlans(), spr = await runMany(ref, short), sp = wins(spr);
+      const short = shortPlans(), spr = await runMany(ref, short, hlim), sp = wins(spr);
       hard = hard && sp === 0 && pl <= T2_PLANS * T2_PLAN_MAX && mv >= T2_MIN_MOVES;
       note += ` | 3-move plans ${sp ? sp + ' WIN' : 'all fail'} | plans ${(100 * pl / T2_PLANS).toFixed(2)}% | ${mv} moves`;
       if (sp) note += ` | e.g. ${short.filter((_, k) => spr[k].won).slice(0, 3).map(p => JSON.stringify(p)).join(' ')}`;
@@ -207,7 +209,7 @@ async function easiness(world?: number) {
 function writePar() {
   for (let i = 0; i < LEVELS.length; i++) {
     const { w, n } = place(i);
-    const s = run(LEVELS[i], LEVELS[i].solution);
+    const s = run(LEVELS[i], LEVELS[i].solution, 60);
     console.log(`${w + 1}-${n + 1} ${LEVELS[i].id.padEnd(20)} solution ${s.won ? s.t.toFixed(2) : 'FAILS'}  par ${suggestPar(s.t)}`);
   }
 }
